@@ -1805,6 +1805,7 @@ async function sfLogout(){
   if(!confirm('Log out from the secure Sky Field system?'))return;
   setCloudStatus('saving','Signing out…');
   try{
+    if(sfCurrentUser?.id)sessionStorage.removeItem('sfHydrationSnapshot:'+sfCurrentUser.id);
     const {error}=await sfDb.auth.signOut();
     if(error)throw error;
     sfLockApp(true);
@@ -1925,10 +1926,20 @@ async function sfActivateUser(user){
 
     localStorage.setItem('sfActiveUserId',user.id);
     const localAfter=sfLocalSnapshot();
-    if(localBefore!==localAfter){
+
+    // The application modules read their data from localStorage before the
+    // asynchronous Supabase hydration finishes. Reload only once for each
+    // distinct hydrated cloud snapshot so those modules can rebuild from the
+    // downloaded data. The snapshot guard prevents an endless refresh loop
+    // when startup code creates or normalizes local cache values on every load.
+    const hydrationKey='sfHydrationSnapshot:'+user.id;
+    const lastHydratedSnapshot=sessionStorage.getItem(hydrationKey)||'';
+    if(localBefore!==localAfter && lastHydratedSnapshot!==localAfter){
+      sessionStorage.setItem(hydrationKey,localAfter);
       location.reload();
       return;
     }
+    sessionStorage.setItem(hydrationKey,localAfter);
     sfUnlockApp(user);
   })().catch(error=>{
     console.error('Secure activation failed',error);
