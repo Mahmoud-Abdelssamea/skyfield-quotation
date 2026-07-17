@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System</title>
+<title>SKY FIELD – Management System v10</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -863,6 +863,55 @@
     .sf-auth-card { padding:27px 23px 25px; }
   }
   @media print { .sf-auth-overlay { display:none !important; } }
+
+
+  /* ── ENGINEERS & INTERNAL COSTING v10 ── */
+  .resource-toolbar{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--gray-200);flex-wrap:wrap}
+  .resource-toolbar h3{font-size:15px;color:var(--navy);flex:1;margin:0}
+  .resource-layout{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:16px;padding:16px}
+  .resource-form,.resource-card{background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .resource-form h4,.resource-card h4{font-size:13px;color:var(--navy);margin-bottom:12px}
+  .resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .resource-grid .span-2{grid-column:1/-1}
+  .resource-field{display:flex;flex-direction:column;gap:4px}
+  .resource-field label{font-size:9.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em}
+  .resource-field input,.resource-field select,.resource-field textarea{width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px;font:12px 'Inter',sans-serif;outline:none;background:#fff;color:var(--gray-900)}
+  .resource-field input:focus,.resource-field select:focus,.resource-field textarea:focus{border-color:var(--orange)}
+  .resource-actions{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+  .resource-table-wrap{overflow:auto;border:1px solid var(--gray-200);border-radius:9px}
+  .resource-table{width:100%;border-collapse:collapse;min-width:760px;font-size:11.5px}
+  .resource-table th{background:var(--navy);color:#fff;padding:8px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  .resource-table td{padding:8px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+  .resource-table tr:last-child td{border-bottom:none}
+  .resource-table tbody tr:hover td{background:#fff8f3}
+  .status-pill{display:inline-block;padding:3px 8px;border-radius:12px;font-size:9.5px;font-weight:700}
+  .status-pill.available{background:#dcfce7;color:#15803d}.status-pill.assigned{background:#dbeafe;color:#1d4ed8}.status-pill.leave{background:#fef3c7;color:#92400e}.status-pill.unavailable{background:#fee2e2;color:#b91c1c}
+  .empty-resource{padding:35px 15px;text-align:center;color:var(--gray-500);font-size:12px}
+  .cost-plan-wrap{padding:16px}
+  .cost-plan-intro{padding:10px 12px;border:1px solid var(--navy-light);background:var(--navy-light);border-radius:8px;color:var(--gray-700);font-size:11.5px;line-height:1.5;margin-bottom:12px}
+  .cost-plan-section{border:1px solid var(--gray-200);border-radius:10px;overflow:hidden;margin-bottom:12px;background:#fff}
+  .cost-plan-hdr{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--gray-100);border-bottom:1px solid var(--gray-200)}
+  .cost-plan-hdr h4{font-size:12px;color:var(--navy);flex:1;margin:0}
+  .cost-plan-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+  .cost-plan-table th{padding:7px 6px;background:#fafafa;border-bottom:1px solid var(--gray-200);font-size:9px;text-transform:uppercase;color:var(--gray-500);text-align:left}
+  .cost-plan-table td{padding:6px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+  .cost-plan-table tr:last-child td{border-bottom:none}
+  .cost-plan-table input,.cost-plan-table select{width:100%;border:1px solid var(--gray-200);border-radius:5px;padding:5px 6px;font-size:10.5px;background:#fff;outline:none}
+  .cost-plan-table input:focus,.cost-plan-table select:focus{border-color:var(--orange)}
+  .cost-plan-table .num{text-align:right}.cost-plan-table .remove-col{width:36px;text-align:center}
+  .cost-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  .cost-summary-box{padding:11px;border:1px solid var(--gray-200);border-radius:9px;background:#fff;text-align:center}
+  .cost-summary-box .lbl{font-size:9px;color:var(--gray-500);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .cost-summary-box .val{font-size:16px;color:var(--navy);font-weight:800;margin-top:4px}
+  .cost-summary-box.primary{background:var(--navy)}.cost-summary-box.primary .lbl{color:rgba(255,255,255,.7)}.cost-summary-box.primary .val{color:var(--gold)}
+  .cost-summary-box.good .val{color:#15803d}.cost-summary-box.bad .val{color:#b91c1c}
+  .cost-privacy-note{font-size:10px;color:var(--gray-500);margin-top:8px;text-align:right}
+  .project-cost-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0 4px}
+  .project-cost-strip>div{background:#f8fafc;border:1px solid var(--gray-200);border-radius:6px;padding:7px;text-align:center}
+  .project-cost-strip small{display:block;color:var(--gray-500);font-size:8.5px;text-transform:uppercase;font-weight:700}.project-cost-strip strong{display:block;color:var(--navy);font-size:11.5px;margin-top:2px}
+  @media(max-width:900px){.resource-layout{grid-template-columns:1fr}.cost-summary-grid{grid-template-columns:1fr 1fr}.cost-plan-table{min-width:780px}.cost-plan-section{overflow:auto}}
+  @media(max-width:600px){.resource-grid{grid-template-columns:1fr}.resource-grid .span-2{grid-column:auto}.cost-summary-grid{grid-template-columns:1fr}.project-cost-strip{grid-template-columns:1fr}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -969,6 +1018,9 @@
     <button class="side-nav-btn" data-module="quotes" onclick="showTab('quotes',this)"><span class="side-nav-icon">▤</span>Quotations <span class="side-nav-count" id="side-quote-count">0</span></button>
     <button class="side-nav-btn" data-module="projects" onclick="showTab('projects',this)"><span class="side-nav-icon">▣</span>Projects <span class="side-nav-count" id="side-project-count">0</span></button>
     <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Invoices <span class="side-nav-count" id="side-pi-count">0</span></button>
+    <div class="side-nav-label">Resources &amp; Costing</div>
+    <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon">♙</span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
+    <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">⚙</span>Cost Library</button>
   </nav>
   <div class="side-footer">
     <div class="side-account" id="side-account">
@@ -1109,7 +1161,8 @@
   <div class="tabs quotation-workspace">
     <button class="tab-btn active" data-builder-tab="activities" onclick="showTab('activities',this)">1. Scope of Work <span class="badge badge-act" id="tab-act-badge">0</span></button>
     <button class="tab-btn" data-builder-tab="equipment" onclick="showTab('equipment',this)">2. Equipment <span class="badge badge-eq" id="tab-eq-badge">0</span></button>
-    <button class="tab-btn" data-builder-tab="conditions" onclick="showTab('conditions',this)">3. Conditions</button>
+    <button class="tab-btn" data-builder-tab="costplanning" onclick="showTab('costplanning',this)">3. Internal Cost</button>
+    <button class="tab-btn" data-builder-tab="conditions" onclick="showTab('conditions',this)">4. Conditions</button>
   </div>
 
   <div class="panel-wrap">
@@ -1172,6 +1225,36 @@
       <div class="eq-list" id="eq-list"></div>
     </div>
 
+    <!-- INTERNAL COST PLANNING TAB -->
+    <div id="tab-costplanning" style="display:none">
+      <div class="cost-plan-wrap">
+        <div class="cost-plan-intro"><strong>Private internal estimate.</strong> Select company engineers and equipment, enter duration and other expenses, then compare the estimated cost with the quotation selling value. This section is never included in customer quotations or invoices.</div>
+
+        <div class="cost-plan-section">
+          <div class="cost-plan-hdr"><h4>Manpower</h4><button class="btn-sm" type="button" onclick="addCostManpowerRow()">+ Add Engineer / Role</button></div>
+          <div style="overflow:auto"><table class="cost-plan-table" style="min-width:860px"><thead><tr><th style="width:25%">Engineer / Role</th><th style="width:8%">Qty</th><th style="width:10%">Duration</th><th style="width:13%">Basis</th><th style="width:15%">Rate</th><th class="num" style="width:18%">Cost</th><th class="remove-col"></th></tr></thead><tbody id="cost-manpower-body"></tbody></table></div>
+        </div>
+
+        <div class="cost-plan-section" id="cost-equipment-plan-section">
+          <div class="cost-plan-hdr"><h4>Equipment Cost</h4><button class="btn-sm" type="button" onclick="addCostEquipmentRow()">+ Add Equipment</button></div>
+          <div style="overflow:auto"><table class="cost-plan-table" style="min-width:860px"><thead><tr><th style="width:25%">Equipment</th><th style="width:8%">Qty</th><th style="width:10%">Duration</th><th style="width:13%">Basis</th><th style="width:15%">Rate</th><th class="num" style="width:18%">Cost</th><th class="remove-col"></th></tr></thead><tbody id="cost-equipment-body"></tbody></table></div>
+        </div>
+
+        <div class="cost-plan-section">
+          <div class="cost-plan-hdr"><h4>Other Project Costs</h4><button class="btn-sm" type="button" onclick="addCostOtherRow()">+ Add Cost</button></div>
+          <div style="overflow:auto"><table class="cost-plan-table"><thead><tr><th>Description</th><th style="width:180px">Amount (SAR)</th><th class="remove-col"></th></tr></thead><tbody id="cost-other-body"></tbody></table></div>
+        </div>
+
+        <div class="cost-summary-grid">
+          <div class="cost-summary-box"><div class="lbl">Manpower Cost</div><div class="val" id="cost-sum-manpower">SAR 0</div></div>
+          <div class="cost-summary-box"><div class="lbl">Equipment + Other</div><div class="val" id="cost-sum-resources">SAR 0</div></div>
+          <div class="cost-summary-box primary"><div class="lbl">Total Internal Cost</div><div class="val" id="cost-sum-total">SAR 0</div></div>
+          <div class="cost-summary-box" id="cost-profit-box"><div class="lbl">Expected Profit / Margin</div><div class="val" id="cost-sum-profit">SAR 0 · 0%</div></div>
+        </div>
+        <div class="cost-privacy-note">🔒 Internal only — excluded from quotation PDF, Proforma Invoice, and client reports.</div>
+      </div>
+    </div>
+
     <!-- CONDITIONS TAB -->
     <div id="tab-conditions" style="display:none">
       <div class="cond-panel">
@@ -1220,6 +1303,65 @@
         <div class="cond-add">
           <textarea id="new-cond" placeholder="Add a custom condition…"></textarea>
           <button onclick="addCond()">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENGINEERS TAB -->
+    <div id="tab-engineers" style="display:none">
+      <div class="resource-toolbar"><h3>Engineers Database</h3><input class="quote-search" id="engineer-search" placeholder="Search name / specialization / LOA..." oninput="renderEngineers()"></div>
+      <div class="resource-layout">
+        <div class="resource-form">
+          <h4 id="engineer-form-title">Add Engineer</h4>
+          <input type="hidden" id="eng-id">
+          <div class="resource-grid">
+            <div class="resource-field span-2"><label>Engineer Name *</label><input id="eng-name" placeholder="Full name"></div>
+            <div class="resource-field"><label>Specialization</label><select id="eng-specialization"><option>Protection</option><option>Testing & Commissioning</option><option>Transformer</option><option>Switchgear</option><option>Cable Testing</option><option>Solar</option><option>Technician</option><option>Project Management</option><option>Other</option></select></div>
+            <div class="resource-field"><label>LOA Classification</label><select id="eng-loa"><option value="Non-LOA">Non-LOA</option><option value="C1">C1</option><option value="C2">C2</option></select></div>
+            <div class="resource-field"><label>Employment Type</label><select id="eng-employment"><option>Company Employee</option><option>Rental Engineer</option><option>Freelancer</option></select></div>
+            <div class="resource-field"><label>Status</label><select id="eng-status"><option value="available">Available</option><option value="assigned">Assigned</option><option value="leave">On Leave</option><option value="unavailable">Unavailable</option></select></div>
+            <div class="resource-field"><label>Daily Internal Cost (SAR)</label><input id="eng-daily" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Monthly Internal Cost (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field span-2"><label>Notes</label><textarea id="eng-notes" rows="3" placeholder="Availability, experience, document notes..."></textarea></div>
+          </div>
+          <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveEngineerRecord()" id="eng-save-btn">Save Engineer</button><button class="btn-outline" type="button" onclick="resetEngineerForm()">Clear</button></div>
+        </div>
+        <div class="resource-card">
+          <h4>Saved Engineers</h4>
+          <div class="resource-table-wrap"><table class="resource-table"><thead><tr><th>Name</th><th>Specialization</th><th>LOA</th><th>Employment</th><th>Daily</th><th>Monthly</th><th>Status</th><th>Actions</th></tr></thead><tbody id="engineer-table-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COST LIBRARY TAB -->
+    <div id="tab-costsettings" style="display:none">
+      <div class="resource-toolbar"><h3>Internal Cost Library</h3><span style="font-size:11px;color:var(--gray-500)">Private rates used only in internal estimates</span></div>
+      <div class="resource-layout">
+        <div class="resource-form">
+          <h4 id="cost-eq-form-title">Add Equipment Rate</h4>
+          <input type="hidden" id="cost-eq-id">
+          <div class="resource-grid">
+            <div class="resource-field span-2"><label>Equipment / Kit Name *</label><input id="cost-eq-name" placeholder="e.g. CPC 100"></div>
+            <div class="resource-field span-2"><label>Category</label><input id="cost-eq-category" placeholder="Protection / HV / Transformer..."></div>
+            <div class="resource-field"><label>Daily Cost (SAR)</label><input id="cost-eq-daily" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Weekly Cost (SAR)</label><input id="cost-eq-weekly" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Monthly Cost (SAR)</label><input id="cost-eq-monthly" type="number" min="0" step="0.01" value="0"></div>
+          </div>
+          <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveCostEquipmentRecord()" id="cost-eq-save-btn">Save Equipment</button><button class="btn-outline" type="button" onclick="resetCostEquipmentForm()">Clear</button></div>
+
+          <h4 style="margin-top:22px">Default Logistics Costs</h4>
+          <div class="resource-grid">
+            <div class="resource-field"><label>Transportation</label><input id="default-transport" type="number" min="0" step="0.01"></div>
+            <div class="resource-field"><label>Accommodation</label><input id="default-accommodation" type="number" min="0" step="0.01"></div>
+            <div class="resource-field"><label>Mobilization</label><input id="default-mobilization" type="number" min="0" step="0.01"></div>
+            <div class="resource-field"><label>Other Default Cost</label><input id="default-other" type="number" min="0" step="0.01"></div>
+          </div>
+          <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveCostDefaults()">Save Defaults</button><button class="btn-outline" type="button" onclick="addDefaultCostsToPlan()">Add to Current Quotation</button></div>
+        </div>
+        <div class="resource-card">
+          <h4>Equipment Rates</h4>
+          <div class="resource-table-wrap"><table class="resource-table"><thead><tr><th>Equipment</th><th>Category</th><th>Daily</th><th>Weekly</th><th>Monthly</th><th>Actions</th></tr></thead><tbody id="cost-equipment-table-body"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -2126,12 +2268,15 @@ function generateNextQuoteNumber(forceIncrement){
 
 const APP_PAGE_META = {
   dashboard: ['Dashboard','Business overview, projects, quotations, and invoice status.'],
-  activities: ['New Quotation','Step 1 of 3 — define the scope of work and commercial details.'],
-  equipment: ['New Quotation','Step 2 of 3 — select testing equipment and rental duration.'],
-  conditions: ['New Quotation','Step 3 of 3 — review commercial and technical conditions.'],
+  activities: ['New Quotation','Step 1 of 4 — define the scope of work and commercial details.'],
+  equipment: ['New Quotation','Step 2 of 4 — select testing equipment and rental duration.'],
+  costplanning: ['New Quotation','Step 3 of 4 — prepare the private manpower, equipment, and logistics cost estimate.'],
+  conditions: ['New Quotation','Step 4 of 4 — review commercial and technical conditions.'],
   projects: ['Projects','Track contract value, invoices, receipts, documents, and commission.'],
   quotes: ['Quotations','Review saved offers and convert approved quotations into projects.'],
-  proformas: ['Invoices','Create and track advance, progress-based, fixed, and full invoices.']
+  proformas: ['Invoices','Create and track advance, progress-based, fixed, and full invoices.'],
+  engineers: ['Engineers','Maintain engineer availability, LOA classification, and internal rates.'],
+  costsettings: ['Cost Library','Maintain equipment rates and default logistics costs for internal estimates.']
 };
 
 function toggleSidebar(){ document.body.classList.toggle('nav-open'); }
@@ -2155,6 +2300,7 @@ function updateSidebarCounts(){
   try{ set('side-quote-count',savedQuotes.length); }catch(e){}
   try{ set('side-project-count',projects.length); }catch(e){}
   try{ set('side-pi-count',proformaInvoices.length); }catch(e){}
+  try{ set('side-engineer-count',sfEngineers.length); }catch(e){}
 }
 function setupQuotationFieldGroups(){
   const advancedIds=['vat','profit','discount-type','discount-value','commission','prep-name','prep-email','substation'];
@@ -2202,8 +2348,8 @@ function renderDashboard(){
 }
 
 function showTab(name,btn){
-  const builderTabs=['activities','equipment','conditions'];
-  const allTabs=['dashboard','activities','equipment','conditions','projects','quotes','proformas'];
+  const builderTabs=['activities','equipment','costplanning','conditions'];
+  const allTabs=['dashboard','activities','equipment','costplanning','conditions','projects','quotes','proformas','engineers','costsettings'];
   const isBuilder=builderTabs.includes(name);
   document.body.dataset.module=isBuilder?'quotation':name;
   allTabs.forEach(t=>{
@@ -2224,12 +2370,17 @@ function showTab(name,btn){
     else if(name==='proformas'){primary.textContent='View Projects to Invoice';primary.onclick=()=>showTab('projects',document.querySelector('.side-nav-btn[data-module=projects]'));}
     else if(name==='quotes'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
     else if(name==='dashboard'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
+    else if(name==='engineers'){primary.textContent='+ Add Engineer';primary.onclick=()=>{resetEngineerForm();document.getElementById('eng-name')?.focus();};}
+    else if(name==='costsettings'){primary.textContent='+ Add Equipment Rate';primary.onclick=()=>{resetCostEquipmentForm();document.getElementById('cost-eq-name')?.focus();};}
     else {primary.textContent='Save Quotation';primary.onclick=()=>saveCurrentQuotation(false,'quotation');}
   }
   if(name==='dashboard') renderDashboard();
   if(name==='projects') renderProjects();
   if(name==='quotes') renderSavedQuotations();
   if(name==='proformas') renderProformas();
+  if(name==='engineers') renderEngineers();
+  if(name==='costsettings') renderCostLibrary();
+  if(name==='costplanning') renderCostPlan();
   updateSidebarCounts();
   closeSidebar();
   try{localStorage.setItem('sfLastModule',name);}catch(e){}
@@ -3231,6 +3382,7 @@ function syncProjectFromQuotation(rec){
       contract:0, start:'', notes:'',
       pos:[], payments:[], docs:[], quotes:[], proformas:[],
       commissionPct:0, commissionAmount:0, commissionNotes:'', commissions:[],
+      estimatedInternalCost:0, expectedProfit:0, assignedEngineers:[], costPlan:null, actualExpenses:[],
       updatedAt:new Date().toISOString()
     };
     projects.unshift(proj);
@@ -4097,9 +4249,95 @@ function previewProforma(id){
 }
 function closeProformaPreview(){const el=document.getElementById('proforma-preview');el.style.display='none';el.classList.remove('print-active');}
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ENGINEERS & SIMPLIFIED INTERNAL COSTING v10
+// ══════════════════════════════════════════════════════════════════════════════
+let sfEngineers = JSON.parse(localStorage.getItem('sfEngineers')||'[]');
+let sfCostEquipment = JSON.parse(localStorage.getItem('sfCostEquipment')||'[]');
+let sfCostDefaults = Object.assign({transportation:0,accommodation:0,mobilization:0,other:0},JSON.parse(localStorage.getItem('sfCostDefaults')||'{}'));
+let sfCurrentCostPlan = {manpower:[],equipment:[],other:[]};
+let sfCostSeq=1;
+
+function sfUid(prefix){return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*100000)}
+function sfNum(v){return Math.max(0,parseFloat(v)||0)}
+function saveEngineerLibrary(){localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));updateSidebarCounts();renderEngineers();renderCostPlan();}
+function saveCostEquipmentLibrary(){localStorage.setItem('sfCostEquipment',JSON.stringify(sfCostEquipment));renderCostLibrary();renderCostPlan();}
+function saveCurrentCostPlan(){renderCostPlan();}
+
+function resetEngineerForm(){
+  ['eng-id','eng-name','eng-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  const defaults={'eng-specialization':'Protection','eng-loa':'Non-LOA','eng-employment':'Company Employee','eng-status':'available','eng-daily':'0','eng-monthly':'0','eng-overtime':'0'};
+  Object.entries(defaults).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v});
+  const t=document.getElementById('engineer-form-title');if(t)t.textContent='Add Engineer';
+  const b=document.getElementById('eng-save-btn');if(b)b.textContent='Save Engineer';
+}
+function saveEngineerRecord(){
+  const name=(document.getElementById('eng-name')?.value||'').trim();if(!name){alert('Engineer name is required.');return;}
+  const id=document.getElementById('eng-id')?.value||sfUid('eng');
+  const rec={id,name,specialization:document.getElementById('eng-specialization').value,loa:document.getElementById('eng-loa').value,employment:document.getElementById('eng-employment').value,status:document.getElementById('eng-status').value,daily:sfNum(document.getElementById('eng-daily').value),monthly:sfNum(document.getElementById('eng-monthly').value),overtime:sfNum(document.getElementById('eng-overtime').value),notes:(document.getElementById('eng-notes').value||'').trim(),updatedAt:new Date().toISOString()};
+  const i=sfEngineers.findIndex(x=>x.id===id);if(i>=0)sfEngineers[i]=rec;else sfEngineers.unshift(rec);
+  saveEngineerLibrary();resetEngineerForm();
+}
+function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('eng-id',x.id);set('eng-name',x.name);set('eng-specialization',x.specialization);set('eng-loa',x.loa);set('eng-employment',x.employment);set('eng-status',x.status);set('eng-daily',x.daily);set('eng-monthly',x.monthly);set('eng-overtime',x.overtime);set('eng-notes',x.notes);document.getElementById('engineer-form-title').textContent='Edit Engineer';document.getElementById('eng-save-btn').textContent='Update Engineer';window.scrollTo({top:0,behavior:'smooth'});}
+function deleteEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x||!confirm('Delete engineer '+x.name+'?'))return;sfEngineers=sfEngineers.filter(e=>e.id!==id);saveEngineerLibrary();}
+function renderEngineers(){
+  const body=document.getElementById('engineer-table-body');if(!body)return;
+  const q=(document.getElementById('engineer-search')?.value||'').toLowerCase();
+  const list=sfEngineers.filter(x=>[x.name,x.specialization,x.loa,x.employment,x.status].join(' ').toLowerCase().includes(q));
+  body.innerHTML=list.length?list.map(x=>`<tr><td><strong>${escHtml(x.name)}</strong>${x.notes?`<div style="font-size:9.5px;color:var(--gray-500);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(x.notes)}</div>`:''}</td><td>${escHtml(x.specialization||'')}</td><td>${escHtml(x.loa||'')}</td><td>${escHtml(x.employment||'')}</td><td>${fmtSAR(x.daily)}</td><td>${fmtSAR(x.monthly)}</td><td><span class="status-pill ${escHtml(x.status||'available')}">${escHtml((x.status||'available').replace('_',' '))}</span></td><td style="white-space:nowrap"><button class="btn-sm" onclick="editEngineerRecord('${x.id}')">Edit</button> <button class="btn-sm" onclick="deleteEngineerRecord('${x.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty-resource">No engineers saved yet.</div></td></tr>`;
+  updateSidebarCounts();
+}
+
+function resetCostEquipmentForm(){['cost-eq-id','cost-eq-name','cost-eq-category'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});['cost-eq-daily','cost-eq-weekly','cost-eq-monthly'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='0'});const t=document.getElementById('cost-eq-form-title');if(t)t.textContent='Add Equipment Rate';const b=document.getElementById('cost-eq-save-btn');if(b)b.textContent='Save Equipment';}
+function saveCostEquipmentRecord(){const name=(document.getElementById('cost-eq-name')?.value||'').trim();if(!name){alert('Equipment name is required.');return;}const id=document.getElementById('cost-eq-id').value||sfUid('ceq');const rec={id,name,category:(document.getElementById('cost-eq-category').value||'').trim(),daily:sfNum(document.getElementById('cost-eq-daily').value),weekly:sfNum(document.getElementById('cost-eq-weekly').value),monthly:sfNum(document.getElementById('cost-eq-monthly').value),updatedAt:new Date().toISOString()};const i=sfCostEquipment.findIndex(x=>x.id===id);if(i>=0)sfCostEquipment[i]=rec;else sfCostEquipment.unshift(rec);saveCostEquipmentLibrary();resetCostEquipmentForm();}
+function editCostEquipmentRecord(id){const x=sfCostEquipment.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('cost-eq-id',x.id);set('cost-eq-name',x.name);set('cost-eq-category',x.category);set('cost-eq-daily',x.daily);set('cost-eq-weekly',x.weekly);set('cost-eq-monthly',x.monthly);document.getElementById('cost-eq-form-title').textContent='Edit Equipment Rate';document.getElementById('cost-eq-save-btn').textContent='Update Equipment';window.scrollTo({top:0,behavior:'smooth'});}
+function deleteCostEquipmentRecord(id){const x=sfCostEquipment.find(e=>e.id===id);if(!x||!confirm('Delete equipment rate '+x.name+'?'))return;sfCostEquipment=sfCostEquipment.filter(e=>e.id!==id);saveCostEquipmentLibrary();}
+function saveCostDefaults(){sfCostDefaults={transportation:sfNum(document.getElementById('default-transport').value),accommodation:sfNum(document.getElementById('default-accommodation').value),mobilization:sfNum(document.getElementById('default-mobilization').value),other:sfNum(document.getElementById('default-other').value)};localStorage.setItem('sfCostDefaults',JSON.stringify(sfCostDefaults));alert('Default logistics costs saved.');}
+function renderCostLibrary(){
+  const vals={'default-transport':sfCostDefaults.transportation,'default-accommodation':sfCostDefaults.accommodation,'default-mobilization':sfCostDefaults.mobilization,'default-other':sfCostDefaults.other};Object.entries(vals).forEach(([id,v])=>{const e=document.getElementById(id);if(e&&document.activeElement!==e)e.value=v||0});
+  const body=document.getElementById('cost-equipment-table-body');if(!body)return;
+  body.innerHTML=sfCostEquipment.length?sfCostEquipment.map(x=>`<tr><td><strong>${escHtml(x.name)}</strong></td><td>${escHtml(x.category||'')}</td><td>${fmtSAR(x.daily)}</td><td>${fmtSAR(x.weekly)}</td><td>${fmtSAR(x.monthly)}</td><td style="white-space:nowrap"><button class="btn-sm" onclick="editCostEquipmentRecord('${x.id}')">Edit</button> <button class="btn-sm" onclick="deleteCostEquipmentRecord('${x.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty-resource">No internal equipment rates saved yet.</div></td></tr>`;
+}
+function addDefaultCostsToPlan(){const defs=[['Transportation',sfCostDefaults.transportation],['Accommodation',sfCostDefaults.accommodation],['Mobilization',sfCostDefaults.mobilization],['Other Default Cost',sfCostDefaults.other]].filter(x=>sfNum(x[1])>0);defs.forEach(([description,amount])=>{const old=sfCurrentCostPlan.other.find(x=>x.description===description);if(old)old.amount=sfNum(amount);else sfCurrentCostPlan.other.push({id:sfUid('oth'),description,amount:sfNum(amount)});});renderCostPlan();showTab('costplanning',document.querySelector('.tab-btn[data-builder-tab=costplanning]'));}
+
+function addCostManpowerRow(){sfCurrentCostPlan.manpower.push({id:sfUid('mp'),engineerId:'',label:'',qty:1,duration:1,basis:conditionType==='engineer_rental'?'monthly':'daily',rate:0});renderCostPlan();}
+function addCostEquipmentRow(){sfCurrentCostPlan.equipment.push({id:sfUid('ep'),equipmentId:'',label:'',qty:1,duration:1,basis:'daily',rate:0});renderCostPlan();}
+function addCostOtherRow(description='',amount=0){sfCurrentCostPlan.other.push({id:sfUid('oth'),description,amount:sfNum(amount)});renderCostPlan();}
+function removeCostPlanRow(group,id){sfCurrentCostPlan[group]=(sfCurrentCostPlan[group]||[]).filter(x=>x.id!==id);renderCostPlan();}
+function setCostPlanValue(group,id,field,value){const row=(sfCurrentCostPlan[group]||[]).find(x=>x.id===id);if(!row)return;row[field]=['qty','duration','rate','amount'].includes(field)?sfNum(value):value;if(group==='manpower'&&field==='engineerId'){const e=sfEngineers.find(x=>x.id===value);row.label=e?e.name:'';row.rate=e?(row.basis==='monthly'?e.monthly:row.basis==='hourly'?e.overtime:e.daily):row.rate;}if(group==='manpower'&&field==='basis'){const e=sfEngineers.find(x=>x.id===row.engineerId);if(e)row.rate=value==='monthly'?e.monthly:value==='hourly'?e.overtime:e.daily;}if(group==='equipment'&&field==='equipmentId'){const e=sfCostEquipment.find(x=>x.id===value);row.label=e?e.name:'';row.rate=e?(row.basis==='weekly'?e.weekly:row.basis==='monthly'?e.monthly:e.daily):row.rate;}if(group==='equipment'&&field==='basis'){const e=sfCostEquipment.find(x=>x.id===row.equipmentId);if(e)row.rate=value==='weekly'?e.weekly:value==='monthly'?e.monthly:e.daily;}renderCostPlan();}
+function calcInternalCostPlan(){const manpower=(sfCurrentCostPlan.manpower||[]).reduce((s,x)=>s+sfNum(x.qty)*sfNum(x.duration)*sfNum(x.rate),0);const equipment=(sfCurrentCostPlan.equipment||[]).reduce((s,x)=>s+sfNum(x.qty)*sfNum(x.duration)*sfNum(x.rate),0);const other=(sfCurrentCostPlan.other||[]).reduce((s,x)=>s+sfNum(x.amount),0);return{manpower,equipment,other,total:manpower+equipment+other};}
+function engineerOptions(selected){return `<option value="">Select engineer / enter role</option>`+sfEngineers.map(x=>`<option value="${x.id}" ${selected===x.id?'selected':''}>${escHtml(x.name)} — ${escHtml(x.specialization||'')} ${x.loa&&x.loa!=='Non-LOA'?'('+escHtml(x.loa)+')':''}</option>`).join('')}
+function costEquipmentOptions(selected){return `<option value="">Select equipment</option>`+sfCostEquipment.map(x=>`<option value="${x.id}" ${selected===x.id?'selected':''}>${escHtml(x.name)}${x.category?' — '+escHtml(x.category):''}</option>`).join('')}
+function renderCostPlan(){
+  if(!sfCurrentCostPlan||typeof sfCurrentCostPlan!=='object')sfCurrentCostPlan={manpower:[],equipment:[],other:[]};
+  const mb=document.getElementById('cost-manpower-body');if(mb)mb.innerHTML=sfCurrentCostPlan.manpower.length?sfCurrentCostPlan.manpower.map(x=>`<tr><td><select onchange="setCostPlanValue('manpower','${x.id}','engineerId',this.value)">${engineerOptions(x.engineerId)}</select>${!x.engineerId?`<input style="margin-top:4px" placeholder="Or type a role" value="${escHtml(x.label||'')}" oninput="setCostPlanValue('manpower','${x.id}','label',this.value)">`:''}</td><td><input type="number" min="0" value="${sfNum(x.qty)}" oninput="setCostPlanValue('manpower','${x.id}','qty',this.value)"></td><td><input type="number" min="0" step="0.5" value="${sfNum(x.duration)}" oninput="setCostPlanValue('manpower','${x.id}','duration',this.value)"></td><td><select onchange="setCostPlanValue('manpower','${x.id}','basis',this.value)"><option value="daily" ${x.basis==='daily'?'selected':''}>Daily</option><option value="monthly" ${x.basis==='monthly'?'selected':''}>Monthly</option><option value="hourly" ${x.basis==='hourly'?'selected':''}>Overtime Hour</option></select></td><td><input type="number" min="0" step="0.01" value="${sfNum(x.rate)}" oninput="setCostPlanValue('manpower','${x.id}','rate',this.value)"></td><td class="num"><strong>${fmtSAR(sfNum(x.qty)*sfNum(x.duration)*sfNum(x.rate))}</strong></td><td class="remove-col"><button class="rm-btn" onclick="removeCostPlanRow('manpower','${x.id}')">×</button></td></tr>`).join(''):`<tr><td colspan="7"><div class="empty-resource">Add engineers or manpower roles required for this quotation.</div></td></tr>`;
+  const eb=document.getElementById('cost-equipment-body');if(eb)eb.innerHTML=sfCurrentCostPlan.equipment.length?sfCurrentCostPlan.equipment.map(x=>`<tr><td><select onchange="setCostPlanValue('equipment','${x.id}','equipmentId',this.value)">${costEquipmentOptions(x.equipmentId)}</select>${!x.equipmentId?`<input style="margin-top:4px" placeholder="Or type equipment" value="${escHtml(x.label||'')}" oninput="setCostPlanValue('equipment','${x.id}','label',this.value)">`:''}</td><td><input type="number" min="0" value="${sfNum(x.qty)}" oninput="setCostPlanValue('equipment','${x.id}','qty',this.value)"></td><td><input type="number" min="0" step="0.5" value="${sfNum(x.duration)}" oninput="setCostPlanValue('equipment','${x.id}','duration',this.value)"></td><td><select onchange="setCostPlanValue('equipment','${x.id}','basis',this.value)"><option value="daily" ${x.basis==='daily'?'selected':''}>Daily</option><option value="weekly" ${x.basis==='weekly'?'selected':''}>Weekly</option><option value="monthly" ${x.basis==='monthly'?'selected':''}>Monthly</option></select></td><td><input type="number" min="0" step="0.01" value="${sfNum(x.rate)}" oninput="setCostPlanValue('equipment','${x.id}','rate',this.value)"></td><td class="num"><strong>${fmtSAR(sfNum(x.qty)*sfNum(x.duration)*sfNum(x.rate))}</strong></td><td class="remove-col"><button class="rm-btn" onclick="removeCostPlanRow('equipment','${x.id}')">×</button></td></tr>`).join(''):`<tr><td colspan="7"><div class="empty-resource">Add rented or company-owned testing equipment costs.</div></td></tr>`;
+  const ob=document.getElementById('cost-other-body');if(ob)ob.innerHTML=sfCurrentCostPlan.other.length?sfCurrentCostPlan.other.map(x=>`<tr><td><input placeholder="Transportation, accommodation, mobilization..." value="${escHtml(x.description||'')}" oninput="setCostPlanValue('other','${x.id}','description',this.value)"></td><td><input type="number" min="0" step="0.01" value="${sfNum(x.amount)}" oninput="setCostPlanValue('other','${x.id}','amount',this.value)"></td><td class="remove-col"><button class="rm-btn" onclick="removeCostPlanRow('other','${x.id}')">×</button></td></tr>`).join(''):`<tr><td colspan="3"><div class="empty-resource">Add transportation, accommodation, mobilization, or other project costs.</div></td></tr>`;
+  const section=document.getElementById('cost-equipment-plan-section');if(section)section.style.display=conditionType==='engineer_rental'?'none':'';
+  const c=calcInternalCostPlan();let selling=0;try{selling=calcQuotationTotals().sub||0}catch(e){}const profit=selling-c.total;const margin=selling?profit/selling*100:0;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set('cost-sum-manpower',fmtSAR(c.manpower));set('cost-sum-resources',fmtSAR(c.equipment+c.other));set('cost-sum-total',fmtSAR(c.total));set('cost-sum-profit',fmtSAR(profit)+' · '+margin.toFixed(1)+'%');const box=document.getElementById('cost-profit-box');if(box)box.className='cost-summary-box '+(profit>=0?'good':'bad');
+}
+
+// Extend quotation snapshots without changing the customer document structure.
+const sfCollectQuotationSnapshotBase=collectQuotationSnapshot;
+collectQuotationSnapshot=function(type){const s=sfCollectQuotationSnapshotBase(type);s.costPlan=deepClone(sfCurrentCostPlan);s.internalCostSummary=calcInternalCostPlan();return s;};
+const sfApplyQuotationSnapshotBase=applyQuotationSnapshot;
+applyQuotationSnapshot=function(snap){sfApplyQuotationSnapshotBase(snap);sfCurrentCostPlan=deepClone(snap?.costPlan||{manpower:[],equipment:[],other:[]});renderCostPlan();};
+const sfClearAllBase=clearAll;
+clearAll=function(){sfCurrentCostPlan={manpower:[],equipment:[],other:[]};sfClearAllBase();renderCostPlan();};
+const sfRecalcBase=recalc;
+recalc=function(){sfRecalcBase();renderCostPlan();};
+const sfSetConditionTypeBase=setConditionType;
+setConditionType=function(type,preserveCustom=false){sfSetConditionTypeBase(type,preserveCustom);renderCostPlan();};
+const sfCalcQuotationTotalsBase=calcQuotationTotals;
+calcQuotationTotals=function(){const t=sfCalcQuotationTotalsBase();const c=calcInternalCostPlan();t.internalCost=c.total;t.internalCostBreakdown=c;t.expectedProfit=(t.sub||0)-c.total;t.expectedMargin=(t.sub||0)?t.expectedProfit/t.sub*100:0;return t;};
+const sfSyncProjectFromQuotationBase=syncProjectFromQuotation;
+syncProjectFromQuotation=function(rec){const p=sfSyncProjectFromQuotationBase(rec);const plan=deepClone(rec?.snapshot?.costPlan||{manpower:[],equipment:[],other:[]});const sum=rec?.snapshot?.internalCostSummary||calcInternalCostPlan();p.costPlan=plan;p.estimatedInternalCost=sfNum(sum.total);p.expectedProfit=(parseFloat(rec?.snapshot?.totals?.sub)||0)-p.estimatedInternalCost;p.assignedEngineers=(plan.manpower||[]).filter(x=>x.engineerId).map(x=>({engineerId:x.engineerId,name:(sfEngineers.find(e=>e.id===x.engineerId)||{}).name||x.label||'',qty:sfNum(x.qty),duration:sfNum(x.duration),basis:x.basis,rate:sfNum(x.rate)}));saveProjects();return p;};
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('qdate').value=new Date().toISOString().slice(0,10);
-buildCatList();buildTasks();buildEq();buildConds();buildCustomSOWList();renderQuoteAttachments();
+buildCatList();buildTasks();buildEq();buildConds();buildCustomSOWList();renderQuoteAttachments();renderEngineers();renderCostLibrary();renderCostPlan();
 generateNextQuoteNumber();
 updateQuoteBadge();
 
@@ -4113,6 +4351,11 @@ let projects = JSON.parse(localStorage.getItem('sfProjects')||'[]').map(p=>({
   docs:Array.isArray(p.docs)?p.docs:[], quotes:Array.isArray(p.quotes)?p.quotes:[], proformas:Array.isArray(p.proformas)?p.proformas:[],
   commissionPct:p.commissionPct||0, commissionAmount:p.commissionAmount||0, commissionNotes:p.commissionNotes||'',
   commissions:Array.isArray(p.commissions)?p.commissions:[],
+  estimatedInternalCost:parseFloat(p.estimatedInternalCost)||0,
+  expectedProfit:parseFloat(p.expectedProfit)||0,
+  assignedEngineers:Array.isArray(p.assignedEngineers)?p.assignedEngineers:[],
+  costPlan:p.costPlan||null,
+  actualExpenses:Array.isArray(p.actualExpenses)?p.actualExpenses:[],
   updatedAt:p.updatedAt||''
 }));
 let pmTempPOs=[], pmTempPays=[], pmTempDocs=[], pmTempComms=[];
@@ -4232,8 +4475,11 @@ function renderProjects(){
       : '';
 
     const totalComm = projTotalCommission(p);
+    const estimatedInternalCost=parseFloat(p.estimatedInternalCost)||0;
+    const expectedProjectProfit=(parseFloat(p.expectedProfit)||Math.max(0,contract-estimatedInternalCost));
+    const assignedEngineerCount=(p.assignedEngineers||[]).length;
 
-    return `<div class="proj-card">
+    return `<div class="proj-card" data-project-id="${escHtml(p.id)}">
       <div class="proj-card-hdr">
         <div class="proj-name">${escHtml(p.name)}</div>
         <span class="proj-status ${statusColor}">${statusLabel}</span>
@@ -4247,6 +4493,7 @@ function renderProjects(){
           <div class="proj-fin-box"><div class="pfb-label">Outstanding</div><div class="pfb-value red">${fmtSAR(pending)}</div></div>
           <div class="proj-fin-box" style="grid-column:1/-1"><div class="pfb-label">Remaining to Invoice</div><div class="pfb-value">${fmtSAR(remainingToInvoice)}</div></div>
         </div>
+        ${estimatedInternalCost?`<div class="project-cost-strip"><div><small>Estimated Cost</small><strong>${fmtSAR(estimatedInternalCost)}</strong></div><div><small>Expected Profit</small><strong style="color:${expectedProjectProfit>=0?'#15803d':'#b91c1c'}">${fmtSAR(expectedProjectProfit)}</strong></div><div><small>Assigned Engineers</small><strong>${assignedEngineerCount}</strong></div></div>`:''}
         ${totalComm?`<div class="proj-fin-row" style="grid-template-columns:1fr">
           <div class="proj-fin-box"><div class="pfb-label">Total Commission (عمولة)</div><div class="pfb-value" style="color:#f59e0b">${fmtSAR(totalComm)}</div></div>
         </div>`:''}
