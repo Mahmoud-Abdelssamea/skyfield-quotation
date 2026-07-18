@@ -1,12 +1,13 @@
-Sky Field Management System v13
+SkyField Management UI v14
 
-التعديلات:
-1) تصحيح Net Total في كشف الرواتب:
-   Attendance Days / 30 × (Basic Salary + Housing & Transport + Site/Car Allowance)
-   + Other Allowance + Overtime Amount + Other Earnings - Deductions
-2) بدل السكن وبدل السيارة أصبحا يُحسبان بنسبة أيام الحضور، ولا تتم إضافتهما كاملين.
-3) مقسوم الرواتب ثابت على 30 يومًا.
-4) إصلاح جلسة Supabase عند الانتقال إلى تبويب آخر في المتصفح؛ TOKEN_REFRESHED لا يفتح صفحة تسجيل الدخول ولا يعيد تحميل بيانات الموقع.
+التحديثات:
+- زر Mark Paid مباشر للفواتير المرتبطة بالمشروعات.
+- تسجيل تاريخ استلام الدفعة ورقم التحويل/الإيصال وطريقة الدفع.
+- تحديث حالة الفاتورة تلقائياً في صفحة Invoices وصفحة Project.
+- تحديث Received وOutstanding ولوحة المعلومات بمجرد تسجيل التحصيل.
+- إمكانية إعادة الفاتورة إلى Pending عند الحاجة.
 
-لـ GitHub Pages:
-استبدل ملف index.html القديم بملف index.html الموجود هنا ثم اعمل Commit.
+النشر على GitHub Pages:
+1. استبدل index.html القديم بهذا الملف.
+2. نفذ Commit ثم انتظر تحديث GitHub Pages.
+3. افتح الموقع واضغط Ctrl + F5.

@@ -501,6 +501,11 @@
   .pay-badge.paid { background:#dcfce7; color:#15803d; }
   .pay-badge.pending { background:#fef9c3; color:#854d0e; }
   .pay-badge.overdue { background:#fee2e2; color:#b91c1c; }
+  .pay-action-btn { border:0; border-radius:5px; padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .pay-action-btn.mark-paid { background:#dcfce7; color:#15803d; }
+  .pay-action-btn.mark-paid:hover { background:#bbf7d0; }
+  .pay-action-btn.mark-pending { background:#fef3c7; color:#92400e; }
+  .pay-action-btn.mark-pending:hover { background:#fde68a; }
 
 
   /* ── SAVED QUOTATIONS / INVOICE QUOTATIONS ── */
@@ -2452,7 +2457,7 @@ function renderDashboard(){
           <button class="dash-action" onclick="showTab('proformas',document.querySelector('.side-nav-btn[data-module=proformas]'))">▧ Invoice register</button>
         </div>
         <div class="dash-panel-hdr" style="border-top:1px solid var(--gray-200)"><h3>Recent Invoices</h3></div>
-        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>`<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.client||'')} · ${escHtml(pi.date||'')}</div></div><strong>${fmtSAR((pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div>
+        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · ${escHtml(pi.issueDate||pi.date||'')}</div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div>
       </div>
     </div>`;
 }
@@ -4193,6 +4198,51 @@ function saveProforma(openPreview){
   renderProformas();closeProformaModal();
   if(openPreview)previewProforma(rec.id);else alert('Proforma Invoice saved: '+rec.number);
 }
+function getInvoicePaymentRecord(projectId,sourceProformaId){
+  const project=projects.find(p=>p.id===projectId);
+  if(!project)return null;
+  const payment=(project.payments||[]).find(x=>x.sourceProformaId===sourceProformaId);
+  return payment?{project,payment}:null;
+}
+function invoicePaymentStatus(pi){
+  const rec=pi&&pi.projectId?getInvoicePaymentRecord(pi.projectId,pi.id):null;
+  return rec?.payment?.status||'pending';
+}
+function setInvoicePaymentStatus(projectId,sourceProformaId,newStatus){
+  const rec=getInvoicePaymentRecord(projectId,sourceProformaId);
+  if(!rec){alert('The linked payment record could not be found. Update the Project link for this invoice and try again.');return;}
+  const {project,payment}=rec;
+  if(newStatus==='paid'){
+    const defaultDate=payment.receivedDate||new Date().toISOString().slice(0,10);
+    const receivedDate=prompt('Payment received date (YYYY-MM-DD):',defaultDate);
+    if(receivedDate===null)return;
+    const paymentReference=prompt('Bank transfer / receipt reference (optional):',payment.paymentReference||'');
+    if(paymentReference===null)return;
+    const paymentMethod=prompt('Payment method (optional, e.g. Bank Transfer):',payment.paymentMethod||'Bank Transfer');
+    if(paymentMethod===null)return;
+    payment.status='paid';
+    payment.receivedDate=receivedDate.trim()||defaultDate;
+    payment.paymentReference=paymentReference.trim();
+    payment.paymentMethod=paymentMethod.trim();
+  }else{
+    if(payment.status==='paid'&&!confirm('Change this collected invoice back to Pending? The received amount will be removed from project totals.'))return;
+    payment.status=newStatus;
+    payment.receivedDate='';
+    payment.paymentReference='';
+    payment.paymentMethod='';
+  }
+  project.updatedAt=new Date().toISOString();
+  saveProjects();
+  renderProjects();
+  renderProformas();
+  if(document.body.dataset.module==='dashboard')renderDashboard();
+}
+function invoiceStatusActionHtml(projectId,sourceProformaId,status){
+  if(!projectId||!sourceProformaId)return '';
+  return status==='paid'
+    ? `<button class="pay-action-btn mark-pending" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','pending')">Set Pending</button>`
+    : `<button class="pay-action-btn mark-paid" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','paid')">✓ Mark Paid</button>`;
+}
 function renderProformas(){
   updateProformaBadge();const grid=document.getElementById('pi-grid');if(!grid)return;
   const q=(document.getElementById('pi-search')||{value:''}).value.toLowerCase();
@@ -4200,8 +4250,13 @@ function renderProformas(){
   if(!rows.length){grid.innerHTML='<div class="proj-empty" style="grid-column:1/-1"><div class="pe-icon">📄</div><p>No Proforma Invoices saved yet. Convert a saved quotation to a Project first, then use Create Proforma.</p></div>';return;}
   grid.innerHTML=rows.map(p=>{
     const pt=resolvedProformaCalculation(p);
+    const paymentRec=p.projectId?getInvoicePaymentRecord(p.projectId,p.id):null;
+    const paymentStatus=paymentRec?.payment?.status||'pending';
+    const receiptMeta=paymentStatus==='paid'&&paymentRec?.payment
+      ? [paymentRec.payment.receivedDate,paymentRec.payment.paymentReference].filter(Boolean).join(' · ')
+      : '';
     return `<div class="quote-card ${p.id===activeProformaId?'active-record':''}">
-    <div class="quote-card-hdr"><div class="quote-no">${escHtml(p.number)}</div><span class="quote-type proforma">Proforma</span></div>
+    <div class="quote-card-hdr"><div class="quote-no">${escHtml(p.number)}</div><span class="pay-badge ${escHtml(paymentStatus)}" style="text-transform:uppercase">${escHtml(paymentStatus)}</span></div>
     <div class="quote-card-body">
       <div class="quote-line"><span>Client</span><strong>${escHtml(p.clientName||'-')}</strong></div>
       <div class="quote-line"><span>Project</span><strong>${escHtml(p.projectName||'-')}</strong></div>
@@ -4214,8 +4269,10 @@ function renderProformas(){
       <div class="quote-line"><span>VAT</span><strong>${fmtPiSAR(pt.vatAmount)}</strong></div>
       <div class="quote-line"><span>${p.basis==='percentage'?'Amount due incl. VAT':'Total incl. VAT'}</span><strong>${fmtPiSAR(pt.grandTotal)}</strong></div>
       ${p.projectId?`<div class="quote-line"><span>Linked Project</span><strong style="color:var(--orange-dark)">📁 ${escHtml((projects.find(x=>x.id===p.projectId)||{}).name||'Linked')}</strong></div>`:''}
+      ${receiptMeta?`<div class="quote-line"><span>Payment Receipt</span><strong style="color:#15803d">${escHtml(receiptMeta)}</strong></div>`:''}
     </div>
     <div class="quote-actions">
+      ${p.projectId?invoiceStatusActionHtml(p.projectId,p.id,paymentStatus):''}
       <button class="btn-quote-load" onclick="editProforma('${p.id}')">Load/Edit</button>
       <button class="btn-quote-preview" onclick="previewProforma('${p.id}')">Preview / Print</button>
       <button class="btn-quote-copy" onclick="createNextProforma('${p.id}')">Next Invoice</button>
@@ -4256,7 +4313,16 @@ function syncProformaToProject(pi){
   const idx=p.proformas.findIndex(x=>x.id===pi.id);if(idx>=0)p.proformas[idx]=entry;else p.proformas.push(entry);
   const payIdx=p.payments.findIndex(x=>x.sourceProformaId===pi.id);
   const oldPay=payIdx>=0?p.payments[payIdx]:null;
-  const payEntry={label:'Invoice '+pi.number,amount:calc.grandTotal,date:pi.issueDate,status:oldPay?.status||'pending',sourceProformaId:pi.id};
+  const payEntry={
+    label:'Invoice '+pi.number,
+    amount:calc.grandTotal,
+    date:pi.issueDate,
+    status:oldPay?.status||'pending',
+    sourceProformaId:pi.id,
+    receivedDate:oldPay?.receivedDate||'',
+    paymentReference:oldPay?.paymentReference||'',
+    paymentMethod:oldPay?.paymentMethod||''
+  };
   if(payIdx>=0)p.payments[payIdx]=payEntry;else p.payments.push(payEntry);
   p.updatedAt=new Date().toISOString();saveProjects();if(document.getElementById('proj-grid'))renderProjects();return p;
 }
@@ -4621,11 +4687,13 @@ function renderProjects(){
 
     const payHTML = p.payments.length
       ? p.payments.map(pay=>`
-          <div class="proj-pay-item" style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px">
-            <span style="flex:1">${escHtml(pay.label)}</span>
+          <div class="proj-pay-item" style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px;flex-wrap:wrap">
+            <span style="flex:1;min-width:150px">${escHtml(pay.label)}</span>
             <span style="font-weight:600">${fmtSAR(pay.amount)}</span>
-            ${pay.date?`<span style="color:var(--gray-500);font-size:10px">${escHtml(pay.date)}</span>`:''}
+            ${pay.status==='paid'&&pay.receivedDate?`<span style="color:#15803d;font-size:10px">Received ${escHtml(pay.receivedDate)}</span>`:(pay.date?`<span style="color:var(--gray-500);font-size:10px">Issued ${escHtml(pay.date)}</span>`:'')}
+            ${pay.paymentReference?`<span style="color:var(--gray-500);font-size:10px">Ref: ${escHtml(pay.paymentReference)}</span>`:''}
             <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>
+            ${pay.sourceProformaId?invoiceStatusActionHtml(p.id,pay.sourceProformaId,pay.status):''}
           </div>`).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No installments added</div>';
 
@@ -4645,15 +4713,20 @@ function renderProjects(){
       : '<div style="font-size:11px;color:var(--gray-400)">No quotations linked yet — use "Add as Project" on a saved quotation to link it here.</div>';
 
     const proformaHTML = (p.proformas||[]).length
-      ? p.proformas.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(pe=>`
-          <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px">
-            <span class="pay-badge pending" style="text-transform:uppercase">Proforma</span>
-            <span style="flex:1">${escHtml(pe.number)}</span>
+      ? p.proformas.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(pe=>{
+          const payment=(p.payments||[]).find(x=>x.sourceProformaId===pe.id);
+          const status=payment?.status||'pending';
+          return `
+          <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px;flex-wrap:wrap">
+            <span class="pay-badge ${escHtml(status)}" style="text-transform:uppercase">${escHtml(status)}</span>
+            <span style="flex:1;min-width:120px">${escHtml(pe.number)}</span>
             <span style="color:var(--gray-500);font-size:10px">${escHtml(pe.date||'')}</span>
             <span style="color:var(--gray-500);font-size:9px">${escHtml(pe.basis||'')}</span>
             <span style="font-weight:600">${fmtSAR(pe.total)}</span>
+            ${invoiceStatusActionHtml(p.id,pe.id,status)}
             <button onclick="previewProforma('${pe.id}')" style="background:none;border:none;color:var(--orange);cursor:pointer;font-size:11px;font-weight:600">View</button>
-          </div>`).join('')
+          </div>`;
+        }).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No Proforma Invoices linked yet.</div>';
 
     const commHTML = (p.commissions||[]).length
@@ -4767,12 +4840,27 @@ function renderPmLists(){
       <span style="font-weight:600">${fmtSAR(pay.amount)}</span>
       ${pay.date?`<span style="color:var(--gray-500);font-size:10px">${pay.date}</span>`:''}
       <span class="pay-badge ${pay.status}">${pay.status}</span>
+      ${pay.sourceProformaId?`<button class="pay-action-btn ${pay.status==='paid'?'mark-pending':'mark-paid'}" onclick="pmTogglePaymentStatus(${i})">${pay.status==='paid'?'Set Pending':'✓ Mark Paid'}</button>`:''}
       <button onclick="pmTempPays.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
     </div>`).join('');
   document.getElementById('pm-doc-list').innerHTML = pmTempDocs.map((d,i)=>`
     <div class="proj-doc-item">📎 <a href="${d.url||'#'}" target="_blank">${d.name}</a>
       <button onclick="pmTempDocs.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;margin-left:auto">×</button>
     </div>`).join('');
+}
+
+function pmTogglePaymentStatus(index){
+  const pay=pmTempPays[index];if(!pay)return;
+  if(pay.status==='paid'){
+    if(!confirm('Change this collected invoice back to Pending?'))return;
+    pay.status='pending';pay.receivedDate='';pay.paymentReference='';pay.paymentMethod='';
+  }else{
+    const defaultDate=pay.receivedDate||new Date().toISOString().slice(0,10);
+    const receivedDate=prompt('Payment received date (YYYY-MM-DD):',defaultDate);if(receivedDate===null)return;
+    const reference=prompt('Bank transfer / receipt reference (optional):',pay.paymentReference||'');if(reference===null)return;
+    pay.status='paid';pay.receivedDate=receivedDate.trim()||defaultDate;pay.paymentReference=reference.trim();pay.paymentMethod=pay.paymentMethod||'Bank Transfer';
+  }
+  renderPmLists();
 }
 
 function addProjItem(type){
