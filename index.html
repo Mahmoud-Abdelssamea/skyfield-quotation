@@ -909,11 +909,46 @@
   .project-cost-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0 4px}
   .project-cost-strip>div{background:#f8fafc;border:1px solid var(--gray-200);border-radius:6px;padding:7px;text-align:center}
   .project-cost-strip small{display:block;color:var(--gray-500);font-size:8.5px;text-transform:uppercase;font-weight:700}.project-cost-strip strong{display:block;color:var(--navy);font-size:11.5px;margin-top:2px}
+
+  /* ── MONTHLY TIMESHEETS & PAYROLL v11 ── */
+  .payroll-page{padding:16px}
+  .payroll-controls{display:grid;grid-template-columns:160px minmax(210px,1fr) 120px auto;gap:10px;align-items:end;margin-bottom:12px}
+  .payroll-control{display:flex;flex-direction:column;gap:4px}
+  .payroll-control label{font-size:9.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em}
+  .payroll-control input,.payroll-control select{width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:8px 9px;font:12px 'Inter',sans-serif;background:#fff;outline:none}
+  .payroll-control input:focus,.payroll-control select:focus{border-color:var(--orange)}
+  .payroll-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .payroll-note{padding:9px 11px;border:1px solid var(--navy-light);background:var(--navy-light);border-radius:8px;color:var(--gray-700);font-size:10.5px;line-height:1.5;margin-bottom:12px}
+  .payroll-table-wrap{overflow:auto;border:1px solid var(--gray-200);border-radius:10px;background:#fff}
+  .payroll-table{width:100%;border-collapse:collapse;min-width:1680px;font-size:10.5px}
+  .payroll-table th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;padding:7px 5px;border:1px solid rgba(255,255,255,.14);font-size:8.5px;text-transform:uppercase;letter-spacing:.02em;text-align:center;white-space:nowrap}
+  .payroll-table td{padding:4px;border:1px solid var(--gray-200);vertical-align:middle;background:#fff}
+  .payroll-table tbody tr:nth-child(even) td{background:#f8fafc}
+  .payroll-table input,.payroll-table select{width:100%;min-width:64px;border:1px solid transparent;background:transparent;border-radius:4px;padding:5px;font:10.5px 'Inter',sans-serif;outline:none}
+  .payroll-table input:focus,.payroll-table select:focus{border-color:var(--orange);background:#fff}
+  .payroll-table .name-inp{min-width:160px}.payroll-table .notes-inp{min-width:145px}.payroll-table .id-inp{min-width:90px}
+  .payroll-table .money{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-weight:700;color:var(--navy)}
+  .payroll-table .net-cell{background:#fff7ed!important;color:var(--orange-dark);font-size:11px}
+  .payroll-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}
+  .payroll-summary-box{border:1px solid var(--gray-200);border-radius:9px;padding:10px;background:#fff;text-align:center}
+  .payroll-summary-box .lbl{font-size:8.5px;color:var(--gray-500);font-weight:700;text-transform:uppercase}.payroll-summary-box .val{font-size:15px;color:var(--navy);font-weight:800;margin-top:3px}
+  .payroll-summary-box.total{background:var(--navy)}.payroll-summary-box.total .lbl{color:rgba(255,255,255,.65)}.payroll-summary-box.total .val{color:var(--gold)}
+  .payroll-saved{margin-top:14px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;overflow:hidden}
+  .payroll-saved-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gray-100);border-bottom:1px solid var(--gray-200)}
+  .payroll-saved-hdr h4{flex:1;font-size:12px;color:var(--navy);margin:0}
+  .payroll-saved-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:9px;padding:11px}
+  .payroll-sheet-card{border:1px solid var(--gray-200);border-radius:8px;padding:10px;background:#fff}
+  .payroll-sheet-card strong{display:block;color:var(--navy);font-size:11.5px}.payroll-sheet-card small{display:block;color:var(--gray-500);font-size:9.5px;margin:3px 0 7px}.payroll-sheet-card-actions{display:flex;gap:5px;flex-wrap:wrap}
+  .payroll-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:22px;padding:0 25px 15px;text-align:center;color:var(--gray-700);font-size:11px}.payroll-signatures div{border-top:1px solid var(--gray-700);padding-top:6px}
+  @media(max-width:1050px){.payroll-controls{grid-template-columns:1fr 1fr}.payroll-actions{grid-column:1/-1;justify-content:flex-start}.payroll-summary{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.payroll-controls{grid-template-columns:1fr}.payroll-actions{grid-column:auto}.payroll-summary{grid-template-columns:1fr}.payroll-page{padding:10px}.payroll-signatures{grid-template-columns:1fr;gap:28px}}
+
   @media(max-width:900px){.resource-layout{grid-template-columns:1fr}.cost-summary-grid{grid-template-columns:1fr 1fr}.cost-plan-table{min-width:780px}.cost-plan-section{overflow:auto}}
   @media(max-width:600px){.resource-grid{grid-template-columns:1fr}.resource-grid .span-2{grid-column:auto}.cost-summary-grid{grid-template-columns:1fr}.project-cost-strip{grid-template-columns:1fr}}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
   // ── Shared database config ──
   // Paste your Supabase project URL and anon public key here (Project Settings → API).
@@ -1020,6 +1055,7 @@
     <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Invoices <span class="side-nav-count" id="side-pi-count">0</span></button>
     <div class="side-nav-label">Resources &amp; Costing</div>
     <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon">♙</span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
+    <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon">▦</span>Monthly Timesheets <span class="side-nav-count" id="side-payroll-count">0</span></button>
     <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">⚙</span>Cost Library</button>
   </nav>
   <div class="side-footer">
@@ -1316,6 +1352,10 @@
           <input type="hidden" id="eng-id">
           <div class="resource-grid">
             <div class="resource-field span-2"><label>Engineer Name *</label><input id="eng-name" placeholder="Full name"></div>
+            <div class="resource-field"><label>Nationality</label><input id="eng-nationality" placeholder="e.g. Egyptian"></div>
+            <div class="resource-field"><label>Iqama / ID Number</label><input id="eng-iqama" placeholder="ID number"></div>
+            <div class="resource-field"><label>Employee Number</label><input id="eng-employee-no" placeholder="Employee no."></div>
+            <div class="resource-field"><label>Profession</label><input id="eng-profession" placeholder="Job profession"></div>
             <div class="resource-field"><label>Specialization</label><select id="eng-specialization"><option>Protection</option><option>Testing & Commissioning</option><option>Transformer</option><option>Switchgear</option><option>Cable Testing</option><option>Solar</option><option>Technician</option><option>Project Management</option><option>Other</option></select></div>
             <div class="resource-field"><label>LOA Classification</label><select id="eng-loa"><option value="Non-LOA">Non-LOA</option><option value="C1">C1</option><option value="C2">C2</option></select></div>
             <div class="resource-field"><label>Employment Type</label><select id="eng-employment"><option>Company Employee</option><option>Rental Engineer</option><option>Freelancer</option></select></div>
@@ -1323,13 +1363,60 @@
             <div class="resource-field"><label>Daily Internal Cost (SAR)</label><input id="eng-daily" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Monthly Internal Cost (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Housing & Transport Allowance</label><input id="eng-housing-transport" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Site / Car Allowance</label><input id="eng-site-car" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field span-2"><label>Notes</label><textarea id="eng-notes" rows="3" placeholder="Availability, experience, document notes..."></textarea></div>
           </div>
           <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveEngineerRecord()" id="eng-save-btn">Save Engineer</button><button class="btn-outline" type="button" onclick="resetEngineerForm()">Clear</button></div>
         </div>
         <div class="resource-card">
           <h4>Saved Engineers</h4>
-          <div class="resource-table-wrap"><table class="resource-table"><thead><tr><th>Name</th><th>Specialization</th><th>LOA</th><th>Employment</th><th>Daily</th><th>Monthly</th><th>Status</th><th>Actions</th></tr></thead><tbody id="engineer-table-body"></tbody></table></div>
+          <div class="resource-table-wrap"><table class="resource-table"><thead><tr><th>Name</th><th>Employee / ID</th><th>Specialization</th><th>LOA</th><th>Monthly</th><th>OT/Hr</th><th>Status</th><th>Actions</th></tr></thead><tbody id="engineer-table-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- MONTHLY TIMESHEETS / PAYROLL TAB -->
+    <div id="tab-payroll" style="display:none">
+      <div class="resource-toolbar">
+        <h3>Monthly Timesheets &amp; Payroll <span style="font-family:Tajawal,sans-serif;font-weight:500">— كشف الحضور والرواتب</span></h3>
+        <span style="font-size:10.5px;color:var(--gray-500)">Payroll totals can be posted to the selected project's actual cost.</span>
+      </div>
+      <div class="payroll-page">
+        <div class="payroll-controls">
+          <div class="payroll-control"><label>Payroll Month</label><input id="payroll-month" type="month" onchange="payrollMonthChanged()"></div>
+          <div class="payroll-control"><label>Project</label><select id="payroll-project" onchange="payrollProjectChanged()"><option value="">General / Not assigned</option></select></div>
+          <div class="payroll-control"><label>Standard Days</label><input id="payroll-standard-days" type="number" min="1" max="31" value="30" onchange="payrollSetHeader('standardDays',this.value)"></div>
+          <div class="payroll-actions">
+            <button class="btn-outline" type="button" onclick="payrollNewSheet()">New Sheet</button>
+            <button class="btn-outline" type="button" onclick="payrollLoadProjectEngineers()">Load Engineers</button>
+            <button class="btn-outline" type="button" onclick="payrollAddRow()">+ Add Row</button>
+            <button class="btn-primary" type="button" onclick="payrollSaveSheet()">Save Month</button>
+          </div>
+        </div>
+        <div class="payroll-note">Attendance salary is calculated as <strong>Basic Salary × Attendance Days ÷ Standard Days</strong>. Allowances, overtime and deductions remain editable. Saving the sheet posts one consolidated payroll expense to the selected project's <strong>Actual Expenses</strong>; saving again updates that same expense instead of duplicating it.</div>
+        <div class="payroll-table-wrap">
+          <table class="payroll-table">
+            <thead><tr>
+              <th>#</th><th>Name / الاسم</th><th>Nationality</th><th>Iqama / ID</th><th>Employee No.</th><th>Profession</th>
+              <th>Basic Salary</th><th>Housing &amp; Transport</th><th>Site / Car Allowance</th><th>Other Allowance</th>
+              <th>Attendance Days</th><th>Attendance Salary</th><th>OT Hours</th><th>OT Rate</th><th>OT Amount</th>
+              <th>Other Earnings</th><th>Deductions</th><th>Net Total</th><th>Notes</th><th></th>
+            </tr></thead>
+            <tbody id="payroll-table-body"></tbody>
+          </table>
+        </div>
+        <div class="payroll-summary" id="payroll-summary"></div>
+        <div class="payroll-actions" style="justify-content:flex-start;margin-bottom:12px">
+          <button class="btn-outline" type="button" onclick="payrollExportXlsx()">Export Excel</button>
+          <button class="btn-outline" type="button" onclick="payrollPrint()">Print / Save PDF</button>
+          <button class="btn-outline" type="button" onclick="payrollApproveCurrent()">Approve Sheet</button>
+        </div>
+        <div class="payroll-signatures"><div>General Manager<br>المدير العام</div><div>Accounts<br>الحسابات</div><div>HR Department<br>إدارة شؤون الموظفين</div></div>
+        <div class="payroll-saved">
+          <div class="payroll-saved-hdr"><h4>Saved Monthly Sheets</h4><input class="quote-search" id="payroll-search" placeholder="Search month / project..." oninput="payrollRenderSaved()"></div>
+          <div class="payroll-saved-list" id="payroll-saved-list"></div>
         </div>
       </div>
     </div>
@@ -2275,7 +2362,8 @@ const APP_PAGE_META = {
   projects: ['Projects','Track contract value, invoices, receipts, documents, and commission.'],
   quotes: ['Quotations','Review saved offers and convert approved quotations into projects.'],
   proformas: ['Invoices','Create and track advance, progress-based, fixed, and full invoices.'],
-  engineers: ['Engineers','Maintain engineer availability, LOA classification, and internal rates.'],
+  engineers: ['Engineers','Maintain engineer availability, LOA classification, payroll details, and internal rates.'],
+  payroll: ['Monthly Timesheets','Prepare monthly attendance, payroll, approvals, Excel export, and actual project cost.'],
   costsettings: ['Cost Library','Maintain equipment rates and default logistics costs for internal estimates.']
 };
 
@@ -2301,6 +2389,7 @@ function updateSidebarCounts(){
   try{ set('side-project-count',projects.length); }catch(e){}
   try{ set('side-pi-count',proformaInvoices.length); }catch(e){}
   try{ set('side-engineer-count',sfEngineers.length); }catch(e){}
+  try{ set('side-payroll-count',sfPayrollSheets.length); }catch(e){}
 }
 function setupQuotationFieldGroups(){
   const advancedIds=['vat','profit','discount-type','discount-value','commission','prep-name','prep-email','substation'];
@@ -2349,7 +2438,7 @@ function renderDashboard(){
 
 function showTab(name,btn){
   const builderTabs=['activities','equipment','costplanning','conditions'];
-  const allTabs=['dashboard','activities','equipment','costplanning','conditions','projects','quotes','proformas','engineers','costsettings'];
+  const allTabs=['dashboard','activities','equipment','costplanning','conditions','projects','quotes','proformas','engineers','payroll','costsettings'];
   const isBuilder=builderTabs.includes(name);
   document.body.dataset.module=isBuilder?'quotation':name;
   allTabs.forEach(t=>{
@@ -2371,6 +2460,7 @@ function showTab(name,btn){
     else if(name==='quotes'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
     else if(name==='dashboard'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
     else if(name==='engineers'){primary.textContent='+ Add Engineer';primary.onclick=()=>{resetEngineerForm();document.getElementById('eng-name')?.focus();};}
+    else if(name==='payroll'){primary.textContent='Save Monthly Sheet';primary.onclick=()=>payrollSaveSheet();}
     else if(name==='costsettings'){primary.textContent='+ Add Equipment Rate';primary.onclick=()=>{resetCostEquipmentForm();document.getElementById('cost-eq-name')?.focus();};}
     else {primary.textContent='Save Quotation';primary.onclick=()=>saveCurrentQuotation(false,'quotation');}
   }
@@ -2379,6 +2469,7 @@ function showTab(name,btn){
   if(name==='quotes') renderSavedQuotations();
   if(name==='proformas') renderProformas();
   if(name==='engineers') renderEngineers();
+  if(name==='payroll') payrollRender();
   if(name==='costsettings') renderCostLibrary();
   if(name==='costplanning') renderCostPlan();
   updateSidebarCounts();
@@ -4266,8 +4357,8 @@ function saveCostEquipmentLibrary(){localStorage.setItem('sfCostEquipment',JSON.
 function saveCurrentCostPlan(){renderCostPlan();}
 
 function resetEngineerForm(){
-  ['eng-id','eng-name','eng-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
-  const defaults={'eng-specialization':'Protection','eng-loa':'Non-LOA','eng-employment':'Company Employee','eng-status':'available','eng-daily':'0','eng-monthly':'0','eng-overtime':'0'};
+  ['eng-id','eng-name','eng-nationality','eng-iqama','eng-employee-no','eng-profession','eng-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  const defaults={'eng-specialization':'Protection','eng-loa':'Non-LOA','eng-employment':'Company Employee','eng-status':'available','eng-daily':'0','eng-monthly':'0','eng-overtime':'0','eng-housing-transport':'0','eng-site-car':'0'};
   Object.entries(defaults).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v});
   const t=document.getElementById('engineer-form-title');if(t)t.textContent='Add Engineer';
   const b=document.getElementById('eng-save-btn');if(b)b.textContent='Save Engineer';
@@ -4275,19 +4366,61 @@ function resetEngineerForm(){
 function saveEngineerRecord(){
   const name=(document.getElementById('eng-name')?.value||'').trim();if(!name){alert('Engineer name is required.');return;}
   const id=document.getElementById('eng-id')?.value||sfUid('eng');
-  const rec={id,name,specialization:document.getElementById('eng-specialization').value,loa:document.getElementById('eng-loa').value,employment:document.getElementById('eng-employment').value,status:document.getElementById('eng-status').value,daily:sfNum(document.getElementById('eng-daily').value),monthly:sfNum(document.getElementById('eng-monthly').value),overtime:sfNum(document.getElementById('eng-overtime').value),notes:(document.getElementById('eng-notes').value||'').trim(),updatedAt:new Date().toISOString()};
+  const rec={id,name,nationality:(document.getElementById('eng-nationality').value||'').trim(),iqama:(document.getElementById('eng-iqama').value||'').trim(),employeeNo:(document.getElementById('eng-employee-no').value||'').trim(),profession:(document.getElementById('eng-profession').value||'').trim(),specialization:document.getElementById('eng-specialization').value,loa:document.getElementById('eng-loa').value,employment:document.getElementById('eng-employment').value,status:document.getElementById('eng-status').value,daily:sfNum(document.getElementById('eng-daily').value),monthly:sfNum(document.getElementById('eng-monthly').value),overtime:sfNum(document.getElementById('eng-overtime').value),housingTransport:sfNum(document.getElementById('eng-housing-transport').value),siteCar:sfNum(document.getElementById('eng-site-car').value),notes:(document.getElementById('eng-notes').value||'').trim(),updatedAt:new Date().toISOString()};
   const i=sfEngineers.findIndex(x=>x.id===id);if(i>=0)sfEngineers[i]=rec;else sfEngineers.unshift(rec);
   saveEngineerLibrary();resetEngineerForm();
 }
-function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('eng-id',x.id);set('eng-name',x.name);set('eng-specialization',x.specialization);set('eng-loa',x.loa);set('eng-employment',x.employment);set('eng-status',x.status);set('eng-daily',x.daily);set('eng-monthly',x.monthly);set('eng-overtime',x.overtime);set('eng-notes',x.notes);document.getElementById('engineer-form-title').textContent='Edit Engineer';document.getElementById('eng-save-btn').textContent='Update Engineer';window.scrollTo({top:0,behavior:'smooth'});}
+function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('eng-id',x.id);set('eng-name',x.name);set('eng-nationality',x.nationality);set('eng-iqama',x.iqama);set('eng-employee-no',x.employeeNo);set('eng-profession',x.profession);set('eng-specialization',x.specialization);set('eng-loa',x.loa);set('eng-employment',x.employment);set('eng-status',x.status);set('eng-daily',x.daily);set('eng-monthly',x.monthly);set('eng-overtime',x.overtime);set('eng-housing-transport',x.housingTransport);set('eng-site-car',x.siteCar);set('eng-notes',x.notes);document.getElementById('engineer-form-title').textContent='Edit Engineer';document.getElementById('eng-save-btn').textContent='Update Engineer';window.scrollTo({top:0,behavior:'smooth'});}
 function deleteEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x||!confirm('Delete engineer '+x.name+'?'))return;sfEngineers=sfEngineers.filter(e=>e.id!==id);saveEngineerLibrary();}
 function renderEngineers(){
   const body=document.getElementById('engineer-table-body');if(!body)return;
   const q=(document.getElementById('engineer-search')?.value||'').toLowerCase();
   const list=sfEngineers.filter(x=>[x.name,x.specialization,x.loa,x.employment,x.status].join(' ').toLowerCase().includes(q));
-  body.innerHTML=list.length?list.map(x=>`<tr><td><strong>${escHtml(x.name)}</strong>${x.notes?`<div style="font-size:9.5px;color:var(--gray-500);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(x.notes)}</div>`:''}</td><td>${escHtml(x.specialization||'')}</td><td>${escHtml(x.loa||'')}</td><td>${escHtml(x.employment||'')}</td><td>${fmtSAR(x.daily)}</td><td>${fmtSAR(x.monthly)}</td><td><span class="status-pill ${escHtml(x.status||'available')}">${escHtml((x.status||'available').replace('_',' '))}</span></td><td style="white-space:nowrap"><button class="btn-sm" onclick="editEngineerRecord('${x.id}')">Edit</button> <button class="btn-sm" onclick="deleteEngineerRecord('${x.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty-resource">No engineers saved yet.</div></td></tr>`;
+  body.innerHTML=list.length?list.map(x=>`<tr><td><strong>${escHtml(x.name)}</strong>${x.notes?`<div style="font-size:9.5px;color:var(--gray-500);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(x.notes)}</div>`:''}</td><td>${escHtml(x.employeeNo||'—')}<div style="font-size:9px;color:var(--gray-500)">${escHtml(x.iqama||'')}</div></td><td>${escHtml(x.specialization||'')}</td><td>${escHtml(x.loa||'')}</td><td>${fmtSAR(x.monthly)}</td><td>${fmtSAR(x.overtime)}</td><td><span class="status-pill ${escHtml(x.status||'available')}">${escHtml((x.status||'available').replace('_',' '))}</span></td><td style="white-space:nowrap"><button class="btn-sm" onclick="editEngineerRecord('${x.id}')">Edit</button> <button class="btn-sm" onclick="deleteEngineerRecord('${x.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty-resource">No engineers saved yet.</div></td></tr>`;
   updateSidebarCounts();
 }
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MONTHLY TIMESHEETS & PAYROLL v11
+// ══════════════════════════════════════════════════════════════════════════════
+let sfPayrollSheets = JSON.parse(localStorage.getItem('sfPayrollSheets')||'[]');
+let sfCurrentPayroll = null;
+function payrollMoney(v){return (parseFloat(v)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function payrollDefaultMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function payrollBlankSheet(){return{id:sfUid('pay'),month:document.getElementById('payroll-month')?.value||payrollDefaultMonth(),projectId:document.getElementById('payroll-project')?.value||'',standardDays:30,status:'draft',rows:[],notes:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
+function payrollRowFromEngineer(e){return{id:sfUid('pr'),engineerId:e?.id||'',name:e?.name||'',nationality:e?.nationality||'',iqama:e?.iqama||'',employeeNo:e?.employeeNo||'',profession:e?.profession||e?.specialization||'',baseSalary:sfNum(e?.monthly),housingTransport:sfNum(e?.housingTransport),siteCar:sfNum(e?.siteCar),otherAllowance:0,attendanceDays:0,overtimeHours:0,overtimeRate:sfNum(e?.overtime),otherEarnings:0,deductions:0,notes:''}}
+function payrollCalcRow(r){const days=Math.max(1,sfNum(sfCurrentPayroll?.standardDays)||30);const attendance=Math.min(days,sfNum(r.attendanceDays));const attendanceSalary=sfNum(r.baseSalary)*attendance/days;const overtimeAmount=sfNum(r.overtimeHours)*sfNum(r.overtimeRate);const allowances=sfNum(r.housingTransport)+sfNum(r.siteCar)+sfNum(r.otherAllowance);const gross=attendanceSalary+allowances+overtimeAmount+sfNum(r.otherEarnings);const net=Math.max(0,gross-sfNum(r.deductions));return{attendanceSalary,overtimeAmount,allowances,gross,net}}
+function payrollTotals(){return(sfCurrentPayroll?.rows||[]).reduce((a,r)=>{const c=payrollCalcRow(r);a.basic+=sfNum(r.baseSalary);a.attendance+=c.attendanceSalary;a.allowances+=c.allowances;a.overtime+=c.overtimeAmount;a.deductions+=sfNum(r.deductions);a.net+=c.net;return a},{basic:0,attendance:0,allowances:0,overtime:0,deductions:0,net:0})}
+function payrollSaveStore(){localStorage.setItem('sfPayrollSheets',JSON.stringify(sfPayrollSheets));updateSidebarCounts();payrollRenderSaved()}
+function payrollPopulateProjects(){const sel=document.getElementById('payroll-project');if(!sel)return;const current=sfCurrentPayroll?.projectId??sel.value;sel.innerHTML='<option value="">General / Not assigned</option>'+projects.map(p=>`<option value="${p.id}">${escHtml(p.name)}${p.client?' — '+escHtml(p.client):''}</option>`).join('');sel.value=current||''}
+function payrollNewSheet(){sfCurrentPayroll=payrollBlankSheet();const m=document.getElementById('payroll-month');if(m&&!m.value)m.value=sfCurrentPayroll.month;payrollPopulateProjects();payrollRender()}
+function payrollMonthChanged(){if(!sfCurrentPayroll)payrollNewSheet();sfCurrentPayroll.month=document.getElementById('payroll-month').value||payrollDefaultMonth();sfCurrentPayroll.updatedAt=new Date().toISOString();payrollRenderSaved()}
+function payrollProjectChanged(){if(!sfCurrentPayroll)payrollNewSheet();sfCurrentPayroll.projectId=document.getElementById('payroll-project').value||'';sfCurrentPayroll.updatedAt=new Date().toISOString()}
+function payrollSetHeader(field,value){if(!sfCurrentPayroll)payrollNewSheet();sfCurrentPayroll[field]=field==='standardDays'?Math.max(1,Math.min(31,sfNum(value)||30)):value;payrollRenderRows()}
+function payrollAddRow(engineerId=''){if(!sfCurrentPayroll)payrollNewSheet();const e=sfEngineers.find(x=>x.id===engineerId);sfCurrentPayroll.rows.push(payrollRowFromEngineer(e));payrollRenderRows()}
+function payrollLoadProjectEngineers(){if(!sfCurrentPayroll)payrollNewSheet();const p=projects.find(x=>x.id===document.getElementById('payroll-project').value);let ids=[];if(p)ids=(p.assignedEngineers||[]).map(x=>x.engineerId).filter(Boolean);const source=ids.length?ids.map(id=>sfEngineers.find(e=>e.id===id)).filter(Boolean):sfEngineers;if(!source.length){alert('No engineers are available. Add engineers first.');return;}const existing=new Set((sfCurrentPayroll.rows||[]).map(r=>r.engineerId).filter(Boolean));source.forEach(e=>{if(!existing.has(e.id))sfCurrentPayroll.rows.push(payrollRowFromEngineer(e))});payrollRenderRows()}
+function payrollSetRow(id,field,value){const r=sfCurrentPayroll?.rows.find(x=>x.id===id);if(!r)return;if(field==='engineerId'){const e=sfEngineers.find(x=>x.id===value);const fresh=payrollRowFromEngineer(e);Object.assign(r,fresh,{id:r.id,attendanceDays:r.attendanceDays||0,notes:r.notes||''});}else r[field]=['baseSalary','housingTransport','siteCar','otherAllowance','attendanceDays','overtimeHours','overtimeRate','otherEarnings','deductions'].includes(field)?sfNum(value):value;sfCurrentPayroll.updatedAt=new Date().toISOString();payrollRenderRows()}
+function payrollRemoveRow(id){if(!sfCurrentPayroll)return;sfCurrentPayroll.rows=sfCurrentPayroll.rows.filter(r=>r.id!==id);payrollRenderRows()}
+function payrollEngineerOptions(selected){return '<option value="">Manual employee</option>'+sfEngineers.map(e=>`<option value="${e.id}" ${selected===e.id?'selected':''}>${escHtml(e.name)}</option>`).join('')}
+function payrollRenderRows(){const body=document.getElementById('payroll-table-body');if(!body||!sfCurrentPayroll)return;body.innerHTML=sfCurrentPayroll.rows.length?sfCurrentPayroll.rows.map((r,i)=>{const c=payrollCalcRow(r);return`<tr>
+<td style="text-align:center">${i+1}</td>
+<td><select onchange="payrollSetRow('${r.id}','engineerId',this.value)" style="min-width:160px">${payrollEngineerOptions(r.engineerId)}</select><input class="name-inp" value="${escHtml(r.name)}" placeholder="Employee name" onchange="payrollSetRow('${r.id}','name',this.value)"></td>
+<td><input value="${escHtml(r.nationality)}" onchange="payrollSetRow('${r.id}','nationality',this.value)"></td><td><input class="id-inp" value="${escHtml(r.iqama)}" onchange="payrollSetRow('${r.id}','iqama',this.value)"></td><td><input class="id-inp" value="${escHtml(r.employeeNo)}" onchange="payrollSetRow('${r.id}','employeeNo',this.value)"></td><td><input value="${escHtml(r.profession)}" onchange="payrollSetRow('${r.id}','profession',this.value)"></td>
+<td><input type="number" value="${r.baseSalary}" onchange="payrollSetRow('${r.id}','baseSalary',this.value)"></td><td><input type="number" value="${r.housingTransport}" onchange="payrollSetRow('${r.id}','housingTransport',this.value)"></td><td><input type="number" value="${r.siteCar}" onchange="payrollSetRow('${r.id}','siteCar',this.value)"></td><td><input type="number" value="${r.otherAllowance}" onchange="payrollSetRow('${r.id}','otherAllowance',this.value)"></td>
+<td><input type="number" min="0" max="31" value="${r.attendanceDays}" onchange="payrollSetRow('${r.id}','attendanceDays',this.value)"></td><td class="money">${payrollMoney(c.attendanceSalary)}</td><td><input type="number" min="0" value="${r.overtimeHours}" onchange="payrollSetRow('${r.id}','overtimeHours',this.value)"></td><td><input type="number" min="0" value="${r.overtimeRate}" onchange="payrollSetRow('${r.id}','overtimeRate',this.value)"></td><td class="money">${payrollMoney(c.overtimeAmount)}</td>
+<td><input type="number" min="0" value="${r.otherEarnings}" onchange="payrollSetRow('${r.id}','otherEarnings',this.value)"></td><td><input type="number" min="0" value="${r.deductions}" onchange="payrollSetRow('${r.id}','deductions',this.value)"></td><td class="money net-cell">${payrollMoney(c.net)}</td><td><input class="notes-inp" value="${escHtml(r.notes)}" onchange="payrollSetRow('${r.id}','notes',this.value)"></td><td><button class="rm-btn" onclick="payrollRemoveRow('${r.id}')">×</button></td></tr>`}).join(''):'<tr><td colspan="20"><div class="empty-resource">No employees added. Select a project and click Load Engineers, or add a row manually.</div></td></tr>';const t=payrollTotals();const sum=document.getElementById('payroll-summary');if(sum)sum.innerHTML=`<div class="payroll-summary-box"><div class="lbl">Attendance Salary</div><div class="val">${fmtSAR(t.attendance)}</div></div><div class="payroll-summary-box"><div class="lbl">Allowances</div><div class="val">${fmtSAR(t.allowances)}</div></div><div class="payroll-summary-box"><div class="lbl">Overtime</div><div class="val">${fmtSAR(t.overtime)}</div></div><div class="payroll-summary-box"><div class="lbl">Deductions</div><div class="val">${fmtSAR(t.deductions)}</div></div><div class="payroll-summary-box total"><div class="lbl">Net Payroll Total</div><div class="val">${fmtSAR(t.net)}</div></div>`}
+function payrollRender(){if(!sfCurrentPayroll)sfCurrentPayroll=payrollBlankSheet();const m=document.getElementById('payroll-month');if(m)m.value=sfCurrentPayroll.month||payrollDefaultMonth();const d=document.getElementById('payroll-standard-days');if(d)d.value=sfCurrentPayroll.standardDays||30;payrollPopulateProjects();payrollRenderRows();payrollRenderSaved()}
+function payrollPostProjectExpense(sheet){projects.forEach(p=>{if(!Array.isArray(p.actualExpenses))p.actualExpenses=[];p.actualExpenses=p.actualExpenses.filter(e=>e.sourceId!==sheet.id)});if(!sheet.projectId)return;const p=projects.find(x=>x.id===sheet.projectId);if(!p)return;const total=(sheet.rows||[]).reduce((s,r)=>s+payrollCalcStandalone(r,sheet.standardDays).net,0);p.actualExpenses.push({id:'exp_'+sheet.id,source:'payroll',sourceId:sheet.id,category:'Payroll',description:`Monthly payroll ${sheet.month}`,amount:total,date:(sheet.month||payrollDefaultMonth())+'-01'});p.updatedAt=new Date().toISOString();saveProjects()}
+function payrollCalcStandalone(r,standardDays){const days=Math.max(1,sfNum(standardDays)||30);const attendanceSalary=sfNum(r.baseSalary)*Math.min(days,sfNum(r.attendanceDays))/days;const overtimeAmount=sfNum(r.overtimeHours)*sfNum(r.overtimeRate);const allowances=sfNum(r.housingTransport)+sfNum(r.siteCar)+sfNum(r.otherAllowance);const gross=attendanceSalary+allowances+overtimeAmount+sfNum(r.otherEarnings);return{attendanceSalary,overtimeAmount,allowances,gross,net:Math.max(0,gross-sfNum(r.deductions))}}
+function payrollSaveSheet(){if(!sfCurrentPayroll)payrollNewSheet();if(!sfCurrentPayroll.month){alert('Select the payroll month.');return}if(!sfCurrentPayroll.rows.length){alert('Add at least one employee.');return}sfCurrentPayroll.projectId=document.getElementById('payroll-project').value||'';sfCurrentPayroll.standardDays=Math.max(1,sfNum(document.getElementById('payroll-standard-days').value)||30);sfCurrentPayroll.updatedAt=new Date().toISOString();const copy=deepClone(sfCurrentPayroll);const idx=sfPayrollSheets.findIndex(x=>x.id===copy.id);if(idx>=0)sfPayrollSheets[idx]=copy;else sfPayrollSheets.unshift(copy);payrollSaveStore();payrollPostProjectExpense(copy);setCloudStatus('saved','Saved to cloud');alert('Monthly timesheet saved and project actual cost updated.')}
+function payrollLoadSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(!x)return;sfCurrentPayroll=deepClone(x);payrollRender();window.scrollTo({top:0,behavior:'smooth'})}
+function payrollDeleteSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(!x||!confirm('Delete this monthly sheet?'))return;sfPayrollSheets=sfPayrollSheets.filter(s=>s.id!==id);projects.forEach(p=>{p.actualExpenses=(p.actualExpenses||[]).filter(e=>e.sourceId!==id)});saveProjects();payrollSaveStore();if(sfCurrentPayroll?.id===id)payrollNewSheet()}
+function payrollApproveCurrent(){if(!sfCurrentPayroll)return;sfCurrentPayroll.status='approved';payrollSaveSheet()}
+function payrollRenderSaved(){const root=document.getElementById('payroll-saved-list');if(!root)return;const q=(document.getElementById('payroll-search')?.value||'').toLowerCase();const list=sfPayrollSheets.filter(s=>{const p=projects.find(x=>x.id===s.projectId);return[s.month,p?.name,s.status].join(' ').toLowerCase().includes(q)});root.innerHTML=list.length?list.map(s=>{const p=projects.find(x=>x.id===s.projectId);const total=(s.rows||[]).reduce((a,r)=>a+payrollCalcStandalone(r,s.standardDays).net,0);return`<div class="payroll-sheet-card"><strong>${escHtml(s.month)} — ${escHtml(p?.name||'General')}</strong><small>${s.rows.length} employees · ${fmtSAR(total)} · ${escHtml(s.status||'draft')}</small><div class="payroll-sheet-card-actions"><button class="btn-sm" onclick="payrollLoadSheet('${s.id}')">Open</button><button class="btn-sm" onclick="payrollExportXlsx('${s.id}')">Excel</button><button class="btn-sm" onclick="payrollDeleteSheet('${s.id}')">Delete</button></div></div>`}).join(''):'<div class="empty-resource" style="grid-column:1/-1">No monthly sheets saved yet.</div>';updateSidebarCounts()}
+function payrollSheetForAction(id){return id?sfPayrollSheets.find(x=>x.id===id):sfCurrentPayroll}
+function payrollExportXlsx(id=''){const sheet=payrollSheetForAction(id);if(!sheet||!sheet.rows.length){alert('No payroll data to export.');return}if(typeof XLSX==='undefined'){alert('Excel export library did not load. Check your internet connection.');return}const p=projects.find(x=>x.id===sheet.projectId);const headers=['م','الاسم','الجنسية','رقم الإقامة','رقم وظيفي','المهنة','الراتب الأساسي','بدل سكن ونقل','بدل موقع / سيارة','بدلات أخرى','عدد أيام الحضور','إجمالي الراتب بالحضور','ساعات إضافية','سعر الساعة','إجمالي الإضافي','مكافآت أخرى','خصومات','الإجمالي','ملاحظات'];const data=[[`رواتب شركة سماء الميدان — ${sheet.month}${p?' — '+p.name:''}`],[],headers];sheet.rows.forEach((r,i)=>{const c=payrollCalcStandalone(r,sheet.standardDays);data.push([i+1,r.name,r.nationality,r.iqama,r.employeeNo,r.profession,r.baseSalary,r.housingTransport,r.siteCar,r.otherAllowance,r.attendanceDays,c.attendanceSalary,r.overtimeHours,r.overtimeRate,c.overtimeAmount,r.otherEarnings,r.deductions,c.net,r.notes])});const totals=sheet.rows.reduce((a,r)=>{const c=payrollCalcStandalone(r,sheet.standardDays);a[6]+=sfNum(r.baseSalary);a[7]+=sfNum(r.housingTransport);a[8]+=sfNum(r.siteCar);a[9]+=sfNum(r.otherAllowance);a[11]+=c.attendanceSalary;a[14]+=c.overtimeAmount;a[15]+=sfNum(r.otherEarnings);a[16]+=sfNum(r.deductions);a[17]+=c.net;return a},Array(19).fill(''));totals[0]='الإجمالي';data.push(totals,[],['المدير العام','','','','','','الحسابات','','','','','','إدارة شؤون الموظفين']);const ws=XLSX.utils.aoa_to_sheet(data);ws['!merges']=[XLSX.utils.decode_range('A1:S1')];ws['!cols']=[{wch:5},{wch:25},{wch:12},{wch:16},{wch:13},{wch:18},...Array(12).fill({wch:14}),{wch:22}];ws['!views']=[{rightToLeft:true}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'الشهر '+sheet.month);XLSX.writeFile(wb,`Sama_AlMaydan_Timesheet_${sheet.month}.xlsx`)}
+function payrollPrint(){const sheet=sfCurrentPayroll;if(!sheet||!sheet.rows.length){alert('No payroll data to print.');return}const p=projects.find(x=>x.id===sheet.projectId);const rows=sheet.rows.map((r,i)=>{const c=payrollCalcStandalone(r,sheet.standardDays);return`<tr><td>${i+1}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.employeeNo)}</td><td>${payrollMoney(r.baseSalary)}</td><td>${r.attendanceDays}</td><td>${payrollMoney(c.attendanceSalary)}</td><td>${payrollMoney(c.allowances)}</td><td>${payrollMoney(c.overtimeAmount)}</td><td>${payrollMoney(r.deductions)}</td><td>${payrollMoney(c.net)}</td><td>${escHtml(r.notes)}</td></tr>`}).join('');const total=sheet.rows.reduce((a,r)=>a+payrollCalcStandalone(r,sheet.standardDays).net,0);const w=window.open('','_blank');w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>Timesheet ${sheet.month}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:18px;color:#111}h2{text-align:center;color:#1F3864}.sub{text-align:center;margin-bottom:14px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#1F3864;color:#fff}th,td{border:1px solid #777;padding:5px;text-align:center}.total{background:#fff4cf;font-weight:bold}.sigs{display:grid;grid-template-columns:repeat(3,1fr);gap:60px;margin-top:55px;text-align:center}.sigs div{border-top:1px solid #222;padding-top:7px}@media print{@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>رواتب شركة سماء الميدان — الشهر ${escHtml(sheet.month)}</h2><div class="sub">${escHtml(p?.name||'عام')} · أيام الشهر المعتمدة: ${sheet.standardDays}</div><table><thead><tr><th>م</th><th>الاسم</th><th>الرقم الوظيفي</th><th>الراتب الأساسي</th><th>الحضور</th><th>راتب الحضور</th><th>البدلات</th><th>الإضافي</th><th>الخصومات</th><th>الإجمالي</th><th>ملاحظات</th></tr></thead><tbody>${rows}<tr class="total"><td colspan="9">الإجمالي</td><td>${payrollMoney(total)}</td><td></td></tr></tbody></table><div class="sigs"><div>المدير العام</div><div>الحسابات</div><div>إدارة شؤون الموظفين</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
 
 function resetCostEquipmentForm(){['cost-eq-id','cost-eq-name','cost-eq-category'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});['cost-eq-daily','cost-eq-weekly','cost-eq-monthly'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='0'});const t=document.getElementById('cost-eq-form-title');if(t)t.textContent='Add Equipment Rate';const b=document.getElementById('cost-eq-save-btn');if(b)b.textContent='Save Equipment';}
 function saveCostEquipmentRecord(){const name=(document.getElementById('cost-eq-name')?.value||'').trim();if(!name){alert('Equipment name is required.');return;}const id=document.getElementById('cost-eq-id').value||sfUid('ceq');const rec={id,name,category:(document.getElementById('cost-eq-category').value||'').trim(),daily:sfNum(document.getElementById('cost-eq-daily').value),weekly:sfNum(document.getElementById('cost-eq-weekly').value),monthly:sfNum(document.getElementById('cost-eq-monthly').value),updatedAt:new Date().toISOString()};const i=sfCostEquipment.findIndex(x=>x.id===id);if(i>=0)sfCostEquipment[i]=rec;else sfCostEquipment.unshift(rec);saveCostEquipmentLibrary();resetCostEquipmentForm();}
@@ -4675,6 +4808,7 @@ updateProformaAvailabilityControls();
 renderProformas();
 
 // ── UI initialization ──
+if(!sfCurrentPayroll) sfCurrentPayroll=payrollBlankSheet();
 setupQuotationFieldGroups();
 updateSidebarCounts();
 window.addEventListener('online',()=>{
@@ -4684,8 +4818,8 @@ window.addEventListener('offline',()=>setCloudStatus('offline','Offline — loca
 setCloudStatus('saving','Checking secure session…');
 const initialModule=localStorage.getItem('sfLastModule')||'dashboard';
 setTimeout(()=>{
-  const safe=['dashboard','activities','equipment','conditions','projects','quotes','proformas'].includes(initialModule)?initialModule:'dashboard';
-  showTab(safe,document.querySelector(`.side-nav-btn[data-module="${['activities','equipment','conditions'].includes(safe)?'activities':safe}"]`));
+  const safe=['dashboard','activities','equipment','costplanning','conditions','projects','quotes','proformas','engineers','payroll','costsettings'].includes(initialModule)?initialModule:'dashboard';
+  showTab(safe,document.querySelector(`.side-nav-btn[data-module="${['activities','equipment','costplanning','conditions'].includes(safe)?'activities':safe}"]`));
 },0);
 
 // Authentication is the final gate. The application remains hidden until a
