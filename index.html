@@ -1345,7 +1345,13 @@
 
     <!-- ENGINEERS TAB -->
     <div id="tab-engineers" style="display:none">
-      <div class="resource-toolbar"><h3>Engineers Database</h3><input class="quote-search" id="engineer-search" placeholder="Search name / specialization / LOA..." oninput="renderEngineers()"></div>
+      <div class="resource-toolbar">
+        <h3>Engineers Database</h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="quote-search" id="engineer-search" placeholder="Search name / ID / nationality / LOA..." oninput="renderEngineers()">
+          <button class="btn-outline" type="button" onclick="importSkyFieldEngineers(true)">Import Sky Field Engineers</button>
+        </div>
+      </div>
       <div class="resource-layout">
         <div class="resource-form">
           <h4 id="engineer-form-title">Add Engineer</h4>
@@ -1361,7 +1367,7 @@
             <div class="resource-field"><label>Employment Type</label><select id="eng-employment"><option>Company Employee</option><option>Rental Engineer</option><option>Freelancer</option></select></div>
             <div class="resource-field"><label>Status</label><select id="eng-status"><option value="available">Available</option><option value="assigned">Assigned</option><option value="leave">On Leave</option><option value="unavailable">Unavailable</option></select></div>
             <div class="resource-field"><label>Daily Internal Cost (SAR)</label><input id="eng-daily" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Monthly Internal Cost (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Basic Monthly Salary (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Housing & Transport Allowance</label><input id="eng-housing-transport" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Site / Car Allowance</label><input id="eng-site-car" type="number" min="0" step="0.01" value="0"></div>
@@ -4345,6 +4351,17 @@ function closeProformaPreview(){const el=document.getElementById('proforma-previ
 // ENGINEERS & SIMPLIFIED INTERNAL COSTING v10
 // ══════════════════════════════════════════════════════════════════════════════
 let sfEngineers = JSON.parse(localStorage.getItem('sfEngineers')||'[]');
+const SKYFIELD_DEFAULT_ENGINEERS = [
+  {id:'eng_260311',name:'محمود عبدالسميع سليمان عواد',nationality:'مصري',iqama:'2543037325',employeeNo:'260311',profession:'مهندس',specialization:'Project Management',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:1000,monthly:30000,overtime:0,housingTransport:0,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260401',name:'مجد جمال محمد حسين',nationality:'مصري',iqama:'2559460999',employeeNo:'260401',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:416.67,monthly:12500,overtime:0,housingTransport:4375,siteCar:1500,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260402',name:'عبدالله محمد صالح ادم',nationality:'سوداني',iqama:'2600459933',employeeNo:'260402',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:400,monthly:12000,overtime:0,housingTransport:4200,siteCar:1500,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260403',name:'افتخار علي خان ليق صابر',nationality:'باكستاني',iqama:'2493737577',employeeNo:'260403',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260404',name:'فرقان ساغير ساغير احمد',nationality:'باكستاني',iqama:'2551686542',employeeNo:'260404',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260405',name:'امجد خان قل محمود جان',nationality:'باكستاني',iqama:'2524057474',employeeNo:'260405',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:266.67,monthly:8000,overtime:0,housingTransport:2000,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260406',name:'محمد سيف الإسلام',nationality:'باكستاني',iqama:'2572124762',employeeNo:'260406',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260503',name:'عبدال قدير محمد نواز',nationality:'باكستاني',iqama:'2582148595',employeeNo:'260503',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:266.67,monthly:8000,overtime:0,housingTransport:2800,siteCar:0,notes:'Imported from the approved monthly payroll list.'}
+];
+
 let sfCostEquipment = JSON.parse(localStorage.getItem('sfCostEquipment')||'[]');
 let sfCostDefaults = Object.assign({transportation:0,accommodation:0,mobilization:0,other:0},JSON.parse(localStorage.getItem('sfCostDefaults')||'{}'));
 let sfCurrentCostPlan = {manpower:[],equipment:[],other:[]};
@@ -4353,6 +4370,31 @@ let sfCostSeq=1;
 function sfUid(prefix){return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*100000)}
 function sfNum(v){return Math.max(0,parseFloat(v)||0)}
 function saveEngineerLibrary(){localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));updateSidebarCounts();renderEngineers();renderCostPlan();}
+function sfNormalizeEngineerKey(value){return String(value||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function importSkyFieldEngineers(showMessage=false){
+  let added=0,updated=0;
+  SKYFIELD_DEFAULT_ENGINEERS.forEach(source=>{
+    const match=sfEngineers.find(x=>(source.employeeNo&&String(x.employeeNo||'')===source.employeeNo)||(source.iqama&&String(x.iqama||'')===source.iqama)||sfNormalizeEngineerKey(x.name)===sfNormalizeEngineerKey(source.name));
+    if(!match){
+      sfEngineers.push({...source,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+      added++;
+      return;
+    }
+    let changed=false;
+    ['name','nationality','iqama','employeeNo','profession','specialization','loa','employment','status','daily','monthly','overtime','housingTransport','siteCar','notes'].forEach(key=>{
+      const current=match[key];
+      if(current===undefined||current===null||current===''){
+        match[key]=source[key];
+        changed=true;
+      }
+    });
+    if(changed){match.updatedAt=new Date().toISOString();updated++;}
+  });
+  if(added||updated){localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));}
+  updateSidebarCounts();renderEngineers();renderCostPlan();
+  if(showMessage){alert(added?`${added} engineer(s) added successfully.${updated?` ${updated} existing record(s) completed.`:''}`:(updated?`${updated} existing engineer record(s) completed.`:'All Sky Field engineers are already available.'));}
+  return{added,updated};
+}
 function saveCostEquipmentLibrary(){localStorage.setItem('sfCostEquipment',JSON.stringify(sfCostEquipment));renderCostLibrary();renderCostPlan();}
 function saveCurrentCostPlan(){renderCostPlan();}
 
@@ -4375,7 +4417,7 @@ function deleteEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x||
 function renderEngineers(){
   const body=document.getElementById('engineer-table-body');if(!body)return;
   const q=(document.getElementById('engineer-search')?.value||'').toLowerCase();
-  const list=sfEngineers.filter(x=>[x.name,x.specialization,x.loa,x.employment,x.status].join(' ').toLowerCase().includes(q));
+  const list=sfEngineers.filter(x=>[x.name,x.nationality,x.iqama,x.employeeNo,x.profession,x.specialization,x.loa,x.employment,x.status].join(' ').toLowerCase().includes(q));
   body.innerHTML=list.length?list.map(x=>`<tr><td><strong>${escHtml(x.name)}</strong>${x.notes?`<div style="font-size:9.5px;color:var(--gray-500);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(x.notes)}</div>`:''}</td><td>${escHtml(x.employeeNo||'—')}<div style="font-size:9px;color:var(--gray-500)">${escHtml(x.iqama||'')}</div></td><td>${escHtml(x.specialization||'')}</td><td>${escHtml(x.loa||'')}</td><td>${fmtSAR(x.monthly)}</td><td>${fmtSAR(x.overtime)}</td><td><span class="status-pill ${escHtml(x.status||'available')}">${escHtml((x.status||'available').replace('_',' '))}</span></td><td style="white-space:nowrap"><button class="btn-sm" onclick="editEngineerRecord('${x.id}')">Edit</button> <button class="btn-sm" onclick="deleteEngineerRecord('${x.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty-resource">No engineers saved yet.</div></td></tr>`;
   updateSidebarCounts();
 }
@@ -4470,6 +4512,7 @@ syncProjectFromQuotation=function(rec){const p=sfSyncProjectFromQuotationBase(re
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('qdate').value=new Date().toISOString().slice(0,10);
+importSkyFieldEngineers(false);
 buildCatList();buildTasks();buildEq();buildConds();buildCustomSOWList();renderQuoteAttachments();renderEngineers();renderCostLibrary();renderCostPlan();
 generateNextQuoteNumber();
 updateQuoteBadge();
