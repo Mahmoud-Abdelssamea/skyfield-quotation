@@ -1,14 +1,12 @@
-Sky Field Management UI v12 — Engineers Imported
+Sky Field Management System v13
 
 التعديلات:
-1. إضافة قائمة المهندسين الثمانية من كشف الرواتب إلى صفحة Engineers.
-2. الاستيراد تلقائي عند أول تشغيل بدون تكرار السجلات الموجودة.
-3. إضافة زر Import Sky Field Engineers للاستيراد اليدوي الآمن.
-4. إمكانية البحث بالاسم، الجنسية، رقم الإقامة، الرقم الوظيفي، التخصص أو LOA.
-5. إتاحة المهندسين مباشرة في Internal Cost Planning وMonthly Timesheets & Payroll.
-6. حفظ القائمة داخل localStorage ومزامنتها مع Supabase من خلال نظام المزامنة الموجود.
+1) تصحيح Net Total في كشف الرواتب:
+   Attendance Days / 30 × (Basic Salary + Housing & Transport + Site/Car Allowance)
+   + Other Allowance + Overtime Amount + Other Earnings - Deductions
+2) بدل السكن وبدل السيارة أصبحا يُحسبان بنسبة أيام الحضور، ولا تتم إضافتهما كاملين.
+3) مقسوم الرواتب ثابت على 30 يومًا.
+4) إصلاح جلسة Supabase عند الانتقال إلى تبويب آخر في المتصفح؛ TOKEN_REFRESHED لا يفتح صفحة تسجيل الدخول ولا يعيد تحميل بيانات الموقع.
 
-للنشر على GitHub Pages:
-- ارفع ملف index.html إلى جذر المستودع بدلاً من النسخة السابقة.
-- اعمل Commit ثم انتظر تحديث GitHub Pages.
-- بعد تسجيل الدخول، افتح Engineers وستظهر القائمة تلقائياً.
+لـ GitHub Pages:
+استبدل ملف index.html القديم بملف index.html الموجود هنا ثم اعمل Commit.
