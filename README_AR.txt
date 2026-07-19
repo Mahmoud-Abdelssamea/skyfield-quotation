@@ -1,13 +1,13 @@
-SkyField Management UI v14
+Sky Field Management System v16
 
-التحديثات:
-- زر Mark Paid مباشر للفواتير المرتبطة بالمشروعات.
-- تسجيل تاريخ استلام الدفعة ورقم التحويل/الإيصال وطريقة الدفع.
-- تحديث حالة الفاتورة تلقائياً في صفحة Invoices وصفحة Project.
-- تحديث Received وOutstanding ولوحة المعلومات بمجرد تسجيل التحصيل.
-- إمكانية إعادة الفاتورة إلى Pending عند الحاجة.
+التعديل الرئيسي:
+- فصل Site Allowance عن Car Allowance في صفحة Engineers وMonthly Timesheets.
+- Car Allowance يُحتسب بنسبة أيام الحضور.
+- Site Allowance يُضاف منفصلًا بالقيمة الكاملة.
+- البيانات القديمة في Site / Car Allowance يتم نقلها تلقائيًا إلى Car Allowance، وSite Allowance يبدأ بصفر.
+- تصدير Excel يحتوي على عمود بدل سيارة وعمود بدل موقع منفصلين.
 
-النشر على GitHub Pages:
+للتحديث على GitHub Pages:
 1. استبدل index.html القديم بهذا الملف.
-2. نفذ Commit ثم انتظر تحديث GitHub Pages.
-3. افتح الموقع واضغط Ctrl + F5.
+2. نفّذ Commit.
+3. بعد تحديث الموقع استخدم Ctrl + F5.

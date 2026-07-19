@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v13</title>
+<title>SKY FIELD – Management System v16</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -500,6 +500,7 @@
   .pay-badge { font-size:9px; padding:2px 7px; border-radius:10px; font-weight:600; }
   .pay-badge.paid { background:#dcfce7; color:#15803d; }
   .pay-badge.pending { background:#fef9c3; color:#854d0e; }
+  .pay-badge.partial { background:#dbeafe; color:#1d4ed8; }
   .pay-badge.overdue { background:#fee2e2; color:#b91c1c; }
   .pay-action-btn { border:0; border-radius:5px; padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap; }
   .pay-action-btn.mark-paid { background:#dcfce7; color:#15803d; }
@@ -649,7 +650,7 @@
 
 
   /* ═══════════════════════════════════════════════════════════════════════
-     SKY FIELD MANAGEMENT UI V2
+     SKY FIELD MANAGEMENT UI V15
      Clear application navigation, dashboard, responsive layout, and cloud
      status feedback. Existing quotation/project/invoice logic is preserved.
      ═══════════════════════════════════════════════════════════════════════ */
@@ -1116,6 +1117,7 @@
     </div>
     <button class="btn-sm" type="button" onclick="exportBackup()">⬇ تصدير نسخة احتياطية (JSON)</button>
     <button class="btn-sm" type="button" onclick="document.getElementById('backup-file-input').click()">⬆ استيراد نسخة احتياطية</button>
+    <button class="btn-sm" type="button" onclick="migrateLegacyDocumentsToStorage()">☁ نقل المستندات القديمة إلى Storage</button>
     <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
   </div>
 
@@ -1375,7 +1377,8 @@
             <div class="resource-field"><label>Basic Monthly Salary (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field"><label>Housing & Transport Allowance</label><input id="eng-housing-transport" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Site / Car Allowance</label><input id="eng-site-car" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Site Allowance</label><input id="eng-site-allowance" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Car Allowance</label><input id="eng-car-allowance" type="number" min="0" step="0.01" value="0"></div>
             <div class="resource-field span-2"><label>Notes</label><textarea id="eng-notes" rows="3" placeholder="Availability, experience, document notes..."></textarea></div>
           </div>
           <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveEngineerRecord()" id="eng-save-btn">Save Engineer</button><button class="btn-outline" type="button" onclick="resetEngineerForm()">Clear</button></div>
@@ -1406,12 +1409,12 @@
             <button class="btn-primary" type="button" onclick="payrollSaveSheet()">Save Month</button>
           </div>
         </div>
-        <div class="payroll-note">Net Total is calculated as <strong>Attendance Days ÷ 30 × (Basic Salary + Housing &amp; Transport + Site / Car Allowance) + Other Allowance + Overtime Amount + Other Earnings − Deductions</strong>. This means the housing and car allowance are prorated with attendance instead of being added in full. Saving the sheet posts one consolidated payroll expense to the selected project's <strong>Actual Expenses</strong>; saving again updates that same expense instead of duplicating it.</div>
+        <div class="payroll-note">Net Total is calculated as <strong>Attendance Days ÷ 30 × (Basic Salary + Housing &amp; Transport + Car Allowance) + Site Allowance + Other Allowance + Overtime Amount + Other Earnings − Deductions</strong>. This means Basic Salary, Housing &amp; Transport, and Car Allowance are prorated with attendance, while Site Allowance is added separately in full. Saving the sheet posts one consolidated payroll expense to the selected project's <strong>Actual Expenses</strong>; saving again updates that same expense instead of duplicating it.</div>
         <div class="payroll-table-wrap">
           <table class="payroll-table">
             <thead><tr>
               <th>#</th><th>Name / الاسم</th><th>Nationality</th><th>Iqama / ID</th><th>Employee No.</th><th>Profession</th>
-              <th>Basic Salary</th><th>Housing &amp; Transport</th><th>Site / Car Allowance</th><th>Other Allowance</th>
+              <th>Basic Salary</th><th>Housing &amp; Transport</th><th>Car Allowance</th><th>Site Allowance</th><th>Other Allowance</th>
               <th>Attendance Days</th><th>Prorated Package</th><th>OT Hours</th><th>OT Rate</th><th>OT Amount</th>
               <th>Other Earnings</th><th>Deductions</th><th>Net Total</th><th>Notes</th><th></th>
             </tr></thead>
@@ -1853,7 +1856,10 @@
 // The browser keeps a local cache for speed and offline resilience.
 // ══════════════════════════════════════════════════════════════════
 const SF_USER_STORE_TABLE = 'sf_user_store';
-const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule']);
+const SF_STORAGE_BUCKET = 'company-documents';
+const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',invoices:'sf_invoices',payments:'sf_payments',engineers:'sf_engineers',payroll:'sf_payroll_sheets',expenses:'sf_expenses',documents:'sf_documents'};
+const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);
+let sfNormalizedTablesAvailable = true;
 let sfCurrentUser = null;
 let sfSyncPaused = false;
 let sfAuthReady = false;
@@ -1957,6 +1963,7 @@ function sfUnlockApp(user){
   const emailEl=document.getElementById('side-account-email'); if(emailEl)emailEl.textContent=email;
   const avatar=document.getElementById('side-account-avatar'); if(avatar)avatar.textContent=(fullName.trim()[0]||'U').toUpperCase();
   setCloudStatus('','Secure cloud connected');
+  if(!sessionStorage.getItem('sfNormalizedMigrationV1')){sessionStorage.setItem('sfNormalizedMigrationV1','1');setTimeout(sfMirrorAllCollections,800);}
 }
 
 async function sfLogin(event){
@@ -2108,12 +2115,83 @@ function sfWriteCloudRowsToLocal(rows,replace=true){
   }finally{sfSyncPaused=wasPaused;}
 }
 
+function sfReloadApplicationStateFromLocal(){
+  // Rebuild in-memory collections after a cloud pull. Previously only
+  // localStorage changed, leaving the visible UI stale until a refresh.
+  try{if(typeof savedQuotes!=='undefined')savedQuotes=JSON.parse(localStorage.getItem('sfSavedQuotations')||'[]')}catch(e){console.warn('Quotation state reload failed',e)}
+  try{if(typeof proformaInvoices!=='undefined')proformaInvoices=JSON.parse(localStorage.getItem('sfProformaInvoices')||'[]')}catch(e){console.warn('Invoice state reload failed',e)}
+  try{if(typeof sfEngineers!=='undefined')sfEngineers=JSON.parse(localStorage.getItem('sfEngineers')||'[]')}catch(e){console.warn('Engineer state reload failed',e)}
+  try{if(typeof sfPayrollSheets!=='undefined')sfPayrollSheets=JSON.parse(localStorage.getItem('sfPayrollSheets')||'[]')}catch(e){console.warn('Payroll state reload failed',e)}
+  try{
+    if(typeof projects!=='undefined')projects=JSON.parse(localStorage.getItem('sfProjects')||'[]').map(p=>({...p,
+      pos:Array.isArray(p.pos)?p.pos:[],payments:(Array.isArray(p.payments)?p.payments:[]).map(sfNormalizePaymentRecord),
+      docs:Array.isArray(p.docs)?p.docs:[],quotes:Array.isArray(p.quotes)?p.quotes:[],proformas:Array.isArray(p.proformas)?p.proformas:[],
+      commissions:Array.isArray(p.commissions)?p.commissions:[],assignedEngineers:Array.isArray(p.assignedEngineers)?p.assignedEngineers:[],
+      actualExpenses:Array.isArray(p.actualExpenses)?p.actualExpenses:[]}));
+  }catch(e){console.warn('Project state reload failed',e)}
+  try{updateSidebarCounts()}catch(e){}
+  try{renderDashboard()}catch(e){}
+  try{renderProjects()}catch(e){}
+  try{renderSavedQuotations()}catch(e){}
+  try{renderProformas()}catch(e){}
+  try{renderEngineers()}catch(e){}
+  try{payrollRender()}catch(e){}
+}
+
+async function sfMirrorCollection(table,records){
+  if(!sfDb||!sfCurrentUser||!sfNormalizedTablesAvailable||!Array.isArray(records))return;
+  const rows=records.filter(r=>r&&r.id).map(r=>({user_id:sfCurrentUser.id,id:String(r.id),payload:r,updated_at:r.updatedAt||new Date().toISOString()}));
+  try{
+    // Upsert the current records first. Then prune rows that no longer exist in
+    // the local collection, so the normalized table remains a true mirror after
+    // deletes as well as edits.
+    if(rows.length){
+      const {error}=await sfDb.from(table).upsert(rows,{onConflict:'user_id,id'});
+      if(error)throw error;
+    }
+    const {data:existing,error:selectError}=await sfDb.from(table).select('id').eq('user_id',sfCurrentUser.id);
+    if(selectError)throw selectError;
+    const keep=new Set(rows.map(r=>r.id));
+    const stale=(existing||[]).map(r=>String(r.id)).filter(id=>!keep.has(id));
+    if(stale.length){
+      const {error:deleteError}=await sfDb.from(table).delete().eq('user_id',sfCurrentUser.id).in('id',stale);
+      if(deleteError)throw deleteError;
+    }
+  }catch(error){
+    if(String(error?.code||'')==='42P01'||/does not exist|schema cache/i.test(String(error?.message||'')))sfNormalizedTablesAvailable=false;
+    console.warn('Normalized mirror unavailable for '+table,error);
+  }
+}
+function sfProjectChildRecords(kind){
+  const out=[];
+  (typeof projects!=='undefined'?projects:[]).forEach(p=>{
+    const list=kind==='payments'?(p.payments||[]):kind==='expenses'?(p.actualExpenses||[]):(p.docs||[]);
+    list.forEach((x,i)=>out.push({...x,id:String(x.id||x.sourceProformaId||x.storagePath||(`${p.id}_${kind}_${i}`)),projectId:p.id,updatedAt:p.updatedAt||new Date().toISOString()}));
+  });
+  return out;
+}
+function sfMirrorProjects(){
+  if(typeof projects==='undefined')return;
+  sfMirrorCollection(SF_NORMALIZED_TABLES.projects,projects);
+  sfMirrorCollection(SF_NORMALIZED_TABLES.payments,sfProjectChildRecords('payments'));
+  sfMirrorCollection(SF_NORMALIZED_TABLES.expenses,sfProjectChildRecords('expenses'));
+  sfMirrorCollection(SF_NORMALIZED_TABLES.documents,sfProjectChildRecords('documents'));
+}
+function sfMirrorAllCollections(){
+  try{sfMirrorProjects()}catch(e){}
+  try{if(typeof savedQuotes!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.quotations,savedQuotes)}catch(e){}
+  try{if(typeof proformaInvoices!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.invoices,proformaInvoices)}catch(e){}
+  try{if(typeof sfEngineers!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.engineers,sfEngineers)}catch(e){}
+  try{if(typeof sfPayrollSheets!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.payroll,sfPayrollSheets)}catch(e){}
+}
+
 async function sfCloudPullAll(){
   if(!sfDb||!sfCurrentUser){setCloudStatus('error','Sign in required');return [];}
   setCloudStatus('saving','Syncing securely…');
   try{
     const rows=await sfFetchUserCloudRows(sfCurrentUser.id);
     sfWriteCloudRowsToLocal(rows,false);
+    sfReloadApplicationStateFromLocal();
     setCloudStatus('','Secure cloud connected');
     return rows;
   }catch(error){
@@ -2359,24 +2437,31 @@ function discountAmountFor(subBeforeDiscount){
 }
 function fmtN(n){return Math.round(n).toLocaleString()}
 
-function generateNextQuoteNumber(forceIncrement){
-  // forceIncrement=true  -> user explicitly clicked "New No.": consume/advance the sequence
-  // forceIncrement=false/undefined -> just PREVIEW the next number (e.g. on page load), without
-  //                                    consuming it, so simply opening/reloading the page does not
-  //                                    burn quotation numbers.
-  try{
-    const year = new Date().getFullYear();
-    const storeKey = 'sf_qno_seq_'+year;
-    const current = parseInt(localStorage.getItem(storeKey)||'0',10);
-    const nextSeq = current + 1;
-    if(forceIncrement){
-      localStorage.setItem(storeKey, String(nextSeq));
-    }
-    const padded = String(nextSeq).padStart(3,'0');
-    document.getElementById('qno').value = `SF-Q-${year}-${padded}`;
-  }catch(e){
-    document.getElementById('qno').value = `SF-Q-${new Date().getFullYear()}-001`;
+const sfReservedDocumentNumbers=new Set();
+function sfLocalMaxSequence(kind){
+  const year=new Date().getFullYear();
+  const prefix=kind==='quotation'?'SF-Q':'SF-PI';
+  const list=kind==='quotation'?(typeof savedQuotes!=='undefined'?savedQuotes:[]):(typeof proformaInvoices!=='undefined'?proformaInvoices:[]);
+  return list.reduce((m,r)=>{const mt=String(r.number||'').match(new RegExp('^'+prefix+'-'+year+'-(\\d+)$','i'));return mt?Math.max(m,parseInt(mt[1],10)||0):m},0);
+}
+async function sfGetDocumentNumber(kind,reserve=false){
+  const year=new Date().getFullYear(),prefix=kind==='quotation'?'SF-Q':'SF-PI',localMax=sfLocalMaxSequence(kind);
+  if(sfDb&&sfCurrentUser){
+    try{
+      const {data,error}=await sfDb.rpc('sf_next_document_number',{p_kind:kind,p_minimum:localMax,p_reserve:!!reserve});
+      if(error)throw error;
+      const number=String(data||'');
+      if(number){if(reserve)sfReservedDocumentNumbers.add(number);return number;}
+    }catch(error){console.warn('Central document numbering unavailable; using local fallback.',error)}
   }
+  const key=(kind==='quotation'?'sf_qno_seq_':'sf_pi_seq_')+year;
+  const current=Math.max(parseInt(localStorage.getItem(key)||'0',10)||0,localMax),seq=current+1;
+  const number=`${prefix}-${year}-${String(seq).padStart(3,'0')}`;
+  if(reserve){localStorage.setItem(key,String(seq));sfReservedDocumentNumbers.add(number)}
+  return number;
+}
+async function generateNextQuoteNumber(forceIncrement=false){
+  const el=document.getElementById('qno');if(el)el.value=await sfGetDocumentNumber('quotation',!!forceIncrement);
 }
 
 const APP_PAGE_META = {
@@ -2425,14 +2510,29 @@ function setupQuotationFieldGroups(){
     if(card)card.classList.add('advanced-field');
   });
 }
+function sfNormalizePaymentRecord(pay){
+  const x={...(pay||{})};
+  x.amount=Math.max(0,parseFloat(x.amount)||0);
+  x.receipts=Array.isArray(x.receipts)?x.receipts.filter(r=>(parseFloat(r.amount)||0)>0).map(r=>({...r,amount:Math.max(0,parseFloat(r.amount)||0)})):[];
+  if(!x.receipts.length&&x.status==='paid'&&x.amount>0){
+    x.receipts=[{id:'rcpt_legacy_'+String(x.sourceProformaId||Date.now()),amount:x.amount,date:x.receivedDate||x.date||'',reference:x.paymentReference||'',method:x.paymentMethod||'Bank Transfer',createdAt:x.receivedDate||new Date().toISOString()}];
+  }
+  x.receivedAmount=Math.min(x.amount,x.receipts.reduce((sum,r)=>sum+(parseFloat(r.amount)||0),0));
+  x.status=x.receivedAmount<=0?'pending':(x.receivedAmount+0.005>=x.amount?'paid':'partial');
+  return x;
+}
+function paymentReceivedAmount(pay){return sfNormalizePaymentRecord(pay).receivedAmount}
+function paymentRemainingAmount(pay){const x=sfNormalizePaymentRecord(pay);return Math.max(0,x.amount-x.receivedAmount)}
+function projectReceivedTotal(project){return(project?.payments||[]).reduce((sum,p)=>sum+paymentReceivedAmount(p),0)}
+
 function renderDashboard(){
   const root=document.getElementById('dashboard-content'); if(!root)return;
   const ps=(typeof projects!=='undefined'?projects:[]);
   const qs=(typeof savedQuotes!=='undefined'?savedQuotes:[]);
   const pis=(typeof proformaInvoices!=='undefined'?proformaInvoices:[]);
   const totalContract=ps.reduce((s,p)=>s+(parseFloat(p.contract)||0),0);
-  const totalInvoiced=pis.reduce((s,p)=>s+(parseFloat((p.amounts||{}).grandTotal)||parseFloat(p.total)||0),0);
-  const totalReceived=ps.reduce((s,p)=>s+(p.payments||[]).filter(x=>x.status==='paid').reduce((a,x)=>a+(parseFloat(x.amount)||0),0),0);
+  const totalInvoiced=pis.reduce((s,p)=>s+(parseFloat((p.totals||{}).grandTotal)||parseFloat((p.amounts||{}).grandTotal)||parseFloat(p.total)||0),0);
+  const totalReceived=ps.reduce((s,p)=>s+projectReceivedTotal(p),0);
   const outstanding=Math.max(0,totalInvoiced-totalReceived);
   const recentProjects=ps.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')).slice(0,5);
   const recentInvoices=pis.slice().sort((a,b)=>(b.updatedAt||b.date||'').localeCompare(a.updatedAt||a.date||'')).slice(0,5);
@@ -2457,7 +2557,7 @@ function renderDashboard(){
           <button class="dash-action" onclick="showTab('proformas',document.querySelector('.side-nav-btn[data-module=proformas]'))">▧ Invoice register</button>
         </div>
         <div class="dash-panel-hdr" style="border-top:1px solid var(--gray-200)"><h3>Recent Invoices</h3></div>
-        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · ${escHtml(pi.issueDate||pi.date||'')}</div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div>
+        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · ${escHtml(pi.issueDate||pi.date||'')}</div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.totals||{}).grandTotal||(pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div>
       </div>
     </div>`;
 }
@@ -2624,21 +2724,94 @@ function toggleCustomSOWOptional(id,checked){
 function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function handleQuoteAttachFiles(input){
-  Array.from(input.files).forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      quoteAttachments.push({name:file.name, url:e.target.result, type:'file', size:file.size||0});
-      renderQuoteAttachments();
-    };
-    reader.readAsDataURL(file);
-  });
-  input.value='';
+function sfSafeSegment(value){return String(value||'item').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,100)||'item'}
+function sfLegacySafeUrl(value){const v=String(value||'').trim();return(/^https?:/i.test(v)||/^data:(application|image|text)\//i.test(v)||/^blob:/i.test(v))?v:'#'}
+async function sfUploadDocument(file,section,recordId){
+  if(!file)return null;
+  if(file.size>25*1024*1024)throw new Error('File exceeds the 25 MB upload limit.');
+  if(sfDb&&sfCurrentUser){
+    const path=`${sfCurrentUser.id}/${sfSafeSegment(section)}/${sfSafeSegment(recordId||'draft')}/${Date.now()}_${sfSafeSegment(file.name)}`;
+    const {data,error}=await sfDb.storage.from(SF_STORAGE_BUCKET).upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});
+    if(error)throw error;
+    return{id:'doc_'+Date.now()+'_'+Math.floor(Math.random()*10000),name:file.name,size:file.size||0,mimeType:file.type||'',storagePath:data.path,type:'storage',uploadedAt:new Date().toISOString()};
+  }
+  const url=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('File read failed'));r.readAsDataURL(file)});
+  return{id:'doc_'+Date.now(),name:file.name,size:file.size||0,mimeType:file.type||'',url,type:'legacy-local',uploadedAt:new Date().toISOString()};
 }
-function removeQuoteAttachment(i){
-  quoteAttachments.splice(i,1);
-  renderQuoteAttachments();
+async function sfOpenDocumentRecord(doc){
+  if(!doc)return;
+  let url='';
+  if(doc.storagePath&&sfDb){const {data,error}=await sfDb.storage.from(SF_STORAGE_BUCKET).createSignedUrl(doc.storagePath,300);if(error){alert('Unable to open this document: '+(error.message||error));return}url=data?.signedUrl||''}
+  else url=sfLegacySafeUrl(doc.url);
+  if(!url||url==='#'){alert('The document link is not available.');return}
+  const w=window.open(url,'_blank');if(w)w.opener=null;
 }
+async function sfRemoveStoredDocument(doc){if(doc?.storagePath&&sfDb&&sfCurrentUser){try{await sfDb.storage.from(SF_STORAGE_BUCKET).remove([doc.storagePath])}catch(e){console.warn('Storage cleanup failed',e)}}}
+async function sfMigrateLegacyDocumentRecord(doc,section,recordId){
+  if(!doc||doc.storagePath||!String(doc.url||'').startsWith('data:'))return doc;
+  const response=await fetch(doc.url),blob=await response.blob();
+  const file=new File([blob],doc.name||('document_'+Date.now()),{type:doc.mimeType||blob.type||'application/octet-stream'});
+  const uploaded=await sfUploadDocument(file,section,recordId);
+  return{...doc,...uploaded,url:'',type:'storage'};
+}
+async function migrateLegacyDocumentsToStorage(){
+  if(!sfDb||!sfCurrentUser){alert('Sign in to Supabase before migrating documents.');return}
+  let candidates=0;
+  savedQuotes.forEach(q=>(q.snapshot?.attachments||[]).forEach(d=>{if(!d.storagePath&&String(d.url||'').startsWith('data:'))candidates++}));
+  projects.forEach(p=>(p.docs||[]).forEach(d=>{if(!d.storagePath&&String(d.url||'').startsWith('data:'))candidates++}));
+  if(!candidates){alert('No legacy Base64 documents were found. New uploads are already stored in Supabase Storage.');return}
+  if(!confirm(`Move ${candidates} legacy document reference(s) to private Supabase Storage? Keep a JSON backup until the migration is verified.`))return;
+  setCloudStatus('saving','Migrating legacy documents…');
+  let migrated=0,failed=0;const quoteDocumentMap=new Map();
+  for(const q of savedQuotes){
+    const attachments=q.snapshot?.attachments||[];
+    for(let i=0;i<attachments.length;i++){
+      const before=attachments[i];
+      const wasLegacy=!before?.storagePath&&String(before?.url||'').startsWith('data:');
+      try{
+        attachments[i]=await sfMigrateLegacyDocumentRecord(before,'quotation',q.id||q.number||'legacy');
+        const a=attachments[i];
+        if(a.storagePath){
+          // Project copies created from quotation attachments do not always retain
+          // the original file size, so use quotation id + file name as the stable link.
+          quoteDocumentMap.set(`${q.id}|${a.name}`,a);
+          if(wasLegacy)migrated++;
+        }
+      }catch(error){failed++;console.error('Quotation attachment migration failed',q.number,before?.name,error)}
+    }
+  }
+  for(const p of projects){
+    for(let i=0;i<(p.docs||[]).length;i++){
+      const d=p.docs[i];
+      const wasLegacy=!d?.storagePath&&String(d?.url||'').startsWith('data:');
+      try{
+        const linked=d.fromQuoteId?quoteDocumentMap.get(`${d.fromQuoteId}|${d.name}`):null;
+        if(linked&&linked.storagePath){
+          p.docs[i]={...d,...linked,fromQuoteId:d.fromQuoteId,fromQuoteNumber:d.fromQuoteNumber};
+          if(wasLegacy)migrated++;
+          continue;
+        }
+        p.docs[i]=await sfMigrateLegacyDocumentRecord(d,'project',p.id||'legacy');
+        if(wasLegacy&&p.docs[i].storagePath)migrated++;
+      }catch(error){failed++;console.error('Project document migration failed',p.name,d?.name,error)}
+    }
+  }
+  saveSavedQuotes();saveProjects();
+  if(activeQuoteId){const active=savedQuotes.find(q=>q.id===activeQuoteId);if(active)quoteAttachments=deepClone(active.snapshot?.attachments||[])}
+  renderQuoteAttachments();renderProjects();setCloudStatus(failed?'error':'','Legacy document migration complete');
+  alert(`Migration completed. Updated references: ${migrated}.${failed?` Failed: ${failed}. Check the browser console and retry those files.`:''}`);
+}
+async function handleQuoteAttachFiles(input){
+  const files=Array.from(input.files||[]);input.disabled=true;setCloudStatus('saving','Uploading document…');
+  try{
+    for(const file of files){const qno=document.getElementById('qno')?.value||activeQuoteId||'draft';quoteAttachments.push(await sfUploadDocument(file,'quotation',qno));renderQuoteAttachments()}
+    setCloudStatus('','Documents uploaded securely');
+  }catch(error){console.error('Quotation document upload failed',error);alert('Document upload failed. Ensure the Supabase Storage SQL setup has been applied.\n'+(error?.message||error));setCloudStatus('error','Upload failed')}
+  finally{input.disabled=false;input.value=''}
+}
+function removeQuoteAttachment(i){if(!quoteAttachments[i])return;quoteAttachments.splice(i,1);renderQuoteAttachments()}
+function openQuoteAttachment(i){sfOpenDocumentRecord(quoteAttachments[i])}
+
 function renderQuoteAttachments(){
   const el=document.getElementById('qa-list'); if(!el)return;
   if(!quoteAttachments.length){
@@ -2647,7 +2820,7 @@ function renderQuoteAttachments(){
   }
   el.innerHTML = quoteAttachments.map((f,i)=>`
     <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;background:var(--gray-100);border-radius:6px;padding:6px 10px">
-      <span style="flex:1">📎 <a href="${escHtml(f.url||'#')}" target="_blank">${escHtml(f.name)}</a></span>
+      <span style="flex:1">📎 <button type="button" onclick="openQuoteAttachment(${i})" style="background:none;border:none;padding:0;color:var(--orange);cursor:pointer;font:inherit;text-align:left">${escHtml(f.name)}</button></span>
       <button onclick="removeQuoteAttachment(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
     </div>`).join('');
 }
@@ -2693,7 +2866,7 @@ function buildCustomSOWList(){
         </div>
         <div class="csw-field csw-unit-field">
           <label>Unit</label>
-          <input type="text" class="qty-inp" style="width:100%" title="Unit" value="${c.unit}" oninput="updateCustomSOW('${c.id}','unit',this.value)">
+          <input type="text" class="qty-inp" style="width:100%" title="Unit" value="${escHtml(c.unit)}" oninput="updateCustomSOW('${c.id}','unit',this.value)">
         </div>
         <div class="csw-field csw-price-field">
           <label>Unit Price (SAR)</label>
@@ -2834,7 +3007,7 @@ function buildConds(){
       const d=document.createElement('div');
       d.className='cond-item';
       d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked">
-        <div><div class="cond-text">${c.text}</div><div class="cond-cat">${c.cat}</div></div>
+        <div><div class="cond-text">${escHtml(c.text)}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
         <button class="cond-rm" onclick="conds.splice(${i},1);buildConds()" title="Remove">×</button>`;
       el.appendChild(d);
     });
@@ -2929,7 +3102,7 @@ function renderQuot(){
       if(c.optional) tr.style.background='var(--orange-light)';
       const subLines=[c.spec?`<span style="color:var(--gray-500)">Spec: ${escHtml(c.spec)}</span>`:'',c.remark?`<span style="color:var(--gray-500)">Remark: ${escHtml(c.remark)}</span>`:''].filter(Boolean).join('<br>');
       tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">${c.optional?'Optional':'Custom'}</td><td style="white-space:pre-line">${c.sn?`<strong>${escHtml(c.sn)}.</strong> `:''}${escHtml(c.text)}${c.optional?' <span style="font-size:10px;color:var(--orange);font-weight:700">(OPTIONAL — not in total)</span>':''}${subLines?`<br><span style="font-size:10px">${subLines}</span>`:''}</td>
-        <td style="font-size:10px;color:var(--gray-500)">manual / ${c.unit}</td>
+        <td style="font-size:10px;color:var(--gray-500)">manual / ${escHtml(c.unit)}</td>
         <td><input class="qty-inp" type="number" min="1" value="${c.qty}" oninput="updateCustomSOW('${c.id}','qty',this.value)"></td>
         <td style="font-weight:600;color:var(--navy-mid)">SAR ${fmtN(c.unitPrice)}</td>
         <td style="font-weight:600;${c.optional?'color:var(--orange)':''}">SAR ${fmtN(total)}${c.optional?' *':''}</td>
@@ -3149,7 +3322,7 @@ function showExport(docType='quotation'){
   condGroups['Price'] = [...priceDynamicLines.map(t=>({text:t})), ...(condGroups['Price']||[])];
   const condRows = COND_SECTION_ORDER
     .filter(sec=>condGroups[sec]&&condGroups[sec].length)
-    .map(sec=>`<div class="doc-cond-sec-hdr">${sec}</div>${condGroups[sec].map(c=>`<div class="doc-cond">${c.text}</div>`).join('')}`)
+    .map(sec=>`<div class="doc-cond-sec-hdr">${escHtml(sec)}</div>${condGroups[sec].map(c=>`<div class="doc-cond">${escHtml(c.text)}</div>`).join('')}`)
     .join('');
 
   const LOGO_SRC=document.querySelector('.logo-wrap img').src;
@@ -3380,6 +3553,7 @@ function saveSavedQuotes(){
   }
   updateQuoteBadge(); updateSidebarCounts();
   if(document.body.dataset.module==='dashboard') renderDashboard();
+  sfMirrorCollection(SF_NORMALIZED_TABLES.quotations,savedQuotes);
 }
 function updateQuoteBadge(){ const b=document.getElementById('tab-quote-badge'); if(b)b.textContent=savedQuotes.length; }
 function invoiceNumberFromQuote(qno){
@@ -3516,7 +3690,7 @@ function syncProjectFromQuotation(rec){
   // Replace this quotation's attached files within the project's document list (keeps in sync on re-link)
   proj.docs = proj.docs.filter(d=>d.fromQuoteId!==rec.id);
   (snap.attachments||[]).forEach(att=>{
-    proj.docs.push({name:att.name, url:att.url, type:'file', fromQuoteId:rec.id, fromQuoteNumber:rec.number});
+    proj.docs.push({...deepClone(att),name:att.name,type:att.type||'file',fromQuoteId:rec.id,fromQuoteNumber:rec.number});
   });
 
   // Upsert this quotation/invoice into the project's linked-documents ledger
@@ -3542,9 +3716,11 @@ function addCurrentQuotationAsProject(){
   if(!activeQuoteId){ alert('Save this quotation first, then you can add it as a project.'); return; }
   addQuotationAsProject(activeQuoteId);
 }
-function saveCurrentQuotation(forceNew=false, forceType){
+async function saveCurrentQuotation(forceNew=false, forceType){
   const actKeys=Object.keys(selActs), eqKeys=Object.keys(selEq);
   if(!actKeys.length&&!eqKeys.length&&!customSOW.length){ alert('No items selected to save.'); return; }
+  const isNew=!!forceNew||!activeQuoteId,qnoEl=document.getElementById('qno');
+  if(isNew&&qnoEl&&/^SF-Q-\d{4}-\d+$/i.test(qnoEl.value.trim())&&!sfReservedDocumentNumbers.has(qnoEl.value.trim()))qnoEl.value=await sfGetDocumentNumber('quotation',true);
   const rec=buildQuoteRecordFromCurrent(forceNew, forceType);
   const idx=savedQuotes.findIndex(q=>q.id===rec.id);
   if(idx>=0) savedQuotes[idx]=rec; else savedQuotes.unshift(rec);
@@ -3658,17 +3834,11 @@ function saveProformaStore(){
   catch(e){ alert('Could not save the Proforma Invoice — browser storage is full. Remove large attachments or old records and try again.'); throw e; }
   updateSidebarCounts();
   if(document.body.dataset.module==='dashboard') renderDashboard();
+  sfMirrorCollection(SF_NORMALIZED_TABLES.invoices,proformaInvoices);
 }
 function updateProformaBadge(){ const b=document.getElementById('tab-pi-badge'); if(b)b.textContent=proformaInvoices.length; }
-function nextProformaNumber(){
-  const year=new Date().getFullYear();
-  const stored=parseInt(localStorage.getItem('sf_pi_seq_'+year)||'0',10)||0;
-  const used=proformaInvoices.reduce((m,p)=>{
-    const mt=String(p.number||'').match(new RegExp('^SF-PI-'+year+'-(\\d+)$','i'));
-    return mt?Math.max(m,parseInt(mt[1],10)||0):m;
-  },0);
-  return `SF-PI-${year}-${String(Math.max(stored,used)+1).padStart(3,'0')}`;
-}
+async function nextProformaNumber(reserve=false){return sfGetDocumentNumber('invoice',reserve)}
+
 function commitProformaSequence(number){
   const mt=String(number||'').match(/^SF-PI-(\d{4})-(\d+)$/i); if(!mt)return;
   const key='sf_pi_seq_'+mt[1], seq=parseInt(mt[2],10)||0;
@@ -4077,13 +4247,13 @@ function clearPiModal(){
   document.getElementById('pi-progress-wrap').innerHTML='';document.getElementById('pi-progress-wrap').style.display='none';
   pendingProgressValues=null;
 }
-function openProformaFromQuotation(id){
+async function openProformaFromQuotation(id){
   const src=savedQuotes.find(q=>q.id===id);if(!src)return;
   if(src.type==='invoice'){alert('Create a Proforma Invoice from the original quotation, not from a legacy Invoice Quotation.');return;}
   if(!canCreateProformaFromQuote(src)){alert('A Proforma Invoice can only be created after this quotation is converted and linked to a Project. Please click “Add as Project” first.');return;}
   clearPiModal();activeProformaId='';piWorkingSource=src;
   const m=src.snapshot?.meta||{};
-  document.getElementById('pi-number').value=nextProformaNumber();
+  document.getElementById('pi-number').value=await nextProformaNumber(false);
   document.getElementById('pi-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('pi-source-id').value=src.id;
   document.getElementById('pi-client').value=m.client||src.client||'';
@@ -4174,9 +4344,11 @@ function validateProforma(calc){
   if(calc.grandTotal<0||!Number.isFinite(calc.grandTotal))return 'The total calculation is invalid.';
   return '';
 }
-function saveProforma(openPreview){
+async function saveProforma(openPreview){
   if(!piWorkingSource)return;
   if(!canCreateProformaFromQuote(piWorkingSource)){alert('A Proforma Invoice can only be saved for a quotation linked to an existing Project.');return;}
+  const pendingExistingId=document.getElementById('pi-id').value,piNoEl=document.getElementById('pi-number');
+  if(!pendingExistingId&&piNoEl&&/^SF-PI-\d{4}-\d+$/i.test(piNoEl.value.trim())&&!sfReservedDocumentNumbers.has(piNoEl.value.trim()))piNoEl.value=await nextProformaNumber(true);
   const opts=currentPiOptions(),calc=calculateProforma(piWorkingSource.snapshot||piWorkingSource.quoteSnapshot||{},opts),err=validateProforma(calc);if(err){alert(err);return;}
   const existingId=document.getElementById('pi-id').value;
   const src=piWorkingSource, old=existingId?proformaInvoices.find(p=>p.id===existingId):null;
@@ -4199,50 +4371,38 @@ function saveProforma(openPreview){
   if(openPreview)previewProforma(rec.id);else alert('Proforma Invoice saved: '+rec.number);
 }
 function getInvoicePaymentRecord(projectId,sourceProformaId){
-  const project=projects.find(p=>p.id===projectId);
-  if(!project)return null;
-  const payment=(project.payments||[]).find(x=>x.sourceProformaId===sourceProformaId);
-  return payment?{project,payment}:null;
+  const project=projects.find(p=>p.id===projectId);if(!project)return null;
+  const index=(project.payments||[]).findIndex(x=>x.sourceProformaId===sourceProformaId);if(index<0)return null;
+  project.payments[index]=sfNormalizePaymentRecord(project.payments[index]);
+  return{project,payment:project.payments[index],index};
 }
-function invoicePaymentStatus(pi){
-  const rec=pi&&pi.projectId?getInvoicePaymentRecord(pi.projectId,pi.id):null;
-  return rec?.payment?.status||'pending';
+function invoicePaymentStatus(pi){const rec=pi&&pi.projectId?getInvoicePaymentRecord(pi.projectId,pi.id):null;return rec?.payment?.status||'pending'}
+function recordInvoicePayment(projectId,sourceProformaId){
+  const rec=getInvoicePaymentRecord(projectId,sourceProformaId);if(!rec){alert('The linked payment record could not be found. Update the Project link for this invoice and try again.');return}
+  const{project,payment}=rec,remaining=paymentRemainingAmount(payment);if(remaining<=0.005){alert('This invoice is already fully paid.');return}
+  const amountText=prompt(`Amount received (remaining ${fmtMoney(remaining)} SAR):`,remaining.toFixed(2));if(amountText===null)return;
+  const amount=parseFloat(amountText);if(!Number.isFinite(amount)||amount<=0){alert('Enter a valid received amount greater than zero.');return}
+  if(amount>remaining+0.005){alert('Received amount cannot exceed the remaining invoice balance.');return}
+  const defaultDate=new Date().toISOString().slice(0,10),date=prompt('Payment received date (YYYY-MM-DD):',defaultDate);if(date===null)return;
+  const reference=prompt('Bank transfer / receipt reference (optional):','');if(reference===null)return;
+  const method=prompt('Payment method (optional, e.g. Bank Transfer):','Bank Transfer');if(method===null)return;
+  payment.receipts=Array.isArray(payment.receipts)?payment.receipts:[];
+  payment.receipts.push({id:'rcpt_'+Date.now()+'_'+Math.floor(Math.random()*10000),amount:roundMoney(amount),date:date.trim()||defaultDate,reference:reference.trim(),method:method.trim()||'Bank Transfer',createdAt:new Date().toISOString()});
+  Object.assign(payment,sfNormalizePaymentRecord(payment));payment.receivedDate=date.trim()||defaultDate;payment.paymentReference=reference.trim();payment.paymentMethod=method.trim()||'Bank Transfer';
+  project.updatedAt=new Date().toISOString();saveProjects();renderProjects();renderProformas();if(document.body.dataset.module==='dashboard')renderDashboard();
 }
 function setInvoicePaymentStatus(projectId,sourceProformaId,newStatus){
-  const rec=getInvoicePaymentRecord(projectId,sourceProformaId);
-  if(!rec){alert('The linked payment record could not be found. Update the Project link for this invoice and try again.');return;}
-  const {project,payment}=rec;
-  if(newStatus==='paid'){
-    const defaultDate=payment.receivedDate||new Date().toISOString().slice(0,10);
-    const receivedDate=prompt('Payment received date (YYYY-MM-DD):',defaultDate);
-    if(receivedDate===null)return;
-    const paymentReference=prompt('Bank transfer / receipt reference (optional):',payment.paymentReference||'');
-    if(paymentReference===null)return;
-    const paymentMethod=prompt('Payment method (optional, e.g. Bank Transfer):',payment.paymentMethod||'Bank Transfer');
-    if(paymentMethod===null)return;
-    payment.status='paid';
-    payment.receivedDate=receivedDate.trim()||defaultDate;
-    payment.paymentReference=paymentReference.trim();
-    payment.paymentMethod=paymentMethod.trim();
-  }else{
-    if(payment.status==='paid'&&!confirm('Change this collected invoice back to Pending? The received amount will be removed from project totals.'))return;
-    payment.status=newStatus;
-    payment.receivedDate='';
-    payment.paymentReference='';
-    payment.paymentMethod='';
-  }
-  project.updatedAt=new Date().toISOString();
-  saveProjects();
-  renderProjects();
-  renderProformas();
-  if(document.body.dataset.module==='dashboard')renderDashboard();
+  if(newStatus==='paid')return recordInvoicePayment(projectId,sourceProformaId);
+  const rec=getInvoicePaymentRecord(projectId,sourceProformaId);if(!rec){alert('The linked payment record could not be found.');return}
+  const{project,payment}=rec;if(paymentReceivedAmount(payment)>0&&!confirm('Clear all recorded receipts and change this invoice back to Pending?'))return;
+  payment.receipts=[];payment.receivedAmount=0;payment.status='pending';payment.receivedDate='';payment.paymentReference='';payment.paymentMethod='';
+  project.updatedAt=new Date().toISOString();saveProjects();renderProjects();renderProformas();if(document.body.dataset.module==='dashboard')renderDashboard();
 }
 function invoiceStatusActionHtml(projectId,sourceProformaId,status){
-  if(!projectId||!sourceProformaId)return '';
-  return status==='paid'
-    ? `<button class="pay-action-btn mark-pending" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','pending')">Set Pending</button>`
-    : `<button class="pay-action-btn mark-paid" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','paid')">✓ Mark Paid</button>`;
+  if(!projectId||!sourceProformaId)return'';
+  return status==='paid'?`<button class="pay-action-btn mark-pending" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','pending')">Set Pending</button>`:`<button class="pay-action-btn mark-paid" onclick="recordInvoicePayment('${projectId}','${sourceProformaId}')">＋ Record Payment</button>`;
 }
+
 function renderProformas(){
   updateProformaBadge();const grid=document.getElementById('pi-grid');if(!grid)return;
   const q=(document.getElementById('pi-search')||{value:''}).value.toLowerCase();
@@ -4252,8 +4412,9 @@ function renderProformas(){
     const pt=resolvedProformaCalculation(p);
     const paymentRec=p.projectId?getInvoicePaymentRecord(p.projectId,p.id):null;
     const paymentStatus=paymentRec?.payment?.status||'pending';
-    const receiptMeta=paymentStatus==='paid'&&paymentRec?.payment
-      ? [paymentRec.payment.receivedDate,paymentRec.payment.paymentReference].filter(Boolean).join(' · ')
+    const receivedAmount=paymentRec?.payment?paymentReceivedAmount(paymentRec.payment):0;
+    const receiptMeta=receivedAmount>0&&paymentRec?.payment
+      ? [`Received ${fmtPiSAR(receivedAmount)}`,paymentRec.payment.receivedDate,paymentRec.payment.paymentReference].filter(Boolean).join(' · ')
       : '';
     return `<div class="quote-card ${p.id===activeProformaId?'active-record':''}">
     <div class="quote-card-hdr"><div class="quote-no">${escHtml(p.number)}</div><span class="pay-badge ${escHtml(paymentStatus)}" style="text-transform:uppercase">${escHtml(paymentStatus)}</span></div>
@@ -4313,16 +4474,11 @@ function syncProformaToProject(pi){
   const idx=p.proformas.findIndex(x=>x.id===pi.id);if(idx>=0)p.proformas[idx]=entry;else p.proformas.push(entry);
   const payIdx=p.payments.findIndex(x=>x.sourceProformaId===pi.id);
   const oldPay=payIdx>=0?p.payments[payIdx]:null;
-  const payEntry={
-    label:'Invoice '+pi.number,
-    amount:calc.grandTotal,
-    date:pi.issueDate,
-    status:oldPay?.status||'pending',
-    sourceProformaId:pi.id,
-    receivedDate:oldPay?.receivedDate||'',
-    paymentReference:oldPay?.paymentReference||'',
-    paymentMethod:oldPay?.paymentMethod||''
-  };
+  const previous=sfNormalizePaymentRecord(oldPay||{});
+  const payEntry=sfNormalizePaymentRecord({
+    ...previous,id:previous.id||('pay_'+pi.id),label:'Invoice '+pi.number,amount:calc.grandTotal,date:pi.issueDate,
+    sourceProformaId:pi.id,receipts:previous.receipts||[]
+  });
   if(payIdx>=0)p.payments[payIdx]=payEntry;else p.payments.push(payEntry);
   p.updatedAt=new Date().toISOString();saveProjects();if(document.getElementById('proj-grid'))renderProjects();return p;
 }
@@ -4433,14 +4589,14 @@ function closeProformaPreview(){const el=document.getElementById('proforma-previ
 // ══════════════════════════════════════════════════════════════════════════════
 let sfEngineers = JSON.parse(localStorage.getItem('sfEngineers')||'[]');
 const SKYFIELD_DEFAULT_ENGINEERS = [
-  {id:'eng_260311',name:'محمود عبدالسميع سليمان عواد',nationality:'مصري',iqama:'2543037325',employeeNo:'260311',profession:'مهندس',specialization:'Project Management',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:1000,monthly:30000,overtime:0,housingTransport:0,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260401',name:'مجد جمال محمد حسين',nationality:'مصري',iqama:'2559460999',employeeNo:'260401',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:416.67,monthly:12500,overtime:0,housingTransport:4375,siteCar:1500,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260402',name:'عبدالله محمد صالح ادم',nationality:'سوداني',iqama:'2600459933',employeeNo:'260402',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:400,monthly:12000,overtime:0,housingTransport:4200,siteCar:1500,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260403',name:'افتخار علي خان ليق صابر',nationality:'باكستاني',iqama:'2493737577',employeeNo:'260403',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260404',name:'فرقان ساغير ساغير احمد',nationality:'باكستاني',iqama:'2551686542',employeeNo:'260404',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260405',name:'امجد خان قل محمود جان',nationality:'باكستاني',iqama:'2524057474',employeeNo:'260405',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:266.67,monthly:8000,overtime:0,housingTransport:2000,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260406',name:'محمد سيف الإسلام',nationality:'باكستاني',iqama:'2572124762',employeeNo:'260406',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteCar:0,notes:'Imported from the approved monthly payroll list.'},
-  {id:'eng_260503',name:'عبدال قدير محمد نواز',nationality:'باكستاني',iqama:'2582148595',employeeNo:'260503',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:266.67,monthly:8000,overtime:0,housingTransport:2800,siteCar:0,notes:'Imported from the approved monthly payroll list.'}
+  {id:'eng_260311',name:'محمود عبدالسميع سليمان عواد',nationality:'مصري',iqama:'2543037325',employeeNo:'260311',profession:'مهندس',specialization:'Project Management',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:1000,monthly:30000,overtime:0,housingTransport:0,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260401',name:'مجد جمال محمد حسين',nationality:'مصري',iqama:'2559460999',employeeNo:'260401',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:416.67,monthly:12500,overtime:0,housingTransport:4375,siteAllowance:0,carAllowance:1500,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260402',name:'عبدالله محمد صالح ادم',nationality:'سوداني',iqama:'2600459933',employeeNo:'260402',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:400,monthly:12000,overtime:0,housingTransport:4200,siteAllowance:0,carAllowance:1500,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260403',name:'افتخار علي خان ليق صابر',nationality:'باكستاني',iqama:'2493737577',employeeNo:'260403',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260404',name:'فرقان ساغير ساغير احمد',nationality:'باكستاني',iqama:'2551686542',employeeNo:'260404',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260405',name:'امجد خان قل محمود جان',nationality:'باكستاني',iqama:'2524057474',employeeNo:'260405',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:266.67,monthly:8000,overtime:0,housingTransport:2000,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260406',name:'محمد سيف الإسلام',nationality:'باكستاني',iqama:'2572124762',employeeNo:'260406',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:250,monthly:7500,overtime:0,housingTransport:1875,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'},
+  {id:'eng_260503',name:'عبدال قدير محمد نواز',nationality:'باكستاني',iqama:'2582148595',employeeNo:'260503',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:266.67,monthly:8000,overtime:0,housingTransport:2800,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'}
 ];
 
 let sfCostEquipment = JSON.parse(localStorage.getItem('sfCostEquipment')||'[]');
@@ -4450,7 +4606,7 @@ let sfCostSeq=1;
 
 function sfUid(prefix){return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*100000)}
 function sfNum(v){return Math.max(0,parseFloat(v)||0)}
-function saveEngineerLibrary(){localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));updateSidebarCounts();renderEngineers();renderCostPlan();}
+function saveEngineerLibrary(){localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));updateSidebarCounts();renderEngineers();renderCostPlan();sfMirrorCollection(SF_NORMALIZED_TABLES.engineers,sfEngineers);}
 function sfNormalizeEngineerKey(value){return String(value||'').trim().toLowerCase().replace(/\s+/g,' ')}
 function importSkyFieldEngineers(showMessage=false){
   let added=0,updated=0;
@@ -4462,7 +4618,7 @@ function importSkyFieldEngineers(showMessage=false){
       return;
     }
     let changed=false;
-    ['name','nationality','iqama','employeeNo','profession','specialization','loa','employment','status','daily','monthly','overtime','housingTransport','siteCar','notes'].forEach(key=>{
+    ['name','nationality','iqama','employeeNo','profession','specialization','loa','employment','status','daily','monthly','overtime','housingTransport','siteAllowance','carAllowance','notes'].forEach(key=>{
       const current=match[key];
       if(current===undefined||current===null||current===''){
         match[key]=source[key];
@@ -4481,7 +4637,7 @@ function saveCurrentCostPlan(){renderCostPlan();}
 
 function resetEngineerForm(){
   ['eng-id','eng-name','eng-nationality','eng-iqama','eng-employee-no','eng-profession','eng-notes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
-  const defaults={'eng-specialization':'Protection','eng-loa':'Non-LOA','eng-employment':'Company Employee','eng-status':'available','eng-daily':'0','eng-monthly':'0','eng-overtime':'0','eng-housing-transport':'0','eng-site-car':'0'};
+  const defaults={'eng-specialization':'Protection','eng-loa':'Non-LOA','eng-employment':'Company Employee','eng-status':'available','eng-daily':'0','eng-monthly':'0','eng-overtime':'0','eng-housing-transport':'0','eng-site-allowance':'0','eng-car-allowance':'0'};
   Object.entries(defaults).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v});
   const t=document.getElementById('engineer-form-title');if(t)t.textContent='Add Engineer';
   const b=document.getElementById('eng-save-btn');if(b)b.textContent='Save Engineer';
@@ -4489,11 +4645,11 @@ function resetEngineerForm(){
 function saveEngineerRecord(){
   const name=(document.getElementById('eng-name')?.value||'').trim();if(!name){alert('Engineer name is required.');return;}
   const id=document.getElementById('eng-id')?.value||sfUid('eng');
-  const rec={id,name,nationality:(document.getElementById('eng-nationality').value||'').trim(),iqama:(document.getElementById('eng-iqama').value||'').trim(),employeeNo:(document.getElementById('eng-employee-no').value||'').trim(),profession:(document.getElementById('eng-profession').value||'').trim(),specialization:document.getElementById('eng-specialization').value,loa:document.getElementById('eng-loa').value,employment:document.getElementById('eng-employment').value,status:document.getElementById('eng-status').value,daily:sfNum(document.getElementById('eng-daily').value),monthly:sfNum(document.getElementById('eng-monthly').value),overtime:sfNum(document.getElementById('eng-overtime').value),housingTransport:sfNum(document.getElementById('eng-housing-transport').value),siteCar:sfNum(document.getElementById('eng-site-car').value),notes:(document.getElementById('eng-notes').value||'').trim(),updatedAt:new Date().toISOString()};
+  const rec={id,name,nationality:(document.getElementById('eng-nationality').value||'').trim(),iqama:(document.getElementById('eng-iqama').value||'').trim(),employeeNo:(document.getElementById('eng-employee-no').value||'').trim(),profession:(document.getElementById('eng-profession').value||'').trim(),specialization:document.getElementById('eng-specialization').value,loa:document.getElementById('eng-loa').value,employment:document.getElementById('eng-employment').value,status:document.getElementById('eng-status').value,daily:sfNum(document.getElementById('eng-daily').value),monthly:sfNum(document.getElementById('eng-monthly').value),overtime:sfNum(document.getElementById('eng-overtime').value),housingTransport:sfNum(document.getElementById('eng-housing-transport').value),siteAllowance:sfNum(document.getElementById('eng-site-allowance').value),carAllowance:sfNum(document.getElementById('eng-car-allowance').value),notes:(document.getElementById('eng-notes').value||'').trim(),updatedAt:new Date().toISOString()};
   const i=sfEngineers.findIndex(x=>x.id===id);if(i>=0)sfEngineers[i]=rec;else sfEngineers.unshift(rec);
   saveEngineerLibrary();resetEngineerForm();
 }
-function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('eng-id',x.id);set('eng-name',x.name);set('eng-nationality',x.nationality);set('eng-iqama',x.iqama);set('eng-employee-no',x.employeeNo);set('eng-profession',x.profession);set('eng-specialization',x.specialization);set('eng-loa',x.loa);set('eng-employment',x.employment);set('eng-status',x.status);set('eng-daily',x.daily);set('eng-monthly',x.monthly);set('eng-overtime',x.overtime);set('eng-housing-transport',x.housingTransport);set('eng-site-car',x.siteCar);set('eng-notes',x.notes);document.getElementById('engineer-form-title').textContent='Edit Engineer';document.getElementById('eng-save-btn').textContent='Update Engineer';window.scrollTo({top:0,behavior:'smooth'});}
+function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('eng-id',x.id);set('eng-name',x.name);set('eng-nationality',x.nationality);set('eng-iqama',x.iqama);set('eng-employee-no',x.employeeNo);set('eng-profession',x.profession);set('eng-specialization',x.specialization);set('eng-loa',x.loa);set('eng-employment',x.employment);set('eng-status',x.status);set('eng-daily',x.daily);set('eng-monthly',x.monthly);set('eng-overtime',x.overtime);set('eng-housing-transport',x.housingTransport);set('eng-site-allowance',x.siteAllowance||0);set('eng-car-allowance',x.carAllowance??x.siteCar??0);set('eng-notes',x.notes);document.getElementById('engineer-form-title').textContent='Edit Engineer';document.getElementById('eng-save-btn').textContent='Update Engineer';window.scrollTo({top:0,behavior:'smooth'});}
 function deleteEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x||!confirm('Delete engineer '+x.name+'?'))return;sfEngineers=sfEngineers.filter(e=>e.id!==id);saveEngineerLibrary();}
 function renderEngineers(){
   const body=document.getElementById('engineer-table-body');if(!body)return;
@@ -4512,10 +4668,10 @@ let sfCurrentPayroll = null;
 function payrollMoney(v){return (parseFloat(v)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function payrollDefaultMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function payrollBlankSheet(){return{id:sfUid('pay'),month:document.getElementById('payroll-month')?.value||payrollDefaultMonth(),projectId:document.getElementById('payroll-project')?.value||'',standardDays:30,status:'draft',rows:[],notes:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
-function payrollRowFromEngineer(e){return{id:sfUid('pr'),engineerId:e?.id||'',name:e?.name||'',nationality:e?.nationality||'',iqama:e?.iqama||'',employeeNo:e?.employeeNo||'',profession:e?.profession||e?.specialization||'',baseSalary:sfNum(e?.monthly),housingTransport:sfNum(e?.housingTransport),siteCar:sfNum(e?.siteCar),otherAllowance:0,attendanceDays:0,overtimeHours:0,overtimeRate:sfNum(e?.overtime),otherEarnings:0,deductions:0,notes:''}}
-function payrollCalcRow(r){const days=30;const attendance=Math.min(days,Math.max(0,sfNum(r.attendanceDays)));const monthlyPackage=sfNum(r.baseSalary)+sfNum(r.housingTransport)+sfNum(r.siteCar);const attendanceSalary=monthlyPackage*attendance/days;const overtimeAmount=sfNum(r.overtimeHours)*sfNum(r.overtimeRate);const fixedAdditions=sfNum(r.otherAllowance)+sfNum(r.otherEarnings);const gross=attendanceSalary+fixedAdditions+overtimeAmount;const net=Math.max(0,gross-sfNum(r.deductions));return{attendanceSalary,overtimeAmount,allowances:fixedAdditions,gross,net,monthlyPackage}}
+function payrollRowFromEngineer(e){return{id:sfUid('pr'),engineerId:e?.id||'',name:e?.name||'',nationality:e?.nationality||'',iqama:e?.iqama||'',employeeNo:e?.employeeNo||'',profession:e?.profession||e?.specialization||'',baseSalary:sfNum(e?.monthly),housingTransport:sfNum(e?.housingTransport),carAllowance:sfNum(e?.carAllowance??e?.siteCar),siteAllowance:sfNum(e?.siteAllowance),otherAllowance:0,attendanceDays:0,overtimeHours:0,overtimeRate:sfNum(e?.overtime),otherEarnings:0,deductions:0,notes:''}}
+function payrollCalcRow(r){const days=30;const attendance=Math.min(days,Math.max(0,sfNum(r.attendanceDays)));const monthlyPackage=sfNum(r.baseSalary)+sfNum(r.housingTransport)+sfNum(r.carAllowance??r.siteCar);const attendanceSalary=monthlyPackage*attendance/days;const overtimeAmount=sfNum(r.overtimeHours)*sfNum(r.overtimeRate);const fixedAdditions=sfNum(r.siteAllowance)+sfNum(r.otherAllowance)+sfNum(r.otherEarnings);const gross=attendanceSalary+fixedAdditions+overtimeAmount;const net=Math.max(0,gross-sfNum(r.deductions));return{attendanceSalary,overtimeAmount,allowances:fixedAdditions,gross,net,monthlyPackage}}
 function payrollTotals(){return(sfCurrentPayroll?.rows||[]).reduce((a,r)=>{const c=payrollCalcRow(r);a.basic+=sfNum(r.baseSalary);a.attendance+=c.attendanceSalary;a.allowances+=c.allowances;a.overtime+=c.overtimeAmount;a.deductions+=sfNum(r.deductions);a.net+=c.net;return a},{basic:0,attendance:0,allowances:0,overtime:0,deductions:0,net:0})}
-function payrollSaveStore(){localStorage.setItem('sfPayrollSheets',JSON.stringify(sfPayrollSheets));updateSidebarCounts();payrollRenderSaved()}
+function payrollSaveStore(){localStorage.setItem('sfPayrollSheets',JSON.stringify(sfPayrollSheets));updateSidebarCounts();payrollRenderSaved();sfMirrorCollection(SF_NORMALIZED_TABLES.payroll,sfPayrollSheets)}
 function payrollPopulateProjects(){const sel=document.getElementById('payroll-project');if(!sel)return;const current=sfCurrentPayroll?.projectId??sel.value;sel.innerHTML='<option value="">General / Not assigned</option>'+projects.map(p=>`<option value="${p.id}">${escHtml(p.name)}${p.client?' — '+escHtml(p.client):''}</option>`).join('');sel.value=current||''}
 function payrollNewSheet(){sfCurrentPayroll=payrollBlankSheet();const m=document.getElementById('payroll-month');if(m&&!m.value)m.value=sfCurrentPayroll.month;payrollPopulateProjects();payrollRender()}
 function payrollMonthChanged(){if(!sfCurrentPayroll)payrollNewSheet();sfCurrentPayroll.month=document.getElementById('payroll-month').value||payrollDefaultMonth();sfCurrentPayroll.updatedAt=new Date().toISOString();payrollRenderSaved()}
@@ -4523,26 +4679,26 @@ function payrollProjectChanged(){if(!sfCurrentPayroll)payrollNewSheet();sfCurren
 function payrollSetHeader(field,value){if(!sfCurrentPayroll)payrollNewSheet();sfCurrentPayroll[field]=field==='standardDays'?Math.max(1,Math.min(31,sfNum(value)||30)):value;payrollRenderRows()}
 function payrollAddRow(engineerId=''){if(!sfCurrentPayroll)payrollNewSheet();const e=sfEngineers.find(x=>x.id===engineerId);sfCurrentPayroll.rows.push(payrollRowFromEngineer(e));payrollRenderRows()}
 function payrollLoadProjectEngineers(){if(!sfCurrentPayroll)payrollNewSheet();const p=projects.find(x=>x.id===document.getElementById('payroll-project').value);let ids=[];if(p)ids=(p.assignedEngineers||[]).map(x=>x.engineerId).filter(Boolean);const source=ids.length?ids.map(id=>sfEngineers.find(e=>e.id===id)).filter(Boolean):sfEngineers;if(!source.length){alert('No engineers are available. Add engineers first.');return;}const existing=new Set((sfCurrentPayroll.rows||[]).map(r=>r.engineerId).filter(Boolean));source.forEach(e=>{if(!existing.has(e.id))sfCurrentPayroll.rows.push(payrollRowFromEngineer(e))});payrollRenderRows()}
-function payrollSetRow(id,field,value){const r=sfCurrentPayroll?.rows.find(x=>x.id===id);if(!r)return;if(field==='engineerId'){const e=sfEngineers.find(x=>x.id===value);const fresh=payrollRowFromEngineer(e);Object.assign(r,fresh,{id:r.id,attendanceDays:r.attendanceDays||0,notes:r.notes||''});}else r[field]=['baseSalary','housingTransport','siteCar','otherAllowance','attendanceDays','overtimeHours','overtimeRate','otherEarnings','deductions'].includes(field)?sfNum(value):value;sfCurrentPayroll.updatedAt=new Date().toISOString();payrollRenderRows()}
+function payrollSetRow(id,field,value){const r=sfCurrentPayroll?.rows.find(x=>x.id===id);if(!r)return;if(field==='engineerId'){const e=sfEngineers.find(x=>x.id===value);const fresh=payrollRowFromEngineer(e);Object.assign(r,fresh,{id:r.id,attendanceDays:r.attendanceDays||0,notes:r.notes||''});}else r[field]=['baseSalary','housingTransport','carAllowance','siteAllowance','otherAllowance','attendanceDays','overtimeHours','overtimeRate','otherEarnings','deductions'].includes(field)?sfNum(value):value;sfCurrentPayroll.updatedAt=new Date().toISOString();payrollRenderRows()}
 function payrollRemoveRow(id){if(!sfCurrentPayroll)return;sfCurrentPayroll.rows=sfCurrentPayroll.rows.filter(r=>r.id!==id);payrollRenderRows()}
 function payrollEngineerOptions(selected){return '<option value="">Manual employee</option>'+sfEngineers.map(e=>`<option value="${e.id}" ${selected===e.id?'selected':''}>${escHtml(e.name)}</option>`).join('')}
 function payrollRenderRows(){const body=document.getElementById('payroll-table-body');if(!body||!sfCurrentPayroll)return;body.innerHTML=sfCurrentPayroll.rows.length?sfCurrentPayroll.rows.map((r,i)=>{const c=payrollCalcRow(r);return`<tr>
 <td style="text-align:center">${i+1}</td>
 <td><select onchange="payrollSetRow('${r.id}','engineerId',this.value)" style="min-width:160px">${payrollEngineerOptions(r.engineerId)}</select><input class="name-inp" value="${escHtml(r.name)}" placeholder="Employee name" onchange="payrollSetRow('${r.id}','name',this.value)"></td>
 <td><input value="${escHtml(r.nationality)}" onchange="payrollSetRow('${r.id}','nationality',this.value)"></td><td><input class="id-inp" value="${escHtml(r.iqama)}" onchange="payrollSetRow('${r.id}','iqama',this.value)"></td><td><input class="id-inp" value="${escHtml(r.employeeNo)}" onchange="payrollSetRow('${r.id}','employeeNo',this.value)"></td><td><input value="${escHtml(r.profession)}" onchange="payrollSetRow('${r.id}','profession',this.value)"></td>
-<td><input type="number" value="${r.baseSalary}" onchange="payrollSetRow('${r.id}','baseSalary',this.value)"></td><td><input type="number" value="${r.housingTransport}" onchange="payrollSetRow('${r.id}','housingTransport',this.value)"></td><td><input type="number" value="${r.siteCar}" onchange="payrollSetRow('${r.id}','siteCar',this.value)"></td><td><input type="number" value="${r.otherAllowance}" onchange="payrollSetRow('${r.id}','otherAllowance',this.value)"></td>
+<td><input type="number" value="${r.baseSalary}" onchange="payrollSetRow('${r.id}','baseSalary',this.value)"></td><td><input type="number" value="${r.housingTransport}" onchange="payrollSetRow('${r.id}','housingTransport',this.value)"></td><td><input type="number" value="${r.carAllowance??r.siteCar??0}" onchange="payrollSetRow('${r.id}','carAllowance',this.value)"></td><td><input type="number" value="${r.siteAllowance||0}" onchange="payrollSetRow('${r.id}','siteAllowance',this.value)"></td><td><input type="number" value="${r.otherAllowance}" onchange="payrollSetRow('${r.id}','otherAllowance',this.value)"></td>
 <td><input type="number" min="0" max="31" value="${r.attendanceDays}" onchange="payrollSetRow('${r.id}','attendanceDays',this.value)"></td><td class="money">${payrollMoney(c.attendanceSalary)}</td><td><input type="number" min="0" value="${r.overtimeHours}" onchange="payrollSetRow('${r.id}','overtimeHours',this.value)"></td><td><input type="number" min="0" value="${r.overtimeRate}" onchange="payrollSetRow('${r.id}','overtimeRate',this.value)"></td><td class="money">${payrollMoney(c.overtimeAmount)}</td>
-<td><input type="number" min="0" value="${r.otherEarnings}" onchange="payrollSetRow('${r.id}','otherEarnings',this.value)"></td><td><input type="number" min="0" value="${r.deductions}" onchange="payrollSetRow('${r.id}','deductions',this.value)"></td><td class="money net-cell">${payrollMoney(c.net)}</td><td><input class="notes-inp" value="${escHtml(r.notes)}" onchange="payrollSetRow('${r.id}','notes',this.value)"></td><td><button class="rm-btn" onclick="payrollRemoveRow('${r.id}')">×</button></td></tr>`}).join(''):'<tr><td colspan="20"><div class="empty-resource">No employees added. Select a project and click Load Engineers, or add a row manually.</div></td></tr>';const t=payrollTotals();const sum=document.getElementById('payroll-summary');if(sum)sum.innerHTML=`<div class="payroll-summary-box"><div class="lbl">Prorated Package</div><div class="val">${fmtSAR(t.attendance)}</div></div><div class="payroll-summary-box"><div class="lbl">Fixed Additions</div><div class="val">${fmtSAR(t.allowances)}</div></div><div class="payroll-summary-box"><div class="lbl">Overtime</div><div class="val">${fmtSAR(t.overtime)}</div></div><div class="payroll-summary-box"><div class="lbl">Deductions</div><div class="val">${fmtSAR(t.deductions)}</div></div><div class="payroll-summary-box total"><div class="lbl">Net Payroll Total</div><div class="val">${fmtSAR(t.net)}</div></div>`}
+<td><input type="number" min="0" value="${r.otherEarnings}" onchange="payrollSetRow('${r.id}','otherEarnings',this.value)"></td><td><input type="number" min="0" value="${r.deductions}" onchange="payrollSetRow('${r.id}','deductions',this.value)"></td><td class="money net-cell">${payrollMoney(c.net)}</td><td><input class="notes-inp" value="${escHtml(r.notes)}" onchange="payrollSetRow('${r.id}','notes',this.value)"></td><td><button class="rm-btn" onclick="payrollRemoveRow('${r.id}')">×</button></td></tr>`}).join(''):'<tr><td colspan="21"><div class="empty-resource">No employees added. Select a project and click Load Engineers, or add a row manually.</div></td></tr>';const t=payrollTotals();const sum=document.getElementById('payroll-summary');if(sum)sum.innerHTML=`<div class="payroll-summary-box"><div class="lbl">Prorated Package</div><div class="val">${fmtSAR(t.attendance)}</div></div><div class="payroll-summary-box"><div class="lbl">Fixed Additions</div><div class="val">${fmtSAR(t.allowances)}</div></div><div class="payroll-summary-box"><div class="lbl">Overtime</div><div class="val">${fmtSAR(t.overtime)}</div></div><div class="payroll-summary-box"><div class="lbl">Deductions</div><div class="val">${fmtSAR(t.deductions)}</div></div><div class="payroll-summary-box total"><div class="lbl">Net Payroll Total</div><div class="val">${fmtSAR(t.net)}</div></div>`}
 function payrollRender(){if(!sfCurrentPayroll)sfCurrentPayroll=payrollBlankSheet();sfCurrentPayroll.standardDays=30;const m=document.getElementById('payroll-month');if(m)m.value=sfCurrentPayroll.month||payrollDefaultMonth();const d=document.getElementById('payroll-standard-days');if(d)d.value=30;payrollPopulateProjects();payrollRenderRows();payrollRenderSaved()}
 function payrollPostProjectExpense(sheet){projects.forEach(p=>{if(!Array.isArray(p.actualExpenses))p.actualExpenses=[];p.actualExpenses=p.actualExpenses.filter(e=>e.sourceId!==sheet.id)});if(!sheet.projectId)return;const p=projects.find(x=>x.id===sheet.projectId);if(!p)return;const total=(sheet.rows||[]).reduce((s,r)=>s+payrollCalcStandalone(r,sheet.standardDays).net,0);p.actualExpenses.push({id:'exp_'+sheet.id,source:'payroll',sourceId:sheet.id,category:'Payroll',description:`Monthly payroll ${sheet.month}`,amount:total,date:(sheet.month||payrollDefaultMonth())+'-01'});p.updatedAt=new Date().toISOString();saveProjects()}
-function payrollCalcStandalone(r,standardDays){const days=30;const attendance=Math.min(days,Math.max(0,sfNum(r.attendanceDays)));const monthlyPackage=sfNum(r.baseSalary)+sfNum(r.housingTransport)+sfNum(r.siteCar);const attendanceSalary=monthlyPackage*attendance/days;const overtimeAmount=sfNum(r.overtimeHours)*sfNum(r.overtimeRate);const fixedAdditions=sfNum(r.otherAllowance)+sfNum(r.otherEarnings);const gross=attendanceSalary+fixedAdditions+overtimeAmount;return{attendanceSalary,overtimeAmount,allowances:fixedAdditions,gross,net:Math.max(0,gross-sfNum(r.deductions)),monthlyPackage}}
+function payrollCalcStandalone(r,standardDays){const days=30;const attendance=Math.min(days,Math.max(0,sfNum(r.attendanceDays)));const monthlyPackage=sfNum(r.baseSalary)+sfNum(r.housingTransport)+sfNum(r.carAllowance??r.siteCar);const attendanceSalary=monthlyPackage*attendance/days;const overtimeAmount=sfNum(r.overtimeHours)*sfNum(r.overtimeRate);const fixedAdditions=sfNum(r.siteAllowance)+sfNum(r.otherAllowance)+sfNum(r.otherEarnings);const gross=attendanceSalary+fixedAdditions+overtimeAmount;return{attendanceSalary,overtimeAmount,allowances:fixedAdditions,gross,net:Math.max(0,gross-sfNum(r.deductions)),monthlyPackage}}
 function payrollSaveSheet(){if(!sfCurrentPayroll)payrollNewSheet();if(!sfCurrentPayroll.month){alert('Select the payroll month.');return}if(!sfCurrentPayroll.rows.length){alert('Add at least one employee.');return}sfCurrentPayroll.projectId=document.getElementById('payroll-project').value||'';sfCurrentPayroll.standardDays=30;sfCurrentPayroll.updatedAt=new Date().toISOString();const copy=deepClone(sfCurrentPayroll);const idx=sfPayrollSheets.findIndex(x=>x.id===copy.id);if(idx>=0)sfPayrollSheets[idx]=copy;else sfPayrollSheets.unshift(copy);payrollSaveStore();payrollPostProjectExpense(copy);setCloudStatus('saved','Saved to cloud');alert('Monthly timesheet saved and project actual cost updated.')}
 function payrollLoadSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(!x)return;sfCurrentPayroll=deepClone(x);payrollRender();window.scrollTo({top:0,behavior:'smooth'})}
 function payrollDeleteSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(!x||!confirm('Delete this monthly sheet?'))return;sfPayrollSheets=sfPayrollSheets.filter(s=>s.id!==id);projects.forEach(p=>{p.actualExpenses=(p.actualExpenses||[]).filter(e=>e.sourceId!==id)});saveProjects();payrollSaveStore();if(sfCurrentPayroll?.id===id)payrollNewSheet()}
 function payrollApproveCurrent(){if(!sfCurrentPayroll)return;sfCurrentPayroll.status='approved';payrollSaveSheet()}
 function payrollRenderSaved(){const root=document.getElementById('payroll-saved-list');if(!root)return;const q=(document.getElementById('payroll-search')?.value||'').toLowerCase();const list=sfPayrollSheets.filter(s=>{const p=projects.find(x=>x.id===s.projectId);return[s.month,p?.name,s.status].join(' ').toLowerCase().includes(q)});root.innerHTML=list.length?list.map(s=>{const p=projects.find(x=>x.id===s.projectId);const total=(s.rows||[]).reduce((a,r)=>a+payrollCalcStandalone(r,s.standardDays).net,0);return`<div class="payroll-sheet-card"><strong>${escHtml(s.month)} — ${escHtml(p?.name||'General')}</strong><small>${s.rows.length} employees · ${fmtSAR(total)} · ${escHtml(s.status||'draft')}</small><div class="payroll-sheet-card-actions"><button class="btn-sm" onclick="payrollLoadSheet('${s.id}')">Open</button><button class="btn-sm" onclick="payrollExportXlsx('${s.id}')">Excel</button><button class="btn-sm" onclick="payrollDeleteSheet('${s.id}')">Delete</button></div></div>`}).join(''):'<div class="empty-resource" style="grid-column:1/-1">No monthly sheets saved yet.</div>';updateSidebarCounts()}
 function payrollSheetForAction(id){return id?sfPayrollSheets.find(x=>x.id===id):sfCurrentPayroll}
-function payrollExportXlsx(id=''){const sheet=payrollSheetForAction(id);if(!sheet||!sheet.rows.length){alert('No payroll data to export.');return}if(typeof XLSX==='undefined'){alert('Excel export library did not load. Check your internet connection.');return}const p=projects.find(x=>x.id===sheet.projectId);const headers=['م','الاسم','الجنسية','رقم الإقامة','رقم وظيفي','المهنة','الراتب الأساسي','بدل سكن ونقل','بدل موقع / سيارة','بدلات أخرى','عدد أيام الحضور','إجمالي الباقة بالحضور','ساعات إضافية','سعر الساعة','إجمالي الإضافي','مكافآت أخرى','خصومات','الإجمالي','ملاحظات'];const data=[[`رواتب شركة سماء الميدان — ${sheet.month}${p?' — '+p.name:''}`],[],headers];sheet.rows.forEach((r,i)=>{const c=payrollCalcStandalone(r,sheet.standardDays);data.push([i+1,r.name,r.nationality,r.iqama,r.employeeNo,r.profession,r.baseSalary,r.housingTransport,r.siteCar,r.otherAllowance,r.attendanceDays,c.attendanceSalary,r.overtimeHours,r.overtimeRate,c.overtimeAmount,r.otherEarnings,r.deductions,c.net,r.notes])});const totals=sheet.rows.reduce((a,r)=>{const c=payrollCalcStandalone(r,sheet.standardDays);a[6]+=sfNum(r.baseSalary);a[7]+=sfNum(r.housingTransport);a[8]+=sfNum(r.siteCar);a[9]+=sfNum(r.otherAllowance);a[11]+=c.attendanceSalary;a[14]+=c.overtimeAmount;a[15]+=sfNum(r.otherEarnings);a[16]+=sfNum(r.deductions);a[17]+=c.net;return a},Array(19).fill(''));totals[0]='الإجمالي';data.push(totals,[],['المدير العام','','','','','','الحسابات','','','','','','إدارة شؤون الموظفين']);const ws=XLSX.utils.aoa_to_sheet(data);ws['!merges']=[XLSX.utils.decode_range('A1:S1')];ws['!cols']=[{wch:5},{wch:25},{wch:12},{wch:16},{wch:13},{wch:18},...Array(12).fill({wch:14}),{wch:22}];ws['!views']=[{rightToLeft:true}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'الشهر '+sheet.month);XLSX.writeFile(wb,`Sama_AlMaydan_Timesheet_${sheet.month}.xlsx`)}
+function payrollExportXlsx(id=''){const sheet=payrollSheetForAction(id);if(!sheet||!sheet.rows.length){alert('No payroll data to export.');return}if(typeof XLSX==='undefined'){alert('Excel export library did not load. Check your internet connection.');return}const p=projects.find(x=>x.id===sheet.projectId);const headers=['م','الاسم','الجنسية','رقم الإقامة','رقم وظيفي','المهنة','الراتب الأساسي','بدل سكن ونقل','بدل سيارة','بدل موقع','بدلات أخرى','عدد أيام الحضور','إجمالي الباقة بالحضور','ساعات إضافية','سعر الساعة','إجمالي الإضافي','مكافآت أخرى','خصومات','الإجمالي','ملاحظات'];const data=[[`رواتب شركة سماء الميدان — ${sheet.month}${p?' — '+p.name:''}`],[],headers];sheet.rows.forEach((r,i)=>{const c=payrollCalcStandalone(r,sheet.standardDays);data.push([i+1,r.name,r.nationality,r.iqama,r.employeeNo,r.profession,r.baseSalary,r.housingTransport,r.carAllowance??r.siteCar??0,r.siteAllowance||0,r.otherAllowance,r.attendanceDays,c.attendanceSalary,r.overtimeHours,r.overtimeRate,c.overtimeAmount,r.otherEarnings,r.deductions,c.net,r.notes])});const totals=sheet.rows.reduce((a,r)=>{const c=payrollCalcStandalone(r,sheet.standardDays);a[6]+=sfNum(r.baseSalary);a[7]+=sfNum(r.housingTransport);a[8]+=sfNum(r.carAllowance??r.siteCar);a[9]+=sfNum(r.siteAllowance);a[10]+=sfNum(r.otherAllowance);a[12]+=c.attendanceSalary;a[15]+=c.overtimeAmount;a[16]+=sfNum(r.otherEarnings);a[17]+=sfNum(r.deductions);a[18]+=c.net;return a},Array(20).fill(''));totals[0]='الإجمالي';data.push(totals,[],['المدير العام','','','','','','الحسابات','','','','','','إدارة شؤون الموظفين']);const ws=XLSX.utils.aoa_to_sheet(data);ws['!merges']=[XLSX.utils.decode_range('A1:T1')];ws['!cols']=[{wch:5},{wch:25},{wch:12},{wch:16},{wch:13},{wch:18},...Array(13).fill({wch:14}),{wch:22}];ws['!views']=[{rightToLeft:true}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'الشهر '+sheet.month);XLSX.writeFile(wb,`Sama_AlMaydan_Timesheet_${sheet.month}.xlsx`)}
 function payrollPrint(){const sheet=sfCurrentPayroll;if(!sheet||!sheet.rows.length){alert('No payroll data to print.');return}const p=projects.find(x=>x.id===sheet.projectId);const rows=sheet.rows.map((r,i)=>{const c=payrollCalcStandalone(r,sheet.standardDays);return`<tr><td>${i+1}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.employeeNo)}</td><td>${payrollMoney(r.baseSalary)}</td><td>${r.attendanceDays}</td><td>${payrollMoney(c.attendanceSalary)}</td><td>${payrollMoney(c.allowances)}</td><td>${payrollMoney(c.overtimeAmount)}</td><td>${payrollMoney(r.deductions)}</td><td>${payrollMoney(c.net)}</td><td>${escHtml(r.notes)}</td></tr>`}).join('');const total=sheet.rows.reduce((a,r)=>a+payrollCalcStandalone(r,sheet.standardDays).net,0);const w=window.open('','_blank');w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>Timesheet ${sheet.month}</title><style>body{font-family:Tahoma,Arial,sans-serif;margin:18px;color:#111}h2{text-align:center;color:#1F3864}.sub{text-align:center;margin-bottom:14px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#1F3864;color:#fff}th,td{border:1px solid #777;padding:5px;text-align:center}.total{background:#fff4cf;font-weight:bold}.sigs{display:grid;grid-template-columns:repeat(3,1fr);gap:60px;margin-top:55px;text-align:center}.sigs div{border-top:1px solid #222;padding-top:7px}@media print{@page{size:A4 landscape;margin:8mm}}</style></head><body><h2>رواتب شركة سماء الميدان — الشهر ${escHtml(sheet.month)}</h2><div class="sub">${escHtml(p?.name||'عام')} · مقسوم الرواتب الثابت: 30</div><table><thead><tr><th>م</th><th>الاسم</th><th>الرقم الوظيفي</th><th>الراتب الأساسي</th><th>الحضور</th><th>الباقة بالحضور</th><th>إضافات ثابتة</th><th>الإضافي</th><th>الخصومات</th><th>الإجمالي</th><th>ملاحظات</th></tr></thead><tbody>${rows}<tr class="total"><td colspan="9">الإجمالي</td><td>${payrollMoney(total)}</td><td></td></tr></tbody></table><div class="sigs"><div>المدير العام</div><div>الحسابات</div><div>إدارة شؤون الموظفين</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
 
 function resetCostEquipmentForm(){['cost-eq-id','cost-eq-name','cost-eq-category'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});['cost-eq-daily','cost-eq-weekly','cost-eq-monthly'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='0'});const t=document.getElementById('cost-eq-form-title');if(t)t.textContent='Add Equipment Rate';const b=document.getElementById('cost-eq-save-btn');if(b)b.textContent='Save Equipment';}
@@ -4591,6 +4747,12 @@ calcQuotationTotals=function(){const t=sfCalcQuotationTotalsBase();const c=calcI
 const sfSyncProjectFromQuotationBase=syncProjectFromQuotation;
 syncProjectFromQuotation=function(rec){const p=sfSyncProjectFromQuotationBase(rec);const plan=deepClone(rec?.snapshot?.costPlan||{manpower:[],equipment:[],other:[]});const sum=rec?.snapshot?.internalCostSummary||calcInternalCostPlan();p.costPlan=plan;p.estimatedInternalCost=sfNum(sum.total);p.expectedProfit=(parseFloat(rec?.snapshot?.totals?.sub)||0)-p.estimatedInternalCost;p.assignedEngineers=(plan.manpower||[]).filter(x=>x.engineerId).map(x=>({engineerId:x.engineerId,name:(sfEngineers.find(e=>e.id===x.engineerId)||{}).name||x.label||'',qty:sfNum(x.qty),duration:sfNum(x.duration),basis:x.basis,rate:sfNum(x.rate)}));saveProjects();return p;};
 
+
+// v16 migration: split the legacy combined Site / Car Allowance field.
+sfEngineers.forEach(e=>{if(e.carAllowance==null)e.carAllowance=sfNum(e.siteCar);if(e.siteAllowance==null)e.siteAllowance=0;});
+sfPayrollSheets.forEach(sh=>(sh.rows||[]).forEach(r=>{if(r.carAllowance==null)r.carAllowance=sfNum(r.siteCar);if(r.siteAllowance==null)r.siteAllowance=0;}));
+if(sfCurrentPayroll?.rows)(sfCurrentPayroll.rows||[]).forEach(r=>{if(r.carAllowance==null)r.carAllowance=sfNum(r.siteCar);if(r.siteAllowance==null)r.siteAllowance=0;});
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('qdate').value=new Date().toISOString().slice(0,10);
 importSkyFieldEngineers(false);
@@ -4604,7 +4766,7 @@ updateQuoteBadge();
 let projects = JSON.parse(localStorage.getItem('sfProjects')||'[]').map(p=>({
   id:p.id, name:p.name||'', client:p.client||'', status:p.status||'active',
   contract:p.contract||0, start:p.start||'', notes:p.notes||'',
-  pos:Array.isArray(p.pos)?p.pos:[], payments:Array.isArray(p.payments)?p.payments:[],
+  pos:Array.isArray(p.pos)?p.pos:[], payments:(Array.isArray(p.payments)?p.payments:[]).map(sfNormalizePaymentRecord),
   docs:Array.isArray(p.docs)?p.docs:[], quotes:Array.isArray(p.quotes)?p.quotes:[], proformas:Array.isArray(p.proformas)?p.proformas:[],
   commissionPct:p.commissionPct||0, commissionAmount:p.commissionAmount||0, commissionNotes:p.commissionNotes||'',
   commissions:Array.isArray(p.commissions)?p.commissions:[],
@@ -4626,10 +4788,11 @@ function saveProjects(){
   try{
     localStorage.setItem('sfProjects', JSON.stringify(projects));
   }catch(e){
-    alert('Could not save project data — storage is full (this often happens when large files are attached as documents). Please remove some attached documents or use smaller files, then try again.');
+    alert('Could not save project data in the local cache. New documents are stored in Supabase Storage; remove old legacy Base64 attachments if this continues.');
   }
   updateSidebarCounts();
   if(document.body.dataset.module==='dashboard') renderDashboard();
+  sfMirrorProjects();
 }
 
 function fmtSAR(n){ return 'SAR '+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
@@ -4655,13 +4818,13 @@ function renderProjects(){
   // Summary bar
   const totContract = projects.reduce((s,p)=>s+(parseFloat(p.contract)||0),0);
   const totInvoiced = projects.reduce((s,p)=>s+(p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0),0);
-  const totReceived = projects.reduce((s,p)=>s+p.payments.filter(x=>x.status==='paid').reduce((a,x)=>a+(parseFloat(x.amount)||0),0),0);
+  const totReceived = projects.reduce((s,p)=>s+projectReceivedTotal(p),0);
   const totPending  = Math.max(0,totInvoiced-totReceived);
   const totCommission = projects.reduce((s,p)=>s+projTotalCommission(p),0);
   document.getElementById('proj-summary').innerHTML=`
     <div class="pfs-card"><div class="pfs-lbl">Total Contract Value</div><div class="pfs-val">${fmtSAR(totContract)}</div><div class="pfs-sub">${projects.length} project(s)</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Total Invoiced</div><div class="pfs-val" style="color:#bfdbfe">${fmtSAR(totInvoiced)}</div><div class="pfs-sub">All linked invoices</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Total Received</div><div class="pfs-val" style="color:#4ade80">${fmtSAR(totReceived)}</div><div class="pfs-sub">Paid invoices</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Total Received</div><div class="pfs-val" style="color:#4ade80">${fmtSAR(totReceived)}</div><div class="pfs-sub">Recorded invoice receipts</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Outstanding / Pending</div><div class="pfs-val" style="color:#fb923c">${fmtSAR(totPending)}</div><div class="pfs-sub">Invoiced less received</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Total Commission (عمولة)</div><div class="pfs-val" style="color:#f59e0b">${fmtSAR(totCommission)}</div><div class="pfs-sub">Across all projects</div></div>
   `;
@@ -4675,7 +4838,7 @@ function renderProjects(){
   grid.innerHTML = filtered.map(p=>{
     const contract = parseFloat(p.contract)||0;
     const invoiced = (p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0);
-    const received = p.payments.filter(x=>x.status==='paid').reduce((a,x)=>a+(parseFloat(x.amount)||0),0);
+    const received = projectReceivedTotal(p);
     const pending  = Math.max(0,invoiced-received);
     const remainingToInvoice=Math.max(0,contract-invoiced);
     const statusColor = {active:'active',completed:'completed',hold:'hold'}[p.status]||'active';
@@ -4686,19 +4849,17 @@ function renderProjects(){
       : '<div style="font-size:11px;color:var(--gray-400)">No POs added</div>';
 
     const payHTML = p.payments.length
-      ? p.payments.map(pay=>`
-          <div class="proj-pay-item" style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px;flex-wrap:wrap">
-            <span style="flex:1;min-width:150px">${escHtml(pay.label)}</span>
-            <span style="font-weight:600">${fmtSAR(pay.amount)}</span>
-            ${pay.status==='paid'&&pay.receivedDate?`<span style="color:#15803d;font-size:10px">Received ${escHtml(pay.receivedDate)}</span>`:(pay.date?`<span style="color:var(--gray-500);font-size:10px">Issued ${escHtml(pay.date)}</span>`:'')}
-            ${pay.paymentReference?`<span style="color:var(--gray-500);font-size:10px">Ref: ${escHtml(pay.paymentReference)}</span>`:''}
-            <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>
-            ${pay.sourceProformaId?invoiceStatusActionHtml(p.id,pay.sourceProformaId,pay.status):''}
-          </div>`).join('')
+      ? p.payments.map(rawPay=>{const pay=sfNormalizePaymentRecord(rawPay),received=paymentReceivedAmount(pay),balance=paymentRemainingAmount(pay);return`
+          <div class="proj-pay-item" style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:6px 8px;flex-wrap:wrap">
+            <span style="flex:1;min-width:150px">${escHtml(pay.label)}</span><span style="font-weight:600">Invoice ${fmtSAR(pay.amount)}</span>
+            ${received>0?`<span style="color:#15803d;font-size:10px">Received ${fmtSAR(received)}</span>`:''}${balance>0?`<span style="color:#b45309;font-size:10px">Balance ${fmtSAR(balance)}</span>`:''}
+            <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>${pay.sourceProformaId?invoiceStatusActionHtml(p.id,pay.sourceProformaId,pay.status):''}
+            ${(pay.receipts||[]).length?`<div style="flex-basis:100%;padding-left:8px;color:var(--gray-500);font-size:9.5px">${pay.receipts.map(r=>`${escHtml(r.date||'')} · ${fmtSAR(r.amount)}${r.reference?' · '+escHtml(r.reference):''}`).join('<br>')}</div>`:''}
+          </div>`}).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No installments added</div>';
 
     const docHTML = p.docs.length
-      ? p.docs.map(d=>`<div class="proj-doc-item">📎 <a href="${escHtml(d.url||'#')}" target="_blank">${escHtml(d.name)}</a>${d.fromQuoteNumber?` <span style="color:var(--gray-400);font-size:10px">(from ${escHtml(d.fromQuoteNumber)})</span>`:''}</div>`).join('')
+      ? p.docs.map((d,di)=>`<div class="proj-doc-item">📎 <button type="button" onclick="openProjectDocument('${p.id}',${di})" style="background:none;border:none;padding:0;color:var(--orange);cursor:pointer;font:inherit;text-align:left;flex:1">${escHtml(d.name)}</button>${d.fromQuoteNumber?` <span style="color:var(--gray-400);font-size:10px">(from ${escHtml(d.fromQuoteNumber)})</span>`:''}</div>`).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No documents attached</div>';
 
     const quotesHTML = (p.quotes||[]).length
@@ -4773,7 +4934,7 @@ function renderProjects(){
         </div>
         <div class="proj-section-lbl">Linked Quotations &amp; Legacy Invoices</div>
         <div class="proj-quotes-list">${quotesHTML}</div>
-        <div class="proj-section-lbl">Proforma Invoices (Not Received Payments)</div>
+        <div class="proj-section-lbl">Invoices &amp; Collection Status</div>
         <div class="proj-quotes-list">${proformaHTML}</div>
         <div class="proj-section-lbl">Purchase Orders</div>
         <div class="proj-po-list">${poHTML}</div>
@@ -4792,6 +4953,7 @@ function renderProjects(){
   }).join('');
 }
 
+function openProjectDocument(projectId,index){const p=projects.find(x=>x.id===projectId);if(p)sfOpenDocumentRecord((p.docs||[])[index])}
 function openProjModal(id){
   pmTempPOs=[]; pmTempPays=[]; pmTempDocs=[]; pmTempComms=[];
   const p = id ? projects.find(x=>x.id===id) : null;
@@ -4823,44 +4985,38 @@ function pmSuggestCommAmount(){
 }
 
 function renderPmLists(){
-  document.getElementById('pm-po-list').innerHTML = pmTempPOs.map((po,i)=>`
-    <div class="proj-po-item">📄 ${po}
-      <button onclick="pmTempPOs.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;margin-left:auto">×</button>
-    </div>`).join('');
-  document.getElementById('pm-comm-list').innerHTML = pmTempComms.map((c,i)=>`
+  document.getElementById('pm-po-list').innerHTML=pmTempPOs.map((po,i)=>`
+    <div class="proj-po-item">📄 ${escHtml(po)}<button onclick="pmTempPOs.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;margin-left:auto">×</button></div>`).join('');
+  document.getElementById('pm-comm-list').innerHTML=pmTempComms.map((c,i)=>`
     <div style="display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:5px;padding:5px 8px;font-size:11.5px">
-      <span style="flex:1">${c.label}${c.notes?` <span style="color:var(--gray-500)">— ${c.notes}</span>`:''}</span>
-      ${c.pct?`<span style="color:var(--gray-500);font-size:10px">${c.pct}%</span>`:''}
-      <span style="font-weight:600;color:#f59e0b">${fmtSAR(c.amount)}</span>
-      <button onclick="pmTempComms.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
+      <span style="flex:1">${escHtml(c.label)}${c.notes?` <span style="color:var(--gray-500)">— ${escHtml(c.notes)}</span>`:''}</span>${c.pct?`<span style="color:var(--gray-500);font-size:10px">${parseFloat(c.pct)||0}%</span>`:''}
+      <span style="font-weight:600;color:#f59e0b">${fmtSAR(c.amount)}</span><button onclick="pmTempComms.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
     </div>`).join('');
-  document.getElementById('pm-pay-list').innerHTML = pmTempPays.map((pay,i)=>`
-    <div style="display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:5px;padding:5px 8px;font-size:11.5px">
-      <span style="flex:1">${pay.label}</span>
-      <span style="font-weight:600">${fmtSAR(pay.amount)}</span>
-      ${pay.date?`<span style="color:var(--gray-500);font-size:10px">${pay.date}</span>`:''}
-      <span class="pay-badge ${pay.status}">${pay.status}</span>
-      ${pay.sourceProformaId?`<button class="pay-action-btn ${pay.status==='paid'?'mark-pending':'mark-paid'}" onclick="pmTogglePaymentStatus(${i})">${pay.status==='paid'?'Set Pending':'✓ Mark Paid'}</button>`:''}
+  document.getElementById('pm-pay-list').innerHTML=pmTempPays.map((rawPay,i)=>{const pay=sfNormalizePaymentRecord(rawPay),received=paymentReceivedAmount(pay),balance=paymentRemainingAmount(pay);return`
+    <div style="display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:5px;padding:5px 8px;font-size:11.5px;flex-wrap:wrap">
+      <span style="flex:1">${escHtml(pay.label)}</span><span style="font-weight:600">${fmtSAR(pay.amount)}</span>${received?`<span style="font-size:10px;color:#15803d">Received ${fmtSAR(received)}</span>`:''}${balance?`<span style="font-size:10px;color:#b45309">Balance ${fmtSAR(balance)}</span>`:''}
+      <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>${pay.sourceProformaId?`<button class="pay-action-btn ${pay.status==='paid'?'mark-pending':'mark-paid'}" onclick="pmTogglePaymentStatus(${i})">${pay.status==='paid'?'Set Pending':'＋ Record Payment'}</button>`:''}
       <button onclick="pmTempPays.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
-    </div>`).join('');
-  document.getElementById('pm-doc-list').innerHTML = pmTempDocs.map((d,i)=>`
-    <div class="proj-doc-item">📎 <a href="${d.url||'#'}" target="_blank">${d.name}</a>
-      <button onclick="pmTempDocs.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;margin-left:auto">×</button>
-    </div>`).join('');
+    </div>`}).join('');
+  document.getElementById('pm-doc-list').innerHTML=pmTempDocs.map((d,i)=>`
+    <div class="proj-doc-item">📎 <button type="button" onclick="openPmDocument(${i})" style="background:none;border:none;padding:0;color:var(--orange);cursor:pointer;font:inherit;text-align:left;flex:1">${escHtml(d.name)}</button>
+      <button onclick="removePmDocument(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;margin-left:auto">×</button></div>`).join('');
 }
+function openPmDocument(i){sfOpenDocumentRecord(pmTempDocs[i])}
+function removePmDocument(i){if(!pmTempDocs[i])return;pmTempDocs.splice(i,1);renderPmLists()}
 
 function pmTogglePaymentStatus(index){
-  const pay=pmTempPays[index];if(!pay)return;
+  const pay=sfNormalizePaymentRecord(pmTempPays[index]);if(!pay)return;
   if(pay.status==='paid'){
-    if(!confirm('Change this collected invoice back to Pending?'))return;
-    pay.status='pending';pay.receivedDate='';pay.paymentReference='';pay.paymentMethod='';
+    if(!confirm('Clear all recorded receipts and change this invoice back to Pending?'))return;pay.receipts=[];
   }else{
-    const defaultDate=pay.receivedDate||new Date().toISOString().slice(0,10);
-    const receivedDate=prompt('Payment received date (YYYY-MM-DD):',defaultDate);if(receivedDate===null)return;
-    const reference=prompt('Bank transfer / receipt reference (optional):',pay.paymentReference||'');if(reference===null)return;
-    pay.status='paid';pay.receivedDate=receivedDate.trim()||defaultDate;pay.paymentReference=reference.trim();pay.paymentMethod=pay.paymentMethod||'Bank Transfer';
+    const remaining=paymentRemainingAmount(pay),amountText=prompt(`Amount received (remaining ${fmtMoney(remaining)} SAR):`,remaining.toFixed(2));if(amountText===null)return;
+    const amount=parseFloat(amountText);if(!Number.isFinite(amount)||amount<=0||amount>remaining+0.005){alert('Enter a valid amount not exceeding the remaining balance.');return}
+    const date=prompt('Payment received date (YYYY-MM-DD):',new Date().toISOString().slice(0,10));if(date===null)return;
+    const reference=prompt('Bank transfer / receipt reference (optional):','');if(reference===null)return;
+    pay.receipts=Array.isArray(pay.receipts)?pay.receipts:[];pay.receipts.push({id:'rcpt_'+Date.now(),amount,date:date.trim(),reference:reference.trim(),method:'Bank Transfer',createdAt:new Date().toISOString()});
   }
-  renderPmLists();
+  pmTempPays[index]=sfNormalizePaymentRecord(pay);renderPmLists();
 }
 
 function addProjItem(type){
@@ -4899,23 +5055,20 @@ function addProjItem(type){
   renderPmLists();
 }
 
-function handleDocFiles(input){
-  Array.from(input.files).forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      pmTempDocs.push({name:file.name, url:e.target.result, type:'file'});
-      renderPmLists();
-    };
-    reader.readAsDataURL(file);
-  });
-  input.value='';
+async function handleDocFiles(input){
+  const files=Array.from(input.files||[]),projectId=document.getElementById('pm-id')?.value||'draft';input.disabled=true;setCloudStatus('saving','Uploading project document…');
+  try{for(const file of files){pmTempDocs.push(await sfUploadDocument(file,'project',projectId));renderPmLists()}setCloudStatus('','Documents uploaded securely')}
+  catch(error){console.error('Project document upload failed',error);alert('Document upload failed. Ensure the Supabase Storage SQL setup has been applied.\n'+(error?.message||error));setCloudStatus('error','Upload failed')}
+  finally{input.disabled=false;input.value=''}
 }
 
 function saveProjModal(){
   const name=document.getElementById('pm-name').value.trim();
   if(!name){alert('Project name is required.');return;}
   const id=document.getElementById('pm-id').value || 'proj_'+Date.now();
+  const oldProject=projects.find(p=>p.id===id)||{};
   const proj={
+    ...oldProject,
     id, name,
     client: document.getElementById('pm-client').value.trim(),
     status: document.getElementById('pm-status').value,
@@ -4926,7 +5079,7 @@ function saveProjModal(){
     commissions: [...pmTempComms],
     notes: document.getElementById('pm-notes').value.trim(),
     pos: [...pmTempPOs],
-    payments: [...pmTempPays],
+    payments: pmTempPays.map(sfNormalizePaymentRecord),
     docs: [...pmTempDocs],
     quotes: (projects.find(p=>p.id===id)||{}).quotes || [],
     proformas: (projects.find(p=>p.id===id)||{}).proformas || [],
@@ -4946,7 +5099,7 @@ function deleteProject(id){
 }
 
 // Proforma module initialization after quotations and projects have loaded.
-projects.forEach(p=>{ if(!Array.isArray(p.proformas))p.proformas=[]; if(!Array.isArray(p.payments))p.payments=[]; });
+projects.forEach(p=>{if(!Array.isArray(p.proformas))p.proformas=[];p.payments=(Array.isArray(p.payments)?p.payments:[]).map(sfNormalizePaymentRecord);if(!Array.isArray(p.docs))p.docs=[];if(!Array.isArray(p.actualExpenses))p.actualExpenses=[]});
 // Repair older records so every existing invoice is represented in its project's payment ledger.
 proformaInvoices.forEach(pi=>{if(pi.projectId&&projects.find(p=>p.id===pi.projectId))syncProformaToProject(pi);});
 updateProformaBadge();
