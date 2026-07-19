@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v16</title>
+<title>SKY FIELD – Management System v17</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -508,6 +508,28 @@
   .pay-action-btn.mark-pending { background:#fef3c7; color:#92400e; }
   .pay-action-btn.mark-pending:hover { background:#fde68a; }
 
+
+
+  /* ── PROJECT DETAILS PAGE ── */
+  .pd-back-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .pd-back-btn{border:1px solid var(--gray-200);background:var(--white);color:var(--navy);border-radius:8px;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer}
+  .pd-hero{background:linear-gradient(135deg,var(--navy),#294f83);color:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 5px 18px rgba(31,56,100,.18);margin-bottom:14px}
+  .pd-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .pd-title{font-size:22px;font-weight:800;color:#fff;margin:0 0 5px}.pd-sub{font-size:12px;color:rgba(255,255,255,.72)}
+  .pd-status{font-size:10px;font-weight:800;text-transform:uppercase;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.14);color:#fff}
+  .pd-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:17px}
+  .pd-kpi{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:10px}
+  .pd-kpi small{display:block;color:rgba(255,255,255,.65);font-size:9px;text-transform:uppercase;font-weight:700}.pd-kpi strong{display:block;color:var(--gold);font-size:14px;margin-top:4px}
+  .pd-tabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;margin-bottom:14px}
+  .pd-tab{border:0;background:transparent;color:var(--gray-500);padding:9px 13px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}.pd-tab.active{background:var(--navy);color:#fff}
+  .pd-panel{display:none}.pd-panel.active{display:block}
+  .pd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.pd-card{background:#fff;border:1px solid var(--gray-200);border-radius:11px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  .pd-card.full{grid-column:1/-1}.pd-card-hdr{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--gray-100);border-bottom:1px solid var(--gray-200)}.pd-card-hdr h3{font-size:12px;color:var(--navy);margin:0}.pd-card-body{padding:13px 14px}
+  .pd-info{display:grid;grid-template-columns:145px 1fr;gap:7px 12px;font-size:11.5px}.pd-info dt{color:var(--gray-500);font-weight:600}.pd-info dd{color:var(--gray-900);font-weight:600;margin:0;overflow-wrap:anywhere}
+  .pd-table-wrap{overflow-x:auto}.pd-table{width:100%;border-collapse:collapse;font-size:11px}.pd-table th{background:var(--navy);color:#fff;padding:7px 8px;text-align:left;white-space:nowrap}.pd-table td{padding:7px 8px;border-bottom:1px solid var(--gray-100);vertical-align:top}.pd-table tr:last-child td{border-bottom:0}
+  .pd-empty{padding:22px;text-align:center;color:var(--gray-500);font-size:11.5px}.pd-doc-btn{border:0;background:none;color:var(--orange);font:inherit;font-weight:700;cursor:pointer;text-align:left;padding:0}.pd-actions{display:flex;gap:7px;flex-wrap:wrap}
+  @media(max-width:900px){.pd-kpis{grid-template-columns:repeat(3,1fr)}.pd-grid{grid-template-columns:1fr}.pd-card.full{grid-column:auto}}
+  @media(max-width:560px){.pd-kpis{grid-template-columns:repeat(2,1fr)}.pd-info{grid-template-columns:1fr}.pd-hero{padding:16px}}
 
   /* ── SAVED QUOTATIONS / INVOICE QUOTATIONS ── */
   .quote-toolbar { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--gray-200); flex-wrap:wrap; }
@@ -1479,6 +1501,19 @@
       </div>
       <!-- Grid -->
       <div class="proj-grid" id="proj-grid"></div>
+    </div>
+
+
+    <!-- PROJECT DETAILS TAB -->
+    <div id="tab-projectdetails" style="display:none">
+      <div class="pd-back-row">
+        <button class="pd-back-btn" onclick="closeProjectDetails()">← Back to Projects</button>
+        <div class="pd-actions">
+          <button class="btn-primary" id="pd-new-invoice-btn" type="button">🧾 New Invoice</button>
+          <button class="btn-outline" id="pd-edit-project-btn" type="button">✏ Edit Project</button>
+        </div>
+      </div>
+      <div id="project-details-root"></div>
     </div>
 
     <!-- SAVED QUOTATIONS TAB -->
@@ -2471,6 +2506,7 @@ const APP_PAGE_META = {
   costplanning: ['New Quotation','Step 3 of 4 — prepare the private manpower, equipment, and logistics cost estimate.'],
   conditions: ['New Quotation','Step 4 of 4 — review commercial and technical conditions.'],
   projects: ['Projects','Track contract value, invoices, receipts, documents, and commission.'],
+  projectdetails: ['Project Details','Complete project workspace: finance, invoices, engineers, payroll, expenses, and documents.'],
   quotes: ['Quotations','Review saved offers and convert approved quotations into projects.'],
   proformas: ['Invoices','Create and track advance, progress-based, fixed, and full invoices.'],
   engineers: ['Engineers','Maintain engineer availability, LOA classification, payroll details, and internal rates.'],
@@ -2564,7 +2600,7 @@ function renderDashboard(){
 
 function showTab(name,btn){
   const builderTabs=['activities','equipment','costplanning','conditions'];
-  const allTabs=['dashboard','activities','equipment','costplanning','conditions','projects','quotes','proformas','engineers','payroll','costsettings'];
+  const allTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','engineers','payroll','costsettings'];
   const isBuilder=builderTabs.includes(name);
   document.body.dataset.module=isBuilder?'quotation':name;
   allTabs.forEach(t=>{
@@ -2582,6 +2618,7 @@ function showTab(name,btn){
   const primary=document.getElementById('command-primary-action');
   if(primary){
     if(name==='projects'){primary.textContent='+ New Project';primary.onclick=()=>openProjModal('');}
+    else if(name==='projectdetails'){primary.textContent='Back to Projects';primary.onclick=()=>closeProjectDetails();}
     else if(name==='proformas'){primary.textContent='View Projects to Invoice';primary.onclick=()=>showTab('projects',document.querySelector('.side-nav-btn[data-module=projects]'));}
     else if(name==='quotes'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
     else if(name==='dashboard'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
@@ -2592,6 +2629,7 @@ function showTab(name,btn){
   }
   if(name==='dashboard') renderDashboard();
   if(name==='projects') renderProjects();
+  if(name==='projectdetails') renderProjectDetails();
   if(name==='quotes') renderSavedQuotations();
   if(name==='proformas') renderProformas();
   if(name==='engineers') renderEngineers();
@@ -2600,7 +2638,7 @@ function showTab(name,btn){
   if(name==='costplanning') renderCostPlan();
   updateSidebarCounts();
   closeSidebar();
-  try{localStorage.setItem('sfLastModule',name);}catch(e){}
+  try{if(name!=='projectdetails')localStorage.setItem('sfLastModule',name);}catch(e){}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -4945,12 +4983,85 @@ function renderProjects(){
         ${p.notes?`<div style="margin-top:8px;font-size:11px;color:var(--gray-600);font-style:italic">${escHtml(p.notes)}</div>`:''}
       </div>
       <div class="proj-card-actions">
+        <button class="btn-proj-edit" onclick="openProjectDetails('${p.id}')">↗ Open Project</button>
         <button class="btn-proj-invoice" onclick="openProformaFromProject('${p.id}')">🧾 New Invoice</button>
         <button class="btn-proj-edit" onclick="openProjModal('${p.id}')">✏ Edit</button>
         <button class="btn-proj-del" onclick="deleteProject('${p.id}')">🗑 Delete</button>
       </div>
     </div>`;
   }).join('');
+}
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PROJECT DETAILS WORKSPACE
+// ══════════════════════════════════════════════════════════════════════════════
+let sfActiveProjectDetailsId='';
+let sfProjectDetailsPanel='overview';
+function openProjectDetails(projectId){
+  const p=projects.find(x=>x.id===projectId);if(!p)return;
+  sfActiveProjectDetailsId=projectId;sfProjectDetailsPanel='overview';
+  showTab('projectdetails',null);renderProjectDetails();
+}
+function closeProjectDetails(){sfActiveProjectDetailsId='';showTab('projects',document.querySelector('.side-nav-btn[data-module="projects"]'));}
+function setProjectDetailsPanel(panel){sfProjectDetailsPanel=panel;renderProjectDetails();}
+function pdDate(v){if(!v)return '—';try{return new Date(v+'T00:00:00').toLocaleDateString('en-GB')}catch{return v}}
+function pdStatusBadge(status){const s=String(status||'pending').toLowerCase();return `<span class="pay-badge ${escHtml(s)}">${escHtml(s)}</span>`}
+function projectInvoiceRecords(p){return proformaInvoices.filter(x=>x.projectId===p.id)}
+function projectPayrollRecords(p){return sfPayrollSheets.filter(x=>x.projectId===p.id)}
+function projectActualExpenseTotal(p){return (p.actualExpenses||[]).reduce((a,x)=>a+sfNum(x.amount),0)}
+function projectReceivedTotal(p){return (p.payments||[]).reduce((a,x)=>a+paymentReceivedAmount(sfNormalizePaymentRecord(x)),0)}
+function projectInvoiceTotal(p){return (p.payments||[]).reduce((a,x)=>a+sfNum(x.amount),0)}
+function projectDetailsTabs(){
+  const tabs=[['overview','Overview'],['commercial','Quotations & PO'],['invoices','Invoices & Payments'],['engineers','Engineers'],['payroll','Timesheets & Payroll'],['expenses','Expenses'],['documents','Documents'],['profitability','Profitability']];
+  return `<div class="pd-tabs">${tabs.map(([k,l])=>`<button class="pd-tab ${sfProjectDetailsPanel===k?'active':''}" onclick="setProjectDetailsPanel('${k}')">${l}</button>`).join('')}</div>`;
+}
+function renderProjectDetails(){
+  const root=document.getElementById('project-details-root');if(!root)return;
+  const p=projects.find(x=>x.id===sfActiveProjectDetailsId);
+  if(!p){root.innerHTML='<div class="pd-empty">Project not found.</div>';return;}
+  const invoices=projectInvoiceRecords(p),payroll=projectPayrollRecords(p),contract=sfNum(p.contract),invoiced=projectInvoiceTotal(p),received=projectReceivedTotal(p),outstanding=Math.max(0,invoiced-received),remaining=Math.max(0,contract-invoiced),estimated=sfNum(p.estimatedInternalCost),actual=projectActualExpenseTotal(p),commission=projTotalCommission(p),expectedProfit=contract-estimated-commission,actualProfit=received-actual-commission;
+  const newInvoiceBtn=document.getElementById('pd-new-invoice-btn');if(newInvoiceBtn)newInvoiceBtn.onclick=()=>openProformaFromProject(p.id);
+  const editBtn=document.getElementById('pd-edit-project-btn');if(editBtn)editBtn.onclick=()=>openProjModal(p.id);
+  root.innerHTML=`
+    <div class="pd-hero"><div class="pd-hero-top"><div><h2 class="pd-title">${escHtml(p.name||'Untitled Project')}</h2><div class="pd-sub">${escHtml(p.client||'No client')} · Started ${escHtml(pdDate(p.start))}</div></div><span class="pd-status">${escHtml(p.status||'active')}</span></div>
+    <div class="pd-kpis"><div class="pd-kpi"><small>Contract</small><strong>${fmtSAR(contract)}</strong></div><div class="pd-kpi"><small>Invoiced</small><strong>${fmtSAR(invoiced)}</strong></div><div class="pd-kpi"><small>Received</small><strong>${fmtSAR(received)}</strong></div><div class="pd-kpi"><small>Outstanding</small><strong>${fmtSAR(outstanding)}</strong></div><div class="pd-kpi"><small>Actual Cost</small><strong>${fmtSAR(actual)}</strong></div><div class="pd-kpi"><small>Actual Cash Profit</small><strong>${fmtSAR(actualProfit)}</strong></div></div></div>
+    ${projectDetailsTabs()}${renderProjectDetailsPanel(p,{invoices,payroll,contract,invoiced,received,outstanding,remaining,estimated,actual,commission,expectedProfit,actualProfit})}`;
+}
+function renderProjectDetailsPanel(p,m){
+  const empty=t=>`<div class="pd-empty">${t}</div>`;
+  if(sfProjectDetailsPanel==='overview')return `<div class="pd-panel active"><div class="pd-grid">
+    <div class="pd-card"><div class="pd-card-hdr"><h3>Project Information</h3></div><div class="pd-card-body"><dl class="pd-info"><dt>Project Name</dt><dd>${escHtml(p.name||'—')}</dd><dt>Client</dt><dd>${escHtml(p.client||'—')}</dd><dt>Status</dt><dd>${escHtml(p.status||'active')}</dd><dt>Start Date</dt><dd>${escHtml(pdDate(p.start))}</dd><dt>Contract Value</dt><dd>${fmtSAR(m.contract)}</dd><dt>Last Updated</dt><dd>${escHtml(p.updatedAt?new Date(p.updatedAt).toLocaleString():'—')}</dd></dl></div></div>
+    <div class="pd-card"><div class="pd-card-hdr"><h3>Workspace Summary</h3></div><div class="pd-card-body"><dl class="pd-info"><dt>Quotations</dt><dd>${(p.quotes||[]).length}</dd><dt>Invoices</dt><dd>${m.invoices.length}</dd><dt>Purchase Orders</dt><dd>${(p.pos||[]).length}</dd><dt>Assigned Engineers</dt><dd>${(p.assignedEngineers||[]).length}</dd><dt>Payroll Sheets</dt><dd>${m.payroll.length}</dd><dt>Documents</dt><dd>${(p.docs||[]).length}</dd></dl></div></div>
+    <div class="pd-card full"><div class="pd-card-hdr"><h3>Notes</h3></div><div class="pd-card-body">${p.notes?`<div style="white-space:pre-wrap;font-size:12px;line-height:1.65">${escHtml(p.notes)}</div>`:empty('No project notes recorded.')}</div></div></div></div>`;
+  if(sfProjectDetailsPanel==='commercial'){
+    const qs=(p.quotes||[]).map(q=>`<tr><td>${escHtml(q.number||'—')}</td><td>${escHtml(q.type||'Quotation')}</td><td>${escHtml(pdDate(q.date))}</td><td>${fmtSAR(q.total||0)}</td><td><button class="btn-sm" onclick="showTab('quotes',document.querySelector('.side-nav-btn[data-module=quotes]'))">Open Register</button></td></tr>`).join('');
+    const pos=(p.pos||[]).map((x,i)=>`<tr><td>${i+1}</td><td>${escHtml(typeof x==='string'?x:(x.number||x.label||''))}</td></tr>`).join('');
+    return `<div class="pd-panel active"><div class="pd-grid"><div class="pd-card full"><div class="pd-card-hdr"><h3>Linked Quotations</h3></div><div class="pd-card-body">${qs?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Number</th><th>Type</th><th>Date</th><th>Total</th><th></th></tr></thead><tbody>${qs}</tbody></table></div>`:empty('No linked quotations.')}</div></div><div class="pd-card full"><div class="pd-card-hdr"><h3>Purchase Orders</h3></div><div class="pd-card-body">${pos?`<table class="pd-table"><thead><tr><th>#</th><th>PO / Contract Reference</th></tr></thead><tbody>${pos}</tbody></table>`:empty('No purchase orders recorded.')}</div></div></div></div>`;
+  }
+  if(sfProjectDetailsPanel==='invoices'){
+    const rows=m.invoices.map(pi=>{const pay=(p.payments||[]).find(x=>x.sourceProformaId===pi.id),n=sfNormalizePaymentRecord(pay||{amount:(pi.totals||{}).grandTotal||0}),r=paymentReceivedAmount(n),b=paymentRemainingAmount(n);return `<tr><td>${escHtml(pi.number||'—')}</td><td>${escHtml(pdDate(pi.issueDate))}</td><td>${escHtml(proformaBasisLabel(pi))}</td><td>${fmtSAR(n.amount)}</td><td>${fmtSAR(r)}</td><td>${fmtSAR(b)}</td><td>${pdStatusBadge(n.status)}</td><td><button class="btn-sm" onclick="previewProforma('${pi.id}')">Preview</button></td></tr>`}).join('');
+    const receipts=(p.payments||[]).flatMap(pay=>(sfNormalizePaymentRecord(pay).receipts||[]).map(r=>({...r,invoice:pay.label}))).map(r=>`<tr><td>${escHtml(r.invoice||'')}</td><td>${escHtml(pdDate(r.date))}</td><td>${fmtSAR(r.amount)}</td><td>${escHtml(r.method||'')}</td><td>${escHtml(r.reference||'—')}</td></tr>`).join('');
+    return `<div class="pd-panel active"><div class="pd-grid"><div class="pd-card full"><div class="pd-card-hdr"><h3>Invoices</h3><button class="btn-primary" style="padding:6px 10px;font-size:10px" onclick="openProformaFromProject('${p.id}')">+ New Invoice</button></div><div class="pd-card-body">${rows?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Invoice</th><th>Date</th><th>Basis</th><th>Total</th><th>Received</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:empty('No invoices issued for this project.')}</div></div><div class="pd-card full"><div class="pd-card-hdr"><h3>Receipt History</h3></div><div class="pd-card-body">${receipts?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead><tbody>${receipts}</tbody></table></div>`:empty('No payments received yet.')}</div></div></div></div>`;
+  }
+  if(sfProjectDetailsPanel==='engineers'){
+    const rows=(p.assignedEngineers||[]).map((a,i)=>{const e=sfEngineers.find(x=>x.id===a.engineerId)||{};return `<tr><td>${i+1}</td><td>${escHtml(a.name||e.name||'—')}</td><td>${escHtml(e.specialization||e.profession||'—')}</td><td>${escHtml(e.loa||'—')}</td><td>${escHtml(e.status||'—')}</td><td>${escHtml(a.basis||'—')}</td><td>${sfNum(a.duration)||'—'}</td><td>${fmtSAR(a.rate||0)}</td></tr>`}).join('');
+    return `<div class="pd-panel active"><div class="pd-card"><div class="pd-card-hdr"><h3>Assigned Engineers</h3></div><div class="pd-card-body">${rows?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>#</th><th>Name</th><th>Position</th><th>LOA</th><th>Status</th><th>Basis</th><th>Duration</th><th>Rate</th></tr></thead><tbody>${rows}</tbody></table></div>`:empty('No engineers assigned through the quotation cost plan.')}</div></div></div>`;
+  }
+  if(sfProjectDetailsPanel==='payroll'){
+    const rows=m.payroll.map(s=>{const total=(s.rows||[]).reduce((a,r)=>a+payrollCalcStandalone(r,s.standardDays).net,0);return `<tr><td>${escHtml(s.month||'—')}</td><td>${(s.rows||[]).length}</td><td>${fmtSAR(total)}</td><td>${escHtml(s.status||'draft')}</td><td><button class="btn-sm" onclick="payrollLoadSheet('${s.id}');showTab('payroll',document.querySelector('.side-nav-btn[data-module=payroll]'))">Open</button></td></tr>`}).join('');
+    return `<div class="pd-panel active"><div class="pd-card"><div class="pd-card-hdr"><h3>Monthly Timesheets & Payroll</h3><button class="btn-sm" onclick="showTab('payroll',document.querySelector('.side-nav-btn[data-module=payroll]'))">Open Payroll Module</button></div><div class="pd-card-body">${rows?`<table class="pd-table"><thead><tr><th>Month</th><th>Employees</th><th>Net Payroll</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:empty('No monthly timesheets linked to this project.')}</div></div></div>`;
+  }
+  if(sfProjectDetailsPanel==='expenses'){
+    const rows=(p.actualExpenses||[]).map((x,i)=>`<tr><td>${i+1}</td><td>${escHtml(pdDate(x.date))}</td><td>${escHtml(x.category||x.source||'Other')}</td><td>${escHtml(x.description||'')}</td><td>${fmtSAR(x.amount||0)}</td></tr>`).join('');
+    return `<div class="pd-panel active"><div class="pd-card"><div class="pd-card-hdr"><h3>Actual Expenses</h3><strong>${fmtSAR(m.actual)}</strong></div><div class="pd-card-body">${rows?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>#</th><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table></div>`:empty('No actual expenses recorded.')}</div></div></div>`;
+  }
+  if(sfProjectDetailsPanel==='documents'){
+    const rows=(p.docs||[]).map((d,i)=>`<tr><td>${i+1}</td><td><button class="pd-doc-btn" onclick="openProjectDocument('${p.id}',${i})">${escHtml(d.name||'Document')}</button></td><td>${escHtml(d.type||d.mimeType||'file')}</td><td>${escHtml(d.uploadedAt?new Date(d.uploadedAt).toLocaleString():'—')}</td></tr>`).join('');
+    return `<div class="pd-panel active"><div class="pd-card"><div class="pd-card-hdr"><h3>Project Documents</h3><button class="btn-sm" onclick="openProjModal('${p.id}')">Upload / Manage</button></div><div class="pd-card-body">${rows?`<table class="pd-table"><thead><tr><th>#</th><th>Document</th><th>Type</th><th>Uploaded</th></tr></thead><tbody>${rows}</tbody></table>`:empty('No project documents uploaded.')}</div></div></div>`;
+  }
+  return `<div class="pd-panel active"><div class="pd-grid"><div class="pd-card full"><div class="pd-card-hdr"><h3>Profitability Summary</h3></div><div class="pd-card-body"><div class="pd-kpis" style="margin-top:0"><div class="pd-kpi" style="background:var(--navy)"><small>Contract</small><strong>${fmtSAR(m.contract)}</strong></div><div class="pd-kpi" style="background:var(--navy)"><small>Estimated Cost</small><strong>${fmtSAR(m.estimated)}</strong></div><div class="pd-kpi" style="background:var(--navy)"><small>Actual Cost</small><strong>${fmtSAR(m.actual)}</strong></div><div class="pd-kpi" style="background:var(--navy)"><small>Commission</small><strong>${fmtSAR(m.commission)}</strong></div><div class="pd-kpi" style="background:var(--navy)"><small>Expected Profit</small><strong>${fmtSAR(m.expectedProfit)}</strong></div><div class="pd-kpi" style="background:var(--navy)"><small>Cash Profit</small><strong>${fmtSAR(m.actualProfit)}</strong></div></div><p style="font-size:10.5px;color:var(--gray-500);margin-top:12px">Cash Profit is currently calculated as received cash minus recorded actual expenses and commission. It is not an accrual-accounting profit figure.</p></div></div></div></div>`;
 }
 
 function openProjectDocument(projectId,index){const p=projects.find(x=>x.id===projectId);if(p)sfOpenDocumentRecord((p.docs||[])[index])}
