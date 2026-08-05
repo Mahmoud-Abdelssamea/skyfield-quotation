@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v19</title>
+<title>SKY FIELD – Management System v20</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -398,15 +398,29 @@
   .memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 16px; padding: 16px; background: var(--gray-100); border-radius: 8px; }
   .doc-section-hdr { font-size: 13px; font-weight: 700; color: var(--navy); padding: 8px 12px; background: var(--navy-light); border-left: 4px solid var(--orange); margin: 20px 0 10px; border-radius: 0 6px 6px 0; }
   .doc-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 16px; table-layout: fixed; }
-  .doc-table th { background: var(--navy); color: var(--white); padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; word-wrap: break-word; }
-  .doc-table td { padding: 6px 10px; border-bottom: 1px solid var(--gray-200); word-wrap: break-word; }
+  .doc-table th { background: var(--navy); color: var(--white); padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .025em; overflow-wrap: normal; word-break: normal; }
+  .doc-table td { padding: 6px 8px; border-bottom: 1px solid var(--gray-200); overflow-wrap: anywhere; word-break: normal; }
   .doc-table:not(.scope-table):not(.optional-table) th:first-child, .doc-table:not(.scope-table):not(.optional-table) td:first-child { width: 55%; }
-  .doc-table th.col-sn, .doc-table td.col-sn { width: 6%; min-width:52px; }
-  .doc-table th.col-item, .doc-table td.col-item { width: 22%; }
-  .doc-table th.col-spec, .doc-table td.col-spec { width: 34%; }
-  .doc-table th.col-remark, .doc-table td.col-remark { width: 17%; }
-  .doc-table th.col-qty, .doc-table td.col-qty { width: 6%; }
-  .doc-table th.col-unit, .doc-table td.col-unit { width: 7%; }
+  .doc-table .col-price, .doc-table .col-total, .doc-table .col-rate { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
+
+  /* Scope table: keep Specification large while reserving enough room for totals. */
+  .scope-table th.col-sn, .scope-table td.col-sn { width: 6%; min-width:48px; }
+  .scope-table th.col-item, .scope-table td.col-item { width: 21%; }
+  .scope-table th.col-spec, .scope-table td.col-spec { width: 32%; }
+  .scope-table th.col-qty, .scope-table td.col-qty { width: 6%; }
+  .scope-table th.col-unit, .scope-table td.col-unit { width: 7%; }
+  .scope-table th.col-remark, .scope-table td.col-remark { width: 14%; }
+  .scope-table th.col-total, .scope-table td.col-total { width: 14%; text-align:right; }
+
+  /* Optional table uses eight balanced columns; price values always stay horizontal. */
+  .optional-table th.col-sn, .optional-table td.col-sn { width: 5%; min-width:42px; }
+  .optional-table th.col-item, .optional-table td.col-item { width: 19%; }
+  .optional-table th.col-spec, .optional-table td.col-spec { width: 27%; }
+  .optional-table th.col-qty, .optional-table td.col-qty { width: 6%; }
+  .optional-table th.col-unit, .optional-table td.col-unit { width: 7%; }
+  .optional-table th.col-price, .optional-table td.col-price { width: 12%; text-align:right; }
+  .optional-table th.col-remark, .optional-table td.col-remark { width: 12%; }
+  .optional-table th.col-total, .optional-table td.col-total { width: 12%; text-align:right; }
   .doc-table tr.main-sow-row td { background:#dce8f6 !important;color:var(--navy);font-weight:800;border-top:2px solid var(--navy-mid);border-bottom:2px solid var(--navy-mid); }
   .doc-table tr.main-sow-row td.col-item { font-size:12px; }
   .doc-table tr.sub-sow-row td.col-item { padding-left:16px;position:relative; }
@@ -1918,6 +1932,7 @@
 // Proforma: Client Company + Proforma Invoice Number
 // Note: the browser/operating system may still allow the user to change the name.
 const SF_APP_WINDOW_TITLE = document.title;
+let sfPreviewTitleActive = false;
 function sfSafeFileNamePart(value,fallback='Document'){
   const cleaned=String(value||'').trim()
     .replace(/[\\/:*?\"<>|]+/g,' ')
@@ -1939,24 +1954,20 @@ function sfSuggestedPrintTitle(kind='quotation'){
   const number=document.getElementById('qno')?.value||'Quotation';
   return `${sfSafeFileNamePart(company,'Client')} - ${sfSafeFileNamePart(number,'Quotation')}`;
 }
+function sfApplyPreviewTitle(kind='quotation'){
+  document.title=sfSuggestedPrintTitle(kind);
+  sfPreviewTitleActive=true;
+}
+function sfRestoreAppTitle(){
+  if(!sfPreviewTitleActive)return;
+  document.title=SF_APP_WINDOW_TITLE;
+  sfPreviewTitleActive=false;
+}
 function sfPrintWithSuggestedName(kind='quotation'){
-  const previousTitle=document.title||SF_APP_WINDOW_TITLE;
-  const printTitle=sfSuggestedPrintTitle(kind);
-  document.title=printTitle;
-  let restored=false;
-  const restore=()=>{
-    if(restored)return;
-    restored=true;
-    document.title=previousTitle||SF_APP_WINDOW_TITLE;
-    window.removeEventListener('afterprint',restore);
-  };
-  window.addEventListener('afterprint',restore,{once:true});
-  // Let the browser register the temporary title before opening the print dialog.
-  setTimeout(()=>{
-    window.print();
-    // Fallback for browsers that do not fire afterprint reliably.
-    setTimeout(restore,2500);
-  },50);
+  // Keep the generated document title active for the entire preview session.
+  // This also covers Ctrl+P and browsers that capture the title before afterprint.
+  sfApplyPreviewTitle(kind);
+  setTimeout(()=>window.print(),120);
 }
 
 const SF_USER_STORE_TABLE = 'sf_user_store';
@@ -3380,9 +3391,9 @@ function showExport(docType='quotation'){
   if(hasCustomRows) actHeadCells += '<th class="col-spec">Specification</th>';
   if(opt.actCodeCol) actHeadCells += '<th>Code</th>';
   if(opt.actQtyCol) actHeadCells += '<th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th>';
-  if(opt.actHrsCol) actHeadCells += '<th style="text-align:right">Hours / Rate</th>';
+  if(opt.actHrsCol) actHeadCells += '<th class="col-rate" style="text-align:right">Hours / Rate</th>';
   if(hasCustomRows) actHeadCells += '<th class="col-remark">Remark</th>';
-  if(opt.actCostCol) actHeadCells += '<th style="text-align:right">Cost (SAR)</th>';
+  if(opt.actCostCol) actHeadCells += '<th class="col-total" style="text-align:right">Cost (SAR)</th>';
 
   let actTableRows='';
   for(const [cat,rows] of Object.entries(catGroups)){
@@ -3401,18 +3412,18 @@ function showExport(docType='quotation'){
         cells += `<td class="col-spec" style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>`;
         if(opt.actCodeCol)cells+='<td></td>';
         if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${hierarchyType==='main'?'':q}</td><td class="col-unit" style="text-align:right">${hierarchyType==='main'?'':escHtml(unit||'')}</td>`;
-        if(opt.actHrsCol)cells+=`<td style="text-align:right">${hierarchyType==='main'?'':`SAR ${fmtN(unitPrice)}/unit`}</td>`;
+        if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hierarchyType==='main'?'':`${fmtN(unitPrice)}/unit`}</td>`;
         cells += `<td class="col-remark" style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>`;
-        if(opt.actCostCol)cells+=`<td style="text-align:right;font-weight:600">${hierarchyType==='main'?'':`SAR ${fmtN(cost)}`}</td>`;
+        if(opt.actCostCol)cells+=`<td class="col-total" style="text-align:right;font-weight:600">${hierarchyType==='main'?'':fmtN(cost)}</td>`;
       }else{
         if(hasCustomRows)cells+='<td class="col-sn"></td>';
         cells+=`<td class="col-item">${task}</td>`;
         if(hasCustomRows)cells+='<td class="col-spec"></td>';
         if(opt.actCodeCol)cells+=`<td style="font-family:monospace;font-size:10px">${code}</td>`;
         if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${unit}</td>`;
-        if(opt.actHrsCol)cells+=`<td style="text-align:right">${hrs.toFixed(2)}h</td>`;
+        if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hrs.toFixed(2)}h</td>`;
         if(hasCustomRows)cells+='<td class="col-remark"></td>';
-        if(opt.actCostCol)cells+=`<td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>`;
+        if(opt.actCostCol)cells+=`<td class="col-total" style="text-align:right;font-weight:600">${fmtN(cost)}</td>`;
       }
       const rowClass=hierarchyType==='main'?'main-sow-row':hierarchyType==='sub'?'sub-sow-row':'';
       actTableRows+=`<tr class="${rowClass}">${cells}</tr>`;
@@ -3423,9 +3434,9 @@ function showExport(docType='quotation'){
     const lblColspan = snColCount + 1 + specColCount + (opt.actCodeCol?1:0);
     let totCells = `<td colspan="${lblColspan}">TOTAL ACTIVITIES</td>`;
     if(opt.actQtyCol) totCells += `<td></td><td></td>`;
-    if(opt.actHrsCol) totCells += `<td style="text-align:right">${requiredCustomSOW.length?'':actH.toFixed(2)+'h'}</td>`;
+    if(opt.actHrsCol) totCells += `<td class="col-rate" style="text-align:right">${requiredCustomSOW.length?'':actH.toFixed(2)+'h'}</td>`;
     if(remColCount) totCells += `<td></td>`;
-    if(opt.actCostCol) totCells += `<td style="text-align:right">SAR ${fmtN(engC)}</td>`;
+    if(opt.actCostCol) totCells += `<td class="col-total" style="text-align:right">${fmtN(engC)}</td>`;
     actTableRows+=`<tr class="total-row">${totCells}</tr>`;
   }
 
@@ -3497,10 +3508,10 @@ function showExport(docType='quotation'){
           <td class="col-item" style="white-space:pre-line">${escHtml(task)}</td>
           <td class="col-spec" style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>
           <td class="col-qty" style="text-align:right">${q}</td>
-          <td class="col-unit" style="text-align:right">${unit}</td>
-          <td style="text-align:right">SAR ${fmtN(unitPrice)}</td>
+          <td class="col-unit" style="text-align:right">${escHtml(unit||'')}</td>
+          <td class="col-price">${fmtN(unitPrice)}</td>
           <td class="col-remark" style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>
-          <td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>
+          <td class="col-total" style="font-weight:600">${fmtN(cost)}</td>
         </tr>`;
   }).join('');
   const hasOptional = optionalRows.length>0;
@@ -3587,7 +3598,7 @@ function showExport(docType='quotation'){
 
       ${hasOptional?`<div class="doc-section-hdr" style="border-left-color:var(--orange);background:var(--orange-light)">${optSecNum}. Optional Offer <span style="font-weight:400;font-size:11px;color:var(--gray-700)">(quoted separately — not included in the Grand Total above)</span></div>
       <table class="doc-table optional-table">
-        <thead><tr><th class="col-sn" style="text-align:center">SN.</th><th class="col-item">Activity / Item</th><th class="col-spec">Specification</th><th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th><th style="text-align:right">Unit Price (SAR)</th><th class="col-remark">Remark</th><th style="text-align:right">Cost (SAR)</th></tr></thead>
+        <thead><tr><th class="col-sn" style="text-align:center">SN.</th><th class="col-item">Activity / Item</th><th class="col-spec">Specification</th><th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th><th class="col-price">Unit Price<br>(SAR)</th><th class="col-remark">Remark</th><th class="col-total">Total<br>(SAR)</th></tr></thead>
         <tbody>
           ${optRowsHTML}
         </tbody>
@@ -3612,8 +3623,9 @@ function showExport(docType='quotation'){
   const oldPi=document.getElementById('proforma-preview'); if(oldPi){oldPi.classList.remove('print-active');oldPi.style.display='none';}
   document.getElementById('export-preview').classList.add('print-active');
   document.getElementById('export-preview').style.display='block';
+  sfApplyPreviewTitle('quotation');
 }
-function closeExport(){ const el=document.getElementById('export-preview'); el.style.display='none'; el.classList.remove('print-active'); }
+function closeExport(){ const el=document.getElementById('export-preview'); el.style.display='none'; el.classList.remove('print-active'); sfRestoreAppTitle(); }
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -4726,9 +4738,9 @@ function previewProforma(id){
     </div>
     <div class="pi-doc-footer"><strong>${escHtml(c.nameEn)} · ${escHtml(c.nameAr)}</strong><br>Tel: ${escHtml(c.telephone)} &nbsp; | &nbsp; Fax: ${escHtml(c.fax)} &nbsp; | &nbsp; VAT No.: ${escHtml(c.vat)}</div>`;
   const old=document.getElementById('export-preview');old.classList.remove('print-active');old.style.display='none';
-  const el=document.getElementById('proforma-preview');el.classList.add('print-active');el.style.display='block';renderProformas();
+  const el=document.getElementById('proforma-preview');el.classList.add('print-active');el.style.display='block';sfApplyPreviewTitle('proforma');renderProformas();
 }
-function closeProformaPreview(){const el=document.getElementById('proforma-preview');el.style.display='none';el.classList.remove('print-active');}
+function closeProformaPreview(){const el=document.getElementById('proforma-preview');el.style.display='none';el.classList.remove('print-active');sfRestoreAppTitle();}
 
 
 // ══════════════════════════════════════════════════════════════════════════════
