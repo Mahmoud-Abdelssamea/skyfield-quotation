@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v18</title>
+<title>SKY FIELD – Management System v19</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -1893,7 +1893,7 @@
   <button class="preview-close" onclick="closeExport()">✕</button>
   <div class="preview-doc" id="preview-doc"></div>
   <div class="preview-actions" style="text-align:center;margin-top:16px">
-    <button class="btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="btn-primary" onclick="sfPrintWithSuggestedName('quotation')">🖨 Print / Save as PDF</button>
   </div>
 </div>
 
@@ -1902,7 +1902,7 @@
   <button class="preview-close" onclick="closeProformaPreview()">✕</button>
   <div class="pi-preview-doc" id="pi-preview-doc"></div>
   <div class="preview-actions" style="text-align:center;margin-top:16px">
-    <button class="btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="btn-primary" onclick="sfPrintWithSuggestedName('proforma')">🖨 Print / Save as PDF</button>
   </div>
 </div>
 
@@ -1913,6 +1913,52 @@
 // ensures each authenticated account can read and write only its own rows.
 // The browser keeps a local cache for speed and offline resilience.
 // ══════════════════════════════════════════════════════════════════
+// Suggest a meaningful PDF file name in the browser print dialog.
+// Quotation: Client Company + Quotation Number
+// Proforma: Client Company + Proforma Invoice Number
+// Note: the browser/operating system may still allow the user to change the name.
+const SF_APP_WINDOW_TITLE = document.title;
+function sfSafeFileNamePart(value,fallback='Document'){
+  const cleaned=String(value||'').trim()
+    .replace(/[\\/:*?\"<>|]+/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/[. ]+$/g,'')
+    .trim();
+  return cleaned||fallback;
+}
+function sfSuggestedPrintTitle(kind='quotation'){
+  if(kind==='proforma'){
+    const rec=(typeof proformaInvoices!=='undefined'&&typeof activeProformaId!=='undefined')
+      ? proformaInvoices.find(x=>x.id===activeProformaId)
+      : null;
+    const company=rec?.clientName||document.getElementById('pi-client')?.value||'Client';
+    const number=rec?.number||document.getElementById('pi-number')?.value||'Proforma Invoice';
+    return `${sfSafeFileNamePart(company,'Client')} - ${sfSafeFileNamePart(number,'Proforma Invoice')}`;
+  }
+  const company=document.getElementById('client')?.value||'Client';
+  const number=document.getElementById('qno')?.value||'Quotation';
+  return `${sfSafeFileNamePart(company,'Client')} - ${sfSafeFileNamePart(number,'Quotation')}`;
+}
+function sfPrintWithSuggestedName(kind='quotation'){
+  const previousTitle=document.title||SF_APP_WINDOW_TITLE;
+  const printTitle=sfSuggestedPrintTitle(kind);
+  document.title=printTitle;
+  let restored=false;
+  const restore=()=>{
+    if(restored)return;
+    restored=true;
+    document.title=previousTitle||SF_APP_WINDOW_TITLE;
+    window.removeEventListener('afterprint',restore);
+  };
+  window.addEventListener('afterprint',restore,{once:true});
+  // Let the browser register the temporary title before opening the print dialog.
+  setTimeout(()=>{
+    window.print();
+    // Fallback for browsers that do not fire afterprint reliably.
+    setTimeout(restore,2500);
+  },50);
+}
+
 const SF_USER_STORE_TABLE = 'sf_user_store';
 const SF_STORAGE_BUCKET = 'company-documents';
 const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',invoices:'sf_invoices',payments:'sf_payments',engineers:'sf_engineers',payroll:'sf_payroll_sheets',expenses:'sf_expenses',documents:'sf_documents'};
