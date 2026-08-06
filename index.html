@@ -1401,24 +1401,6 @@
           <label for="proj-duration">Project Duration</label>
           <input type="text" id="proj-duration" placeholder="e.g. 6 months" oninput="updateProjectDuration(this.value)">
         </div>
-        <div class="custom-sow-label-row" style="max-width:760px">
-          <label>Commercial Rates for Conditions</label>
-          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
-            <div>
-              <label for="commercial-engineer-daily-rate" style="font-size:10px;color:var(--gray-500)">Engineer Daily Rate (SAR/day)</label>
-              <input id="commercial-engineer-daily-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,500" oninput="refreshCommercialConditionRates()">
-            </div>
-            <div>
-              <label for="commercial-engineer-monthly-rate" style="font-size:10px;color:var(--gray-500)">Engineer Monthly Rate (SAR/month)</label>
-              <input id="commercial-engineer-monthly-rate" type="number" min="0" step="0.01" placeholder="e.g. 30,000" oninput="refreshCommercialConditionRates()">
-            </div>
-            <div>
-              <label for="commercial-mobilization-rate" style="font-size:10px;color:var(--gray-500)">Additional Mobilization (SAR/person/round trip)</label>
-              <input id="commercial-mobilization-rate" type="number" min="0" step="0.01" placeholder="e.g. 2,000" oninput="refreshCommercialConditionRates()">
-            </div>
-          </div>
-          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
-        </div>
         <div class="cond-list" id="cond-list"></div>
         <div class="cond-add">
           <textarea id="new-cond" placeholder="Add a custom condition…"></textarea>
@@ -2569,31 +2551,6 @@ function discountAmountFor(subBeforeDiscount){
   return Math.max(0, Math.min(raw, subBeforeDiscount));
 }
 function fmtN(n){return Math.round(n).toLocaleString()}
-function commercialEngineerDailyRate(){return Math.max(0,parseFloat(document.getElementById('commercial-engineer-daily-rate')?.value)||0)}
-function commercialEngineerMonthlyRate(){return Math.max(0,parseFloat(document.getElementById('commercial-engineer-monthly-rate')?.value)||0)}
-function commercialMobilizationRate(){return Math.max(0,parseFloat(document.getElementById('commercial-mobilization-rate')?.value)||0)}
-function fmtConditionRate(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2})}
-function conditionDisplayText(text,cat=''){
-  let out=String(text||'');
-  const daily=commercialEngineerDailyRate(), monthly=commercialEngineerMonthlyRate(), mobilization=commercialMobilizationRate();
-  const rateParts=[];
-  if(daily)rateParts.push(`Daily Rate: SAR ${fmtConditionRate(daily)}/day`);
-  if(monthly)rateParts.push(`Monthly Rate: SAR ${fmtConditionRate(monthly)}/month`);
-
-  if(rateParts.length && /daily or monthly rate stated in the commercial offer/i.test(out)){
-    out=out.replace(/the daily or monthly rate stated in the commercial offer/gi,`the applicable engineer rate (${rateParts.join(' or ')})`);
-  }else if(rateParts.length && cat==='Additional Days' && !/Daily Rate:\s*SAR/i.test(out)){
-    out += ` Applicable engineer rates: ${rateParts.join(' or ')}.`;
-  }
-
-  if(mobilization && (cat==='Mobilization' || /additional round-trip mobilization|required after initial demobilization|agreed per-person rate/i.test(out))){
-    const priced=`SAR ${fmtConditionRate(mobilization)} per person per round trip`;
-    if(/the agreed per-person rate/i.test(out)) out=out.replace(/the agreed per-person rate/gi,priced);
-    else if(!/Additional mobilization rate:\s*SAR/i.test(out)) out += ` Additional mobilization rate: ${priced}.`;
-  }
-  return out;
-}
-function refreshCommercialConditionRates(){buildConds();}
 
 const sfReservedDocumentNumbers=new Set();
 function sfLocalMaxSequence(kind){
@@ -2824,7 +2781,7 @@ function clrCat(){
   ACTS[activeCat].forEach(([,code])=>delete selActs[k(activeCat,code)]);
   buildTasks();buildCatList();recalc();renderQuot();
 }
-function clearAll(){selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';paymentTermType='full_advance';paymentAdvancePct=10;paymentDueDays=30;paymentBalanceBasis='monthly_progress';paymentCustomText='';conds=conditionTemplate('testing');projectDuration='';quoteAttachments=[];const lbl=document.getElementById('custom-sow-label');if(lbl)lbl.value='';const dur=document.getElementById('proj-duration');if(dur)dur.value='';['commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});const ct=document.getElementById('condition-type');if(ct)ct.value='testing';const pt=document.getElementById('payment-term-type');if(pt)pt.value='full_advance';const ap=document.getElementById('payment-advance-pct');if(ap)ap.value='10';const pd=document.getElementById('payment-due-days');if(pd)pd.value='30';const pb=document.getElementById('payment-balance-basis');if(pb)pb.value='monthly_progress';const pc=document.getElementById('payment-custom-text');if(pc)pc.value='';updatePaymentTermControls();buildTasks();buildCatList();buildEq();buildCustomSOWList();buildConds();recalc();renderQuot();renderQuoteAttachments();}
+function clearAll(){selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';paymentTermType='full_advance';paymentAdvancePct=10;paymentDueDays=30;paymentBalanceBasis='monthly_progress';paymentCustomText='';conds=conditionTemplate('testing');projectDuration='';quoteAttachments=[];const lbl=document.getElementById('custom-sow-label');if(lbl)lbl.value='';const dur=document.getElementById('proj-duration');if(dur)dur.value='';const ct=document.getElementById('condition-type');if(ct)ct.value='testing';const pt=document.getElementById('payment-term-type');if(pt)pt.value='full_advance';const ap=document.getElementById('payment-advance-pct');if(ap)ap.value='10';const pd=document.getElementById('payment-due-days');if(pd)pd.value='30';const pb=document.getElementById('payment-balance-basis');if(pb)pb.value='monthly_progress';const pc=document.getElementById('payment-custom-text');if(pc)pc.value='';updatePaymentTermControls();buildTasks();buildCatList();buildEq();buildCustomSOWList();buildConds();recalc();renderQuot();renderQuoteAttachments();}
 
 function toggleSOWMenu(){
   const menu=document.getElementById('sow-menu');
@@ -3200,7 +3157,7 @@ function buildConds(){
       const d=document.createElement('div');
       d.className='cond-item';
       d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked">
-        <div><div class="cond-text">${escHtml(conditionDisplayText(c.text,c.cat))}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
+        <div><div class="cond-text">${escHtml(c.text)}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
         <button class="cond-rm" onclick="conds.splice(${i},1);buildConds()" title="Remove">×</button>`;
       el.appendChild(d);
     });
@@ -3510,7 +3467,7 @@ function showExport(docType='quotation'){
   const condGroups={};
   activeConds.forEach(c=>{
     const sec=condSection(c.cat);
-    (condGroups[sec]=condGroups[sec]||[]).push({text:conditionDisplayText(c.text,c.cat)});
+    (condGroups[sec]=condGroups[sec]||[]).push({text:c.text});
   });
   const priceDynamicLines = [
     discA>0
@@ -3787,7 +3744,7 @@ function calcQuotationTotals(){
 }
 function collectQuotationSnapshot(type){
   const meta={};
-  ['client','client-attn','client-tel','client-email','proj-name','station-name','qo-ref','qno','qdate','rate','hpd','vat','profit','discount-type','discount-value','commission','prep-name','prep-email','substation','commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{
+  ['client','client-attn','client-tel','client-email','proj-name','station-name','qo-ref','qno','qdate','rate','hpd','vat','profit','discount-type','discount-value','commission','prep-name','prep-email','substation'].forEach(id=>{
     const el=document.getElementById(id); if(el) meta[id]=el.value;
   });
   return {
