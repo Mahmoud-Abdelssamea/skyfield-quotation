@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v17</title>
+<title>SKY FIELD – Management System v20</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -202,6 +202,17 @@
     border: 1px solid var(--gray-200); border-radius: 8px; background: var(--white);
   }
   .custom-sow-row.is-optional { background: var(--orange-light); border-color: var(--orange); }
+  .custom-sow-row.is-main { background: var(--navy-light); border: 2px solid var(--navy-mid); }
+  .custom-sow-row.is-sub { margin-left: 28px; border-left: 4px solid var(--navy-mid); }
+  .csw-type-badge { display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:12px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap; }
+  .csw-type-badge.main { background:var(--navy);color:#fff; }
+  .csw-type-badge.sub { background:var(--navy-light);color:var(--navy);border:1px solid rgba(31,56,100,.18); }
+  .csw-type-badge.item { background:var(--gray-100);color:var(--gray-500); }
+  .csw-main-actions { display:flex;gap:6px;align-items:center;flex-wrap:wrap; }
+  .custom-sow-add-actions { display:flex;flex-direction:column;gap:7px;min-width:138px; }
+  .custom-sow-add-actions .btn-sm { width:100%; }
+  .custom-sow-add-actions .btn-main-sow { background:var(--navy);border-color:var(--navy);color:#fff; }
+  @media(max-width:680px){.custom-sow-add{flex-direction:column}.custom-sow-add-actions{width:100%;flex-direction:row}.custom-sow-row.is-sub{margin-left:12px}}
   .csw-field { display: flex; flex-direction: column; min-width: 0; }
   .csw-field label { font-size: 9.5px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
   .csw-row-top { display: flex; gap: 10px; align-items: flex-start; }
@@ -364,7 +375,7 @@
     background: rgba(0,0,0,.6); z-index: 200; overflow-y: auto; padding: 30px;
   }
   .preview-doc {
-    background: var(--white); max-width: 860px; margin: 0 auto;
+    background: var(--white); max-width: 1080px; margin: 0 auto;
     border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.3);
     overflow: hidden;
   }
@@ -387,10 +398,33 @@
   .memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 16px; padding: 16px; background: var(--gray-100); border-radius: 8px; }
   .doc-section-hdr { font-size: 13px; font-weight: 700; color: var(--navy); padding: 8px 12px; background: var(--navy-light); border-left: 4px solid var(--orange); margin: 20px 0 10px; border-radius: 0 6px 6px 0; }
   .doc-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 16px; table-layout: fixed; }
-  .doc-table th { background: var(--navy); color: var(--white); padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; word-wrap: break-word; }
-  .doc-table td { padding: 6px 10px; border-bottom: 1px solid var(--gray-200); word-wrap: break-word; }
-  .doc-table th:first-child, .doc-table td:first-child { width: 55%; }
-  .doc-table th.col-qty, .doc-table td.col-qty, .doc-table th.col-unit, .doc-table td.col-unit { width: 7%; }
+  .doc-table th { background: var(--navy); color: var(--white); padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .025em; overflow-wrap: normal; word-break: normal; }
+  .doc-table td { padding: 6px 8px; border-bottom: 1px solid var(--gray-200); overflow-wrap: anywhere; word-break: normal; }
+  .doc-table:not(.scope-table):not(.optional-table) th:first-child, .doc-table:not(.scope-table):not(.optional-table) td:first-child { width: 55%; }
+  .doc-table .col-price, .doc-table .col-total, .doc-table .col-rate { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
+
+  /* Scope table: keep Specification large while reserving enough room for totals. */
+  .scope-table th.col-sn, .scope-table td.col-sn { width: 6%; min-width:48px; }
+  .scope-table th.col-item, .scope-table td.col-item { width: 21%; }
+  .scope-table th.col-spec, .scope-table td.col-spec { width: 32%; }
+  .scope-table th.col-qty, .scope-table td.col-qty { width: 6%; }
+  .scope-table th.col-unit, .scope-table td.col-unit { width: 7%; }
+  .scope-table th.col-remark, .scope-table td.col-remark { width: 14%; }
+  .scope-table th.col-total, .scope-table td.col-total { width: 14%; text-align:right; }
+
+  /* Optional table uses eight balanced columns; price values always stay horizontal. */
+  .optional-table th.col-sn, .optional-table td.col-sn { width: 5%; min-width:42px; }
+  .optional-table th.col-item, .optional-table td.col-item { width: 19%; }
+  .optional-table th.col-spec, .optional-table td.col-spec { width: 27%; }
+  .optional-table th.col-qty, .optional-table td.col-qty { width: 6%; }
+  .optional-table th.col-unit, .optional-table td.col-unit { width: 7%; }
+  .optional-table th.col-price, .optional-table td.col-price { width: 12%; text-align:right; }
+  .optional-table th.col-remark, .optional-table td.col-remark { width: 12%; }
+  .optional-table th.col-total, .optional-table td.col-total { width: 12%; text-align:right; }
+  .doc-table tr.main-sow-row td { background:#dce8f6 !important;color:var(--navy);font-weight:800;border-top:2px solid var(--navy-mid);border-bottom:2px solid var(--navy-mid); }
+  .doc-table tr.main-sow-row td.col-item { font-size:12px; }
+  .doc-table tr.sub-sow-row td.col-item { padding-left:16px;position:relative; }
+  .doc-table tr.sub-sow-row td.col-item::before { content:'↳';position:absolute;left:5px;color:var(--navy-mid);font-weight:800; }
   .doc-table tr:nth-child(even) td { background: var(--navy-light); }
   .doc-table tr.cat-row td, .doc-table tr.cat-row td { background: var(--navy) !important; color: var(--white); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
   .doc-table tr.total-row td, .doc-table tr.total-row td { background: var(--orange) !important; color: var(--white); font-weight: 700; }
@@ -1261,20 +1295,23 @@
 
       <div class="custom-sow-panel">
         <h4>+ Add Scope of Work manually</h4>
-        <div class="custom-sow-hint">Don't want to pick from the menu above? Type your own scope-of-work item text here (it becomes the "Item" field below, with line breaks preserved) — then fill in SN, Specification, Remark, Qty, Unit and Unit Price directly on the card that appears below. Total Price calculates automatically.</div>
+        <div class="custom-sow-hint">Create a priced item directly, or create a main heading such as <strong>1. MV Cable Works</strong> and then add priced sub-items such as <strong>1.1</strong> and <strong>1.2</strong> beneath it. Main headings do not carry a quantity or price; their sub-items do.</div>
         <div class="custom-sow-label-row">
           <label for="custom-sow-label">Section description (shown in report instead of "Custom / Manual Entry")</label>
           <input type="text" id="custom-sow-label" placeholder="e.g. Additional Scope of Work" oninput="updateCustomSOWLabel(this.value)">
         </div>
         <div class="custom-sow-add">
-          <textarea id="new-sow" placeholder="Type your scope-of-work text here (multiple lines allowed)..."></textarea>
-          <button class="btn-sm" onclick="addCustomSOW()">+ Add to Scope</button>
+          <textarea id="new-sow" placeholder="Type the main heading or priced scope item here (multiple lines allowed)..."></textarea>
+          <div class="custom-sow-add-actions">
+            <button class="btn-sm btn-main-sow" onclick="addCustomSOW('main')">+ Main Item</button>
+            <button class="btn-sm" onclick="addCustomSOW('item')">+ Priced Item</button>
+          </div>
         </div>
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gray-600);margin:-6px 0 12px 2px;cursor:pointer">
           <input type="checkbox" id="sow-split-lines" style="width:13px;height:13px;accent-color:var(--orange)">
-          Split each line into a separate scope item instead of one combined item
+          Split each line into a separate priced item instead of one combined item
         </label>
-        <div class="custom-sow-hint" style="margin:0 0 8px 2px">Each item below has: <strong>SN</strong> (free text — e.g. <code>1</code>, <code>1.1</code>, <code>1.2</code>, <code>2</code>, <code>2.1</code>, <code>3</code>, <code>4</code> …), <strong>Item</strong>, <strong>Specification</strong>, <strong>Remark</strong>, plus <strong>Qty</strong>, <strong>Unit</strong> and <strong>Unit Price</strong>. Tick <strong>Optional</strong> for an item you want to offer at a price without it being included in the Grand Total — it will be excluded from all totals/VAT and listed separately as an "Optional Offer" after the Grand Total in the printed quotation.</div>
+        <div class="custom-sow-hint" style="margin:0 0 8px 2px"><strong>Main Item:</strong> a heading numbered 1, 2, 3… with no price. Use its <strong>+ Add Sub-item</strong> button to create 1.1, 1.2… Each sub-item has Specification, Remark, Qty, Unit and Unit Price. Existing standalone priced items remain supported. Tick <strong>Optional</strong> only on priced items that must be excluded from the Grand Total.</div>
 
         <div class="custom-sow-list" id="custom-sow-list"></div>
       </div>
@@ -1363,6 +1400,24 @@
         <div class="custom-sow-label-row" style="max-width:340px">
           <label for="proj-duration">Project Duration</label>
           <input type="text" id="proj-duration" placeholder="e.g. 6 months" oninput="updateProjectDuration(this.value)">
+        </div>
+        <div class="custom-sow-label-row" style="max-width:760px">
+          <label>Commercial Rates for Conditions</label>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+            <div>
+              <label for="commercial-engineer-daily-rate" style="font-size:10px;color:var(--gray-500)">Engineer Daily Rate (SAR/day)</label>
+              <input id="commercial-engineer-daily-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,500" oninput="refreshCommercialConditionRates()">
+            </div>
+            <div>
+              <label for="commercial-engineer-monthly-rate" style="font-size:10px;color:var(--gray-500)">Engineer Monthly Rate (SAR/month)</label>
+              <input id="commercial-engineer-monthly-rate" type="number" min="0" step="0.01" placeholder="e.g. 30,000" oninput="refreshCommercialConditionRates()">
+            </div>
+            <div>
+              <label for="commercial-mobilization-rate" style="font-size:10px;color:var(--gray-500)">Additional Mobilization (SAR/person/round trip)</label>
+              <input id="commercial-mobilization-rate" type="number" min="0" step="0.01" placeholder="e.g. 2,000" oninput="refreshCommercialConditionRates()">
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
         </div>
         <div class="cond-list" id="cond-list"></div>
         <div class="cond-add">
@@ -1870,7 +1925,7 @@
   <button class="preview-close" onclick="closeExport()">✕</button>
   <div class="preview-doc" id="preview-doc"></div>
   <div class="preview-actions" style="text-align:center;margin-top:16px">
-    <button class="btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="btn-primary" onclick="sfPrintWithSuggestedName('quotation')">🖨 Print / Save as PDF</button>
   </div>
 </div>
 
@@ -1879,7 +1934,7 @@
   <button class="preview-close" onclick="closeProformaPreview()">✕</button>
   <div class="pi-preview-doc" id="pi-preview-doc"></div>
   <div class="preview-actions" style="text-align:center;margin-top:16px">
-    <button class="btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="btn-primary" onclick="sfPrintWithSuggestedName('proforma')">🖨 Print / Save as PDF</button>
   </div>
 </div>
 
@@ -1890,6 +1945,49 @@
 // ensures each authenticated account can read and write only its own rows.
 // The browser keeps a local cache for speed and offline resilience.
 // ══════════════════════════════════════════════════════════════════
+// Suggest a meaningful PDF file name in the browser print dialog.
+// Quotation: Client Company + Quotation Number
+// Proforma: Client Company + Proforma Invoice Number
+// Note: the browser/operating system may still allow the user to change the name.
+const SF_APP_WINDOW_TITLE = document.title;
+let sfPreviewTitleActive = false;
+function sfSafeFileNamePart(value,fallback='Document'){
+  const cleaned=String(value||'').trim()
+    .replace(/[\\/:*?\"<>|]+/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/[. ]+$/g,'')
+    .trim();
+  return cleaned||fallback;
+}
+function sfSuggestedPrintTitle(kind='quotation'){
+  if(kind==='proforma'){
+    const rec=(typeof proformaInvoices!=='undefined'&&typeof activeProformaId!=='undefined')
+      ? proformaInvoices.find(x=>x.id===activeProformaId)
+      : null;
+    const company=rec?.clientName||document.getElementById('pi-client')?.value||'Client';
+    const number=rec?.number||document.getElementById('pi-number')?.value||'Proforma Invoice';
+    return `${sfSafeFileNamePart(company,'Client')} - ${sfSafeFileNamePart(number,'Proforma Invoice')}`;
+  }
+  const company=document.getElementById('client')?.value||'Client';
+  const number=document.getElementById('qno')?.value||'Quotation';
+  return `${sfSafeFileNamePart(company,'Client')} - ${sfSafeFileNamePart(number,'Quotation')}`;
+}
+function sfApplyPreviewTitle(kind='quotation'){
+  document.title=sfSuggestedPrintTitle(kind);
+  sfPreviewTitleActive=true;
+}
+function sfRestoreAppTitle(){
+  if(!sfPreviewTitleActive)return;
+  document.title=SF_APP_WINDOW_TITLE;
+  sfPreviewTitleActive=false;
+}
+function sfPrintWithSuggestedName(kind='quotation'){
+  // Keep the generated document title active for the entire preview session.
+  // This also covers Ctrl+P and browsers that capture the title before afterprint.
+  sfApplyPreviewTitle(kind);
+  setTimeout(()=>window.print(),120);
+}
+
 const SF_USER_STORE_TABLE = 'sf_user_store';
 const SF_STORAGE_BUCKET = 'company-documents';
 const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',invoices:'sf_invoices',payments:'sf_payments',engineers:'sf_engineers',payroll:'sf_payroll_sheets',expenses:'sf_expenses',documents:'sf_documents'};
@@ -2471,6 +2569,31 @@ function discountAmountFor(subBeforeDiscount){
   return Math.max(0, Math.min(raw, subBeforeDiscount));
 }
 function fmtN(n){return Math.round(n).toLocaleString()}
+function commercialEngineerDailyRate(){return Math.max(0,parseFloat(document.getElementById('commercial-engineer-daily-rate')?.value)||0)}
+function commercialEngineerMonthlyRate(){return Math.max(0,parseFloat(document.getElementById('commercial-engineer-monthly-rate')?.value)||0)}
+function commercialMobilizationRate(){return Math.max(0,parseFloat(document.getElementById('commercial-mobilization-rate')?.value)||0)}
+function fmtConditionRate(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2})}
+function conditionDisplayText(text,cat=''){
+  let out=String(text||'');
+  const daily=commercialEngineerDailyRate(), monthly=commercialEngineerMonthlyRate(), mobilization=commercialMobilizationRate();
+  const rateParts=[];
+  if(daily)rateParts.push(`Daily Rate: SAR ${fmtConditionRate(daily)}/day`);
+  if(monthly)rateParts.push(`Monthly Rate: SAR ${fmtConditionRate(monthly)}/month`);
+
+  if(rateParts.length && /daily or monthly rate stated in the commercial offer/i.test(out)){
+    out=out.replace(/the daily or monthly rate stated in the commercial offer/gi,`the applicable engineer rate (${rateParts.join(' or ')})`);
+  }else if(rateParts.length && cat==='Additional Days' && !/Daily Rate:\s*SAR/i.test(out)){
+    out += ` Applicable engineer rates: ${rateParts.join(' or ')}.`;
+  }
+
+  if(mobilization && (cat==='Mobilization' || /additional round-trip mobilization|required after initial demobilization|agreed per-person rate/i.test(out))){
+    const priced=`SAR ${fmtConditionRate(mobilization)} per person per round trip`;
+    if(/the agreed per-person rate/i.test(out)) out=out.replace(/the agreed per-person rate/gi,priced);
+    else if(!/Additional mobilization rate:\s*SAR/i.test(out)) out += ` Additional mobilization rate: ${priced}.`;
+  }
+  return out;
+}
+function refreshCommercialConditionRates(){buildConds();}
 
 const sfReservedDocumentNumbers=new Set();
 function sfLocalMaxSequence(kind){
@@ -2701,7 +2824,7 @@ function clrCat(){
   ACTS[activeCat].forEach(([,code])=>delete selActs[k(activeCat,code)]);
   buildTasks();buildCatList();recalc();renderQuot();
 }
-function clearAll(){selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';paymentTermType='full_advance';paymentAdvancePct=10;paymentDueDays=30;paymentBalanceBasis='monthly_progress';paymentCustomText='';conds=conditionTemplate('testing');projectDuration='';quoteAttachments=[];const lbl=document.getElementById('custom-sow-label');if(lbl)lbl.value='';const dur=document.getElementById('proj-duration');if(dur)dur.value='';const ct=document.getElementById('condition-type');if(ct)ct.value='testing';const pt=document.getElementById('payment-term-type');if(pt)pt.value='full_advance';const ap=document.getElementById('payment-advance-pct');if(ap)ap.value='10';const pd=document.getElementById('payment-due-days');if(pd)pd.value='30';const pb=document.getElementById('payment-balance-basis');if(pb)pb.value='monthly_progress';const pc=document.getElementById('payment-custom-text');if(pc)pc.value='';updatePaymentTermControls();buildTasks();buildCatList();buildEq();buildCustomSOWList();buildConds();recalc();renderQuot();renderQuoteAttachments();}
+function clearAll(){selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';paymentTermType='full_advance';paymentAdvancePct=10;paymentDueDays=30;paymentBalanceBasis='monthly_progress';paymentCustomText='';conds=conditionTemplate('testing');projectDuration='';quoteAttachments=[];const lbl=document.getElementById('custom-sow-label');if(lbl)lbl.value='';const dur=document.getElementById('proj-duration');if(dur)dur.value='';['commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});const ct=document.getElementById('condition-type');if(ct)ct.value='testing';const pt=document.getElementById('payment-term-type');if(pt)pt.value='full_advance';const ap=document.getElementById('payment-advance-pct');if(ap)ap.value='10';const pd=document.getElementById('payment-due-days');if(pd)pd.value='30';const pb=document.getElementById('payment-balance-basis');if(pb)pb.value='monthly_progress';const pc=document.getElementById('payment-custom-text');if(pc)pc.value='';updatePaymentTermControls();buildTasks();buildCatList();buildEq();buildCustomSOWList();buildConds();recalc();renderQuot();renderQuoteAttachments();}
 
 function toggleSOWMenu(){
   const menu=document.getElementById('sow-menu');
@@ -2715,43 +2838,86 @@ function updateCustomSOWLabel(val){
   customSOWLabel = val.trim();
   recalc();renderQuot();
 }
-function addCustomSOW(){
+function customSOWType(item){return item?.itemType==='main'?'main':item?.itemType==='sub'?'sub':'item'}
+function normalizeCustomSOWHierarchy(){
+  customSOW.forEach(c=>{
+    c.itemType=customSOWType(c);
+    c.parentId=c.itemType==='sub'?(c.parentId||''):'';
+    if(c.itemType==='main'){c.qty=0;c.unit='';c.unitPrice=0;c.optional=false;c.parentId='';}
+  });
+}
+function nextCustomMainSN(){
+  const used=customSOW.filter(c=>customSOWType(c)==='main').map(c=>parseInt(String(c.sn||'').split('.')[0],10)).filter(Number.isFinite);
+  return String((used.length?Math.max(...used):0)+1);
+}
+function nextCustomSubSN(parentId){
+  const parent=customSOW.find(c=>c.id===parentId);const prefix=String(parent?.sn||nextCustomMainSN()).trim();
+  const used=customSOW.filter(c=>customSOWType(c)==='sub'&&c.parentId===parentId).map(c=>parseInt(String(c.sn||'').split('.').pop(),10)).filter(Number.isFinite);
+  return prefix+'.'+String((used.length?Math.max(...used):0)+1);
+}
+function renumberCustomSubItems(parentId){
+  const parent=customSOW.find(c=>c.id===parentId);if(!parent)return;
+  const prefix=String(parent.sn||'').trim();let n=1;
+  customSOW.forEach(c=>{if(customSOWType(c)==='sub'&&c.parentId===parentId)c.sn=(prefix?prefix+'.':'')+(n++);});
+}
+function addCustomSOW(kind='item'){
   const ta=document.getElementById('new-sow');
   const raw=ta.value.replace(/\r\n/g,'\n');
-  const splitLines=document.getElementById('sow-split-lines')?.checked;
+  const splitLines=document.getElementById('sow-split-lines')?.checked&&kind!=='main';
+  const makeItem=(text)=>({id:'csw'+(sowSeq++),sn:kind==='main'?nextCustomMainSN():'',text,spec:'',remark:'',qty:kind==='main'?0:1,unit:kind==='main'?'':'lot',unitPrice:0,optional:false,itemType:kind==='main'?'main':'item',parentId:''});
   if(splitLines){
     const lines=raw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(!lines.length)return;
-    lines.forEach(text=>{
-      customSOW.push({id:'csw'+(sowSeq++), sn:'', text, spec:'', remark:'', qty:1, unit:'lot', unitPrice:0, optional:false});
-    });
-  } else {
+    lines.forEach(text=>customSOW.push(makeItem(text)));
+  }else{
     const text=raw.split('\n').map(s=>s.trim()).filter((s,i,arr)=>!(s===''&&(i===0||i===arr.length-1))).join('\n').trim();
     if(!text)return;
-    customSOW.push({id:'csw'+(sowSeq++), sn:'', text, spec:'', remark:'', qty:1, unit:'lot', unitPrice:0, optional:false});
+    customSOW.push(makeItem(text));
   }
   ta.value='';
   buildCustomSOWList();recalc();renderQuot();
 }
+function addCustomSubItem(parentId){
+  const parent=customSOW.find(c=>c.id===parentId&&customSOWType(c)==='main');if(!parent)return;
+  const child={id:'csw'+(sowSeq++),sn:nextCustomSubSN(parentId),text:'',spec:'',remark:'',qty:1,unit:'lot',unitPrice:0,optional:false,itemType:'sub',parentId};
+  let insertAt=customSOW.findIndex(c=>c.id===parentId)+1;
+  while(insertAt<customSOW.length&&customSOWType(customSOW[insertAt])==='sub'&&customSOW[insertAt].parentId===parentId)insertAt++;
+  customSOW.splice(insertAt,0,child);
+  renumberCustomSubItems(parentId);
+  buildCustomSOWList();recalc();renderQuot();
+  setTimeout(()=>document.querySelector(`[data-csw-id="${child.id}"] textarea.csw-item`)?.focus(),0);
+}
 function removeCustomSOW(id){
-  customSOW=customSOW.filter(c=>c.id!==id);
+  const item=customSOW.find(c=>c.id===id);if(!item)return;
+  if(customSOWType(item)==='main'){
+    const count=customSOW.filter(c=>c.parentId===id).length;
+    if(count&&!confirm(`Remove this main item and its ${count} sub-item(s)?`))return;
+    customSOW=customSOW.filter(c=>c.id!==id&&c.parentId!==id);
+  }else{
+    const parentId=item.parentId||'';
+    customSOW=customSOW.filter(c=>c.id!==id);
+    if(parentId)renumberCustomSubItems(parentId);
+  }
   buildCustomSOWList();recalc();renderQuot();
 }
 function updateCustomSOW(id,field,val){
-  const item=customSOW.find(c=>c.id===id);
-  if(!item)return;
+  const item=customSOW.find(c=>c.id===id);if(!item)return;
+  const type=customSOWType(item);
   if(field==='text')item.text=val;
-  else if(field==='sn')item.sn=val;
+  else if(field==='sn'){
+    item.sn=val;
+    if(type==='main')renumberCustomSubItems(id);
+  }
   else if(field==='spec')item.spec=val;
   else if(field==='remark')item.remark=val;
-  else if(field==='unit')item.unit=val;
-  else if(field==='qty')item.qty=Math.max(1,parseFloat(val)||1);
-  else if(field==='unitPrice')item.unitPrice=Math.max(0,parseFloat(val)||0);
-  else if(field==='optional')item.optional=!!val;
-  const row=document.querySelector(`.custom-sow-row [oninput*="'${id}'"]`)?.closest('.custom-sow-row');
+  else if(field==='unit'&&type!=='main')item.unit=val;
+  else if(field==='qty'&&type!=='main')item.qty=Math.max(0,parseFloat(val)||0);
+  else if(field==='unitPrice'&&type!=='main')item.unitPrice=Math.max(0,parseFloat(val)||0);
+  else if(field==='optional'&&type!=='main')item.optional=!!val;
+  const row=document.querySelector(`[data-csw-id="${id}"]`);
   if(row){
     const totalSpan=row.querySelector('.custom-sow-total');
-    if(totalSpan) totalSpan.textContent='SAR '+fmtN((item.qty*item.unitPrice)||0);
+    if(totalSpan)totalSpan.textContent='SAR '+fmtN((item.qty*item.unitPrice)||0)+(item.optional?' (optional)':'');
   }
   recalc();renderQuot();
 }
@@ -2864,59 +3030,48 @@ function renderQuoteAttachments(){
 }
 function autoGrowCSW(el){ el.style.height='auto'; el.style.height=(el.scrollHeight+2)+'px'; }
 function buildCustomSOWList(){
-  const el=document.getElementById('custom-sow-list'); if(!el)return; el.innerHTML='';
+  const el=document.getElementById('custom-sow-list');if(!el)return;el.innerHTML='';
+  normalizeCustomSOWHierarchy();
   customSOW.forEach(c=>{
+    const type=customSOWType(c);const isMain=type==='main';
     const row=document.createElement('div');
-    row.className='custom-sow-row'+(c.optional?' is-optional':'');
-    const total=(c.qty*c.unitPrice)||0;
-    row.innerHTML=`
-      <div class="csw-row-top">
-        <div class="csw-field csw-sn-field">
-          <label>SN</label>
-          <input type="text" placeholder="1 / 1.1" value="${escHtml(c.sn||'')}" oninput="updateCustomSOW('${c.id}','sn',this.value)">
+    row.dataset.cswId=c.id;
+    row.className='custom-sow-row is-'+type+(c.optional?' is-optional':'');
+    const total=isMain?0:(c.qty*c.unitPrice)||0;
+    if(isMain){
+      const childCount=customSOW.filter(x=>customSOWType(x)==='sub'&&x.parentId===c.id).length;
+      row.innerHTML=`
+        <div class="csw-row-top">
+          <div class="csw-field csw-sn-field"><label>SN</label><input type="text" placeholder="1" value="${escHtml(c.sn||'')}" oninput="updateCustomSOW('${c.id}','sn',this.value)"></div>
+          <div class="csw-field csw-item-field"><label>Main Item / Heading</label><textarea class="csw-item" rows="1" placeholder="Main scope heading…" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','text',this.value)">${escHtml(c.text||'')}</textarea></div>
+          <div class="csw-field csw-opt-field"><label>Type</label><span class="csw-type-badge main">Main</span></div>
+          <button class="rm-btn csw-rm-btn" onclick="removeCustomSOW('${c.id}')" title="Remove main item">×</button>
         </div>
-        <div class="csw-field csw-item-field">
-          <label>Item</label>
-          <textarea class="csw-item" rows="1" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','text',this.value)">${escHtml(c.text)}</textarea>
+        <div class="csw-main-actions" style="margin-top:9px">
+          <button class="btn-sm" onclick="addCustomSubItem('${c.id}')">+ Add Sub-item ${escHtml(c.sn||'')}.${childCount+1}</button>
+          <span style="font-size:10.5px;color:var(--gray-500)">${childCount} sub-item${childCount===1?'':'s'} · main headings have no quantity or price</span>
+        </div>`;
+    }else{
+      const parent=type==='sub'?customSOW.find(x=>x.id===c.parentId):null;
+      row.innerHTML=`
+        <div class="csw-row-top">
+          <div class="csw-field csw-sn-field"><label>SN</label><input type="text" placeholder="${type==='sub'?'1.1':'1'}" value="${escHtml(c.sn||'')}" oninput="updateCustomSOW('${c.id}','sn',this.value)"></div>
+          <div class="csw-field csw-item-field"><label>${type==='sub'?'Sub-item':'Item'}</label><textarea class="csw-item" rows="1" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','text',this.value)">${escHtml(c.text||'')}</textarea></div>
+          <div class="csw-field csw-opt-field"><label>${type==='sub'?'Sub / Optional':'Optional'}</label>${type==='sub'?`<span class="csw-type-badge sub" title="Under ${escHtml(parent?.sn||'main item')}">Sub</span><span class="custom-sow-opt-wrap" title="Mark as optional offer"><input type="checkbox" ${c.optional?'checked':''} onchange="toggleCustomSOWOptional('${c.id}',this.checked)"></span>`:`<span class="custom-sow-opt-wrap" title="Mark as optional offer (excluded from Grand Total, listed separately in report)"><input type="checkbox" ${c.optional?'checked':''} onchange="toggleCustomSOWOptional('${c.id}',this.checked)"></span>`}</div>
+          <button class="rm-btn csw-rm-btn" onclick="removeCustomSOW('${c.id}')" title="Remove">×</button>
         </div>
-        <div class="csw-field csw-opt-field">
-          <label>Optional</label>
-          <span class="custom-sow-opt-wrap" title="Mark as optional offer (excluded from Grand Total, listed separately in report)">
-            <input type="checkbox" ${c.optional?'checked':''} onchange="toggleCustomSOWOptional('${c.id}',this.checked)">
-          </span>
+        <div class="csw-row-mid">
+          <div class="csw-field"><label>Specification</label><textarea class="csw-spec" rows="2" placeholder="Detailed specification…" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','spec',this.value)">${escHtml(c.spec||'')}</textarea></div>
+          <div class="csw-field"><label>Remark</label><textarea class="csw-remark" rows="1" placeholder="Remark…" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','remark',this.value)">${escHtml(c.remark||'')}</textarea></div>
         </div>
-        <button class="rm-btn csw-rm-btn" onclick="removeCustomSOW('${c.id}')" title="Remove">×</button>
-      </div>
-      <div class="csw-row-mid">
-        <div class="csw-field">
-          <label>Specification</label>
-          <textarea class="csw-spec" rows="1" placeholder="Specification…" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','spec',this.value)">${escHtml(c.spec||'')}</textarea>
-        </div>
-        <div class="csw-field">
-          <label>Remark</label>
-          <textarea class="csw-remark" rows="1" placeholder="Remark…" oninput="autoGrowCSW(this);updateCustomSOW('${c.id}','remark',this.value)">${escHtml(c.remark||'')}</textarea>
-        </div>
-      </div>
-      <div class="csw-row-bottom">
-        <div class="csw-field csw-qty-field">
-          <label>Qty</label>
-          <input type="text" class="qty-inp" style="width:100%" title="Qty" value="${c.qty}" oninput="updateCustomSOW('${c.id}','qty',this.value)">
-        </div>
-        <div class="csw-field csw-unit-field">
-          <label>Unit</label>
-          <input type="text" class="qty-inp" style="width:100%" title="Unit" value="${escHtml(c.unit)}" oninput="updateCustomSOW('${c.id}','unit',this.value)">
-        </div>
-        <div class="csw-field csw-price-field">
-          <label>Unit Price (SAR)</label>
-          <input type="text" class="qty-inp" style="width:100%" title="Unit Price (SAR)" value="${c.unitPrice}" oninput="updateCustomSOW('${c.id}','unitPrice',this.value)">
-        </div>
-        <div class="csw-field csw-total-field">
-          <label>Total</label>
-          <span class="custom-sow-total${c.optional?' is-optional-total':''}" title="${c.optional?'Optional — excluded from Grand Total':'Total Price'}">SAR ${fmtN(total)}${c.optional?' (optional)':''}</span>
-        </div>
-      </div>`;
-    el.appendChild(row);
-    row.querySelectorAll('textarea').forEach(t=>autoGrowCSW(t));
+        <div class="csw-row-bottom">
+          <div class="csw-field csw-qty-field"><label>Qty</label><input type="text" class="qty-inp" style="width:100%" value="${c.qty}" oninput="updateCustomSOW('${c.id}','qty',this.value)"></div>
+          <div class="csw-field csw-unit-field"><label>Unit</label><input type="text" class="qty-inp" style="width:100%" value="${escHtml(c.unit||'')}" oninput="updateCustomSOW('${c.id}','unit',this.value)"></div>
+          <div class="csw-field csw-price-field"><label>Unit Price (SAR)</label><input type="text" class="qty-inp" style="width:100%" value="${c.unitPrice}" oninput="updateCustomSOW('${c.id}','unitPrice',this.value)"></div>
+          <div class="csw-field csw-total-field"><label>Total</label><span class="custom-sow-total${c.optional?' is-optional-total':''}">SAR ${fmtN(total)}${c.optional?' (optional)':''}</span></div>
+        </div>`;
+    }
+    el.appendChild(row);row.querySelectorAll('textarea').forEach(t=>autoGrowCSW(t));
   });
 }
 
@@ -3045,7 +3200,7 @@ function buildConds(){
       const d=document.createElement('div');
       d.className='cond-item';
       d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked">
-        <div><div class="cond-text">${escHtml(c.text)}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
+        <div><div class="cond-text">${escHtml(conditionDisplayText(c.text,c.cat))}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
         <button class="cond-rm" onclick="conds.splice(${i},1);buildConds()" title="Remove">×</button>`;
       el.appendChild(d);
     });
@@ -3061,7 +3216,7 @@ function addCond(){
 function recalc(){
   let actH=0,eqC=0,customC=0,optionalC=0;
   Object.entries(selActs).forEach(([ky,a])=>{ actH+=a.dur*(actQty[ky]||1); });
-  customSOW.forEach(c=>{ if(c.optional) optionalC+=c.qty*c.unitPrice; else customC+=c.qty*c.unitPrice; });
+  customSOW.forEach(c=>{ if(customSOWType(c)==='main')return; if(c.optional) optionalC+=c.qty*c.unitPrice; else customC+=c.qty*c.unitPrice; });
   Object.entries(selEq).forEach(([i,e])=>{ eqC+=e.daily*(eqQty[i]||1); });
   const days=actH/hpd(), engC=days*rate()+customC;
   const baseSub=engC+eqC, subBeforeDiscount=baseSub*(1+profitPct()/100);
@@ -3135,16 +3290,21 @@ function renderQuot(){
       tbody.appendChild(tr);
     });
     customSOW.forEach(c=>{
-      const total=c.qty*c.unitPrice;
+      const type=customSOWType(c);const total=type==='main'?0:c.qty*c.unitPrice;
       const tr=document.createElement('tr');
-      if(c.optional) tr.style.background='var(--orange-light)';
-      const subLines=[c.spec?`<span style="color:var(--gray-500)">Spec: ${escHtml(c.spec)}</span>`:'',c.remark?`<span style="color:var(--gray-500)">Remark: ${escHtml(c.remark)}</span>`:''].filter(Boolean).join('<br>');
-      tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">${c.optional?'Optional':'Custom'}</td><td style="white-space:pre-line">${c.sn?`<strong>${escHtml(c.sn)}.</strong> `:''}${escHtml(c.text)}${c.optional?' <span style="font-size:10px;color:var(--orange);font-weight:700">(OPTIONAL — not in total)</span>':''}${subLines?`<br><span style="font-size:10px">${subLines}</span>`:''}</td>
-        <td style="font-size:10px;color:var(--gray-500)">manual / ${escHtml(c.unit)}</td>
-        <td><input class="qty-inp" type="number" min="1" value="${c.qty}" oninput="updateCustomSOW('${c.id}','qty',this.value)"></td>
-        <td style="font-weight:600;color:var(--navy-mid)">SAR ${fmtN(c.unitPrice)}</td>
-        <td style="font-weight:600;${c.optional?'color:var(--orange)':''}">SAR ${fmtN(total)}${c.optional?' *':''}</td>
-        <td><button class="rm-btn" onclick="removeCustomSOW('${c.id}')">×</button></td>`;
+      if(type==='main'){
+        tr.style.background='var(--navy-light)';
+        tr.innerHTML=`<td style="font-size:10px;color:var(--navy);font-weight:800">MAIN</td><td colspan="4" style="white-space:pre-line;font-weight:800;color:var(--navy)">${c.sn?`<strong>${escHtml(c.sn)}.</strong> `:''}${escHtml(c.text)}</td><td></td><td><button class="rm-btn" onclick="removeCustomSOW('${c.id}')">×</button></td>`;
+      }else{
+        if(c.optional)tr.style.background='var(--orange-light)';
+        const subLines=[c.spec?`<span style="color:var(--gray-500)">Spec: ${escHtml(c.spec)}</span>`:'',c.remark?`<span style="color:var(--gray-500)">Remark: ${escHtml(c.remark)}</span>`:''].filter(Boolean).join('<br>');
+        tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">${c.optional?'Optional':type==='sub'?'Sub-item':'Custom'}</td><td style="white-space:pre-line;${type==='sub'?'padding-left:18px':''}">${c.sn?`<strong>${escHtml(c.sn)}.</strong> `:''}${escHtml(c.text)}${c.optional?' <span style="font-size:10px;color:var(--orange);font-weight:700">(OPTIONAL — not in total)</span>':''}${subLines?`<br><span style="font-size:10px">${subLines}</span>`:''}</td>
+          <td style="font-size:10px;color:var(--gray-500)">manual / ${escHtml(c.unit)}</td>
+          <td><input class="qty-inp" type="number" min="0" value="${c.qty}" oninput="updateCustomSOW('${c.id}','qty',this.value)"></td>
+          <td style="font-weight:600;color:var(--navy-mid)">SAR ${fmtN(c.unitPrice)}</td>
+          <td style="font-weight:600;${c.optional?'color:var(--orange)':''}">SAR ${fmtN(total)}${c.optional?' *':''}</td>
+          <td><button class="rm-btn" onclick="removeCustomSOW('${c.id}')">×</button></td>`;
+      }
       tbody.appendChild(tr);
     });
   }
@@ -3233,13 +3393,14 @@ function showExport(docType='quotation'){
     if(!catGroups[a.cat])catGroups[a.cat]=[];
     catGroups[a.cat].push({...a,q,hrs,cost:hrs/h*r,isCustom:false});
   });
+  normalizeCustomSOWHierarchy();
   const requiredCustomSOW = customSOW.filter(c=>!c.optional);
-  const optionalCustomSOW = customSOW.filter(c=>c.optional);
+  const optionalCustomSOW = customSOW.filter(c=>c.optional&&customSOWType(c)!=='main');
   if(requiredCustomSOW.length){
     const catLabel = customSOWLabel || 'ADDITIONAL SCOPE OF WORK';
     catGroups[catLabel]=requiredCustomSOW.map(c=>{
-      const cost=c.qty*c.unitPrice;customC+=cost;
-      return {task:c.text,sn:c.sn,spec:c.spec,remark:c.remark,code:'manual',q:c.qty,unit:c.unit,unitPrice:c.unitPrice,cost,isCustom:true};
+      const itemType=customSOWType(c);const cost=itemType==='main'?0:c.qty*c.unitPrice;if(itemType!=='main')customC+=cost;
+      return {task:c.text,sn:c.sn,spec:c.spec,remark:c.remark,code:'manual',q:itemType==='main'?'':c.qty,unit:itemType==='main'?'':c.unit,unitPrice:itemType==='main'?0:c.unitPrice,cost,isCustom:true,itemType,parentId:c.parentId||''};
     });
   }
   let optionalC=0;
@@ -3268,14 +3429,14 @@ function showExport(docType='quotation'){
   const remColCount  = hasCustomRows ? 1 : 0;
   const actColCount  = snColCount + 1 + specColCount + (opt.actCodeCol?1:0) + (opt.actQtyCol?2:0) + (opt.actHrsCol?1:0) + remColCount + (opt.actCostCol?1:0);
   let actHeadCells = '';
-  if(hasCustomRows) actHeadCells += '<th style="width:52px;text-align:center">SN.</th>';
-  actHeadCells += '<th>Activity / Item</th>';
-  if(hasCustomRows) actHeadCells += '<th>Specification</th>';
+  if(hasCustomRows) actHeadCells += '<th class="col-sn" style="text-align:center">SN.</th>';
+  actHeadCells += '<th class="col-item">Activity / Item</th>';
+  if(hasCustomRows) actHeadCells += '<th class="col-spec">Specification</th>';
   if(opt.actCodeCol) actHeadCells += '<th>Code</th>';
   if(opt.actQtyCol) actHeadCells += '<th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th>';
-  if(opt.actHrsCol) actHeadCells += '<th style="text-align:right">Hours / Rate</th>';
-  if(hasCustomRows) actHeadCells += '<th>Remark</th>';
-  if(opt.actCostCol) actHeadCells += '<th style="text-align:right">Cost (SAR)</th>';
+  if(opt.actHrsCol) actHeadCells += '<th class="col-rate" style="text-align:right">Hours / Rate</th>';
+  if(hasCustomRows) actHeadCells += '<th class="col-remark">Remark</th>';
+  if(opt.actCostCol) actHeadCells += '<th class="col-total" style="text-align:right">Cost (SAR)</th>';
 
   let actTableRows='';
   for(const [cat,rows] of Object.entries(catGroups)){
@@ -3286,28 +3447,29 @@ function showExport(docType='quotation'){
     if(remColCount) catCells += `<td></td>`;
     if(opt.actCostCol) catCells += `<td></td>`;
     actTableRows+=`<tr class="cat-row">${catCells}</tr>`;
-    rows.forEach(({task,code,q,unit,hrs,cost,isCustom,unitPrice,sn,spec,remark})=>{
-      let cells = '';
+    rows.forEach(({task,code,q,unit,hrs,cost,isCustom,unitPrice,sn,spec,remark,itemType})=>{
+      let cells='';const hierarchyType=itemType||'item';
       if(isCustom){
-        cells += `<td style="text-align:center;font-weight:700;font-size:11px">${escHtml(sn||'')}</td>`;
-        cells += `<td style="white-space:pre-line">${escHtml(task)}</td>`;
-        cells += `<td style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>`;
-        if(opt.actCodeCol) cells += `<td></td>`;
-        if(opt.actQtyCol) cells += `<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${unit}</td>`;
-        if(opt.actHrsCol) cells += `<td style="text-align:right">SAR ${fmtN(unitPrice)}/unit</td>`;
-        cells += `<td style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>`;
-        if(opt.actCostCol) cells += `<td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>`;
-      } else {
-        if(hasCustomRows) cells += `<td></td>`;
-        cells += `<td>${task}</td>`;
-        if(hasCustomRows) cells += `<td></td>`;
-        if(opt.actCodeCol) cells += `<td style="font-family:monospace;font-size:10px">${code}</td>`;
-        if(opt.actQtyCol) cells += `<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${unit}</td>`;
-        if(opt.actHrsCol) cells += `<td style="text-align:right">${hrs.toFixed(2)}h</td>`;
-        if(hasCustomRows) cells += `<td></td>`;
-        if(opt.actCostCol) cells += `<td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>`;
+        cells += `<td class="col-sn" style="text-align:center;font-weight:700;font-size:11px">${escHtml(sn||'')}</td>`;
+        cells += `<td class="col-item" style="white-space:pre-line">${escHtml(task)}</td>`;
+        cells += `<td class="col-spec" style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>`;
+        if(opt.actCodeCol)cells+='<td></td>';
+        if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${hierarchyType==='main'?'':q}</td><td class="col-unit" style="text-align:right">${hierarchyType==='main'?'':escHtml(unit||'')}</td>`;
+        if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hierarchyType==='main'?'':`${fmtN(unitPrice)}/unit`}</td>`;
+        cells += `<td class="col-remark" style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>`;
+        if(opt.actCostCol)cells+=`<td class="col-total" style="text-align:right;font-weight:600">${hierarchyType==='main'?'':fmtN(cost)}</td>`;
+      }else{
+        if(hasCustomRows)cells+='<td class="col-sn"></td>';
+        cells+=`<td class="col-item">${task}</td>`;
+        if(hasCustomRows)cells+='<td class="col-spec"></td>';
+        if(opt.actCodeCol)cells+=`<td style="font-family:monospace;font-size:10px">${code}</td>`;
+        if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${unit}</td>`;
+        if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hrs.toFixed(2)}h</td>`;
+        if(hasCustomRows)cells+='<td class="col-remark"></td>';
+        if(opt.actCostCol)cells+=`<td class="col-total" style="text-align:right;font-weight:600">${fmtN(cost)}</td>`;
       }
-      actTableRows+=`<tr>${cells}</tr>`;
+      const rowClass=hierarchyType==='main'?'main-sow-row':hierarchyType==='sub'?'sub-sow-row':'';
+      actTableRows+=`<tr class="${rowClass}">${cells}</tr>`;
     });
   }
   if(opt.actHrsCol || opt.actCostCol){
@@ -3315,9 +3477,9 @@ function showExport(docType='quotation'){
     const lblColspan = snColCount + 1 + specColCount + (opt.actCodeCol?1:0);
     let totCells = `<td colspan="${lblColspan}">TOTAL ACTIVITIES</td>`;
     if(opt.actQtyCol) totCells += `<td></td><td></td>`;
-    if(opt.actHrsCol) totCells += `<td style="text-align:right">${requiredCustomSOW.length?'':actH.toFixed(2)+'h'}</td>`;
+    if(opt.actHrsCol) totCells += `<td class="col-rate" style="text-align:right">${requiredCustomSOW.length?'':actH.toFixed(2)+'h'}</td>`;
     if(remColCount) totCells += `<td></td>`;
-    if(opt.actCostCol) totCells += `<td style="text-align:right">SAR ${fmtN(engC)}</td>`;
+    if(opt.actCostCol) totCells += `<td class="col-total" style="text-align:right">${fmtN(engC)}</td>`;
     actTableRows+=`<tr class="total-row">${totCells}</tr>`;
   }
 
@@ -3348,7 +3510,7 @@ function showExport(docType='quotation'){
   const condGroups={};
   activeConds.forEach(c=>{
     const sec=condSection(c.cat);
-    (condGroups[sec]=condGroups[sec]||[]).push({text:c.text});
+    (condGroups[sec]=condGroups[sec]||[]).push({text:conditionDisplayText(c.text,c.cat)});
   });
   const priceDynamicLines = [
     discA>0
@@ -3385,14 +3547,14 @@ function showExport(docType='quotation'){
   const optRowsHTML = optionalRows.map(({task,sn,spec,remark,q,unit,unitPrice,cost})=>{
     return `
         <tr>
-          <td style="text-align:center;font-weight:700;font-size:11px">${escHtml(sn||'')}</td>
-          <td style="white-space:pre-line">${escHtml(task)}</td>
-          <td style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>
+          <td class="col-sn" style="text-align:center;font-weight:700;font-size:11px">${escHtml(sn||'')}</td>
+          <td class="col-item" style="white-space:pre-line">${escHtml(task)}</td>
+          <td class="col-spec" style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>
           <td class="col-qty" style="text-align:right">${q}</td>
-          <td class="col-unit" style="text-align:right">${unit}</td>
-          <td style="text-align:right">SAR ${fmtN(unitPrice)}</td>
-          <td style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>
-          <td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>
+          <td class="col-unit" style="text-align:right">${escHtml(unit||'')}</td>
+          <td class="col-price">${fmtN(unitPrice)}</td>
+          <td class="col-remark" style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>
+          <td class="col-total" style="font-weight:600">${fmtN(cost)}</td>
         </tr>`;
   }).join('');
   const hasOptional = optionalRows.length>0;
@@ -3461,7 +3623,7 @@ function showExport(docType='quotation'){
       <div class="doc-info-item" style="margin-bottom:16px"><span class="dk">Subject</span><span class="dv">${qoRef||'-'}</span></div>
 
       ${showAct?`<div class="doc-section-hdr">${actSecNum}. Scope of Work</div>
-      <table class="doc-table">
+      <table class="doc-table scope-table">
         <thead><tr>${actHeadCells}</tr></thead>
         <tbody>${actTableRows||`<tr><td colspan="${actColCount}" style="text-align:center;color:#999">No activities selected</td></tr>`}</tbody>
       </table>`:''}
@@ -3478,8 +3640,8 @@ function showExport(docType='quotation'){
       </div>`:''}
 
       ${hasOptional?`<div class="doc-section-hdr" style="border-left-color:var(--orange);background:var(--orange-light)">${optSecNum}. Optional Offer <span style="font-weight:400;font-size:11px;color:var(--gray-700)">(quoted separately — not included in the Grand Total above)</span></div>
-      <table class="doc-table">
-        <thead><tr><th style="width:52px;text-align:center">SN.</th><th>Activity / Item</th><th>Specification</th><th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th><th style="text-align:right">Unit Price (SAR)</th><th>Remark</th><th style="text-align:right">Cost (SAR)</th></tr></thead>
+      <table class="doc-table optional-table">
+        <thead><tr><th class="col-sn" style="text-align:center">SN.</th><th class="col-item">Activity / Item</th><th class="col-spec">Specification</th><th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th><th class="col-price">Unit Price<br>(SAR)</th><th class="col-remark">Remark</th><th class="col-total">Total<br>(SAR)</th></tr></thead>
         <tbody>
           ${optRowsHTML}
         </tbody>
@@ -3504,8 +3666,9 @@ function showExport(docType='quotation'){
   const oldPi=document.getElementById('proforma-preview'); if(oldPi){oldPi.classList.remove('print-active');oldPi.style.display='none';}
   document.getElementById('export-preview').classList.add('print-active');
   document.getElementById('export-preview').style.display='block';
+  sfApplyPreviewTitle('quotation');
 }
-function closeExport(){ const el=document.getElementById('export-preview'); el.style.display='none'; el.classList.remove('print-active'); }
+function closeExport(){ const el=document.getElementById('export-preview'); el.style.display='none'; el.classList.remove('print-active'); sfRestoreAppTitle(); }
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3611,7 +3774,7 @@ function setExportOptionSnapshot(opts={}){
 function calcQuotationTotals(){
   let actH=0, eqC=0, customC=0, optionalC=0;
   Object.entries(selActs).forEach(([ky,a])=>{ actH+=a.dur*(actQty[ky]||1); });
-  customSOW.forEach(c=>{ const val=(parseFloat(c.qty)||0)*(parseFloat(c.unitPrice)||0); if(c.optional) optionalC+=val; else customC+=val; });
+  customSOW.forEach(c=>{ if(customSOWType(c)==='main')return; const val=(parseFloat(c.qty)||0)*(parseFloat(c.unitPrice)||0); if(c.optional) optionalC+=val; else customC+=val; });
   Object.entries(selEq).forEach(([i,e])=>{ eqC+=e.daily*(eqQty[i]||1); });
   const engC=(actH/hpd()*rate())+customC;
   const subBeforeDiscount=(engC+eqC)*(1+profitPct()/100);
@@ -3624,7 +3787,7 @@ function calcQuotationTotals(){
 }
 function collectQuotationSnapshot(type){
   const meta={};
-  ['client','client-attn','client-tel','client-email','proj-name','station-name','qo-ref','qno','qdate','rate','hpd','vat','profit','discount-type','discount-value','commission','prep-name','prep-email','substation'].forEach(id=>{
+  ['client','client-attn','client-tel','client-email','proj-name','station-name','qo-ref','qno','qdate','rate','hpd','vat','profit','discount-type','discount-value','commission','prep-name','prep-email','substation','commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{
     const el=document.getElementById(id); if(el) meta[id]=el.value;
   });
   return {
@@ -3645,7 +3808,7 @@ function applyQuotationSnapshot(snap){
   Object.entries(meta).forEach(([id,val])=>{ const el=document.getElementById(id); if(el)el.value=val; });
   selActs=deepClone(snap.selActs||{}); selEq=deepClone(snap.selEq||{});
   actQty=deepClone(snap.actQty||{}); eqQty=deepClone(snap.eqQty||{});
-  customSOW=deepClone(snap.customSOW||[]); customSOWLabel=snap.customSOWLabel||'';
+  customSOW=deepClone(snap.customSOW||[]); normalizeCustomSOWHierarchy(); customSOWLabel=snap.customSOWLabel||'';
   sowSeq=snap.sowSeq || (customSOW.length+1);
   conditionType=snap.conditionType||'testing';
   paymentTermType=snap.paymentTermType||'full_advance';
@@ -3890,7 +4053,7 @@ function snapshotTotals(snap){
   const rateN=parseFloat(meta.rate)||1500, hpdN=parseFloat(meta.hpd)||8, profitN=parseFloat(meta.profit)||0, vatN=parseFloat(meta.vat)||0;
   let actH=0,eqC=0,customC=0,optionalC=0;
   Object.entries((snap&&snap.selActs)||{}).forEach(([ky,a])=>actH+=(parseFloat(a.dur)||0)*(parseFloat((snap.actQty||{})[ky])||1));
-  ((snap&&snap.customSOW)||[]).forEach(c=>{const v=(parseFloat(c.qty)||0)*(parseFloat(c.unitPrice)||0);if(c.optional)optionalC+=v;else customC+=v;});
+  ((snap&&snap.customSOW)||[]).forEach(c=>{if(customSOWType(c)==='main')return;const v=(parseFloat(c.qty)||0)*(parseFloat(c.unitPrice)||0);if(c.optional)optionalC+=v;else customC+=v;});
   Object.entries((snap&&snap.selEq)||{}).forEach(([i,e])=>eqC+=(parseFloat(e.daily)||0)*(parseFloat((snap.eqQty||{})[i])||1));
   const engC=actH/hpdN*rateN+customC, subBeforeDiscount=(engC+eqC)*(1+profitN/100);
   const dv=parseFloat(meta['discount-value'])||0, dtype=meta['discount-type']||'pct';
@@ -3923,6 +4086,7 @@ function collectProformaBaseItems(snap,includeOptional){
     });
   }
   (snap.customSOW||[]).forEach(c=>{
+    if(customSOWType(c)==='main')return;
     if(c.optional&&!includeOptional)return;
     // Required custom SOW rows are rendered inside the same activities table in the quotation, so they follow
     // the same Qty/Cost toggles there; their unit price is only ever revealed via the Hours/Rate column.
@@ -4617,9 +4781,9 @@ function previewProforma(id){
     </div>
     <div class="pi-doc-footer"><strong>${escHtml(c.nameEn)} · ${escHtml(c.nameAr)}</strong><br>Tel: ${escHtml(c.telephone)} &nbsp; | &nbsp; Fax: ${escHtml(c.fax)} &nbsp; | &nbsp; VAT No.: ${escHtml(c.vat)}</div>`;
   const old=document.getElementById('export-preview');old.classList.remove('print-active');old.style.display='none';
-  const el=document.getElementById('proforma-preview');el.classList.add('print-active');el.style.display='block';renderProformas();
+  const el=document.getElementById('proforma-preview');el.classList.add('print-active');el.style.display='block';sfApplyPreviewTitle('proforma');renderProformas();
 }
-function closeProformaPreview(){const el=document.getElementById('proforma-preview');el.style.display='none';el.classList.remove('print-active');}
+function closeProformaPreview(){const el=document.getElementById('proforma-preview');el.style.display='none';el.classList.remove('print-active');sfRestoreAppTitle();}
 
 
 // ══════════════════════════════════════════════════════════════════════════════

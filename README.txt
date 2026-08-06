@@ -1,11 +1,18 @@
-Sky Field Management System v17
+Sky Field Management System v20 - Conditions Rate Update (06-08-2026)
 
-New feature: dedicated Project Details workspace.
+التعديلات:
+1. إبقاء اسم ملف PDF المقترح فعالاً طوال فتح معاينة المستند، ليكون اسم شركة العميل + رقم العرض.
+2. توسيع عمود إجمالي التكلفة ومنع التفاف الأرقام رأسياً.
+3. إعادة تنسيق جدول Optional Offer وإبقاء Unit Price وTotal في اتجاه أفقي.
+4. الإبقاء على القيم الصفرية ظاهرة كما طلب المستخدم.
+5. إضافة خانات Commercial منفصلة لسعر المهندس اليومي والشهري داخل تبويب Conditions، وإدراجها تلقائياً في شرط تمديد مدة العمل.
+6. إضافة خانة Additional Mobilization وإدراج قيمتها تلقائياً في شرط Mobilization/Demobilization كسعر للشخص لكل رحلة ذهاب وعودة.
+7. حفظ القيم الجديدة مع كل Quotation عند الحفظ وإعادتها عند فتح العرض مرة أخرى.
 
-Installation:
-1. Replace the existing GitHub Pages index.html with this index.html.
-2. Commit the change.
-3. Wait for GitHub Pages deployment.
-4. Refresh the browser using Ctrl+F5.
+طريقة التحديث:
+- استبدل ملف index.html الحالي على GitHub بهذا الملف.
+- نفّذ Commit وانتظر تحديث GitHub Pages.
+- افتح الموقع واضغط Ctrl+F5.
+- أدخل اسم العميل ورقم العرض ثم افتح المعاينة واحفظ PDF.
 
-Open Projects and click "Open Project" on any project card.
+لا يحتاج هذا الإصدار إلى تشغيل SQL جديد.
