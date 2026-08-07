@@ -276,6 +276,7 @@
   }
   .cond-item input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--orange); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
   .cond-text { font-size: 12px; color: var(--gray-900); line-height: 1.5; flex: 1; }
+  .cond-text.cond-emphasis { font-weight: 700; color: var(--navy); }
   .cond-cat { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
   .cond-rm { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0; }
   .cond-rm:hover { color: var(--red); }
@@ -437,6 +438,8 @@
   .sv { font-weight: 600; color: var(--navy); }
   .doc-conds { counter-reset: cond; }
   .doc-cond { display: flex; gap: 10px; padding: 5px 0; font-size: 11.5px; color: var(--gray-700); line-height: 1.5; border-bottom: 1px solid var(--gray-100); }
+  .doc-cond-note { padding: 7px 10px; margin-bottom: 8px; font-size: 11.5px; color: var(--gray-700); line-height: 1.5; background: var(--gray-50); border-left: 3px solid var(--orange); }
+  .doc-cond.doc-cond-emphasis, .doc-cond-note.doc-cond-emphasis { font-weight: 700; color: var(--navy); }
   .doc-cond-sec-hdr { font-size: 11px; font-weight: 700; color: var(--white); background: var(--navy-mid,var(--navy)); padding: 5px 10px; margin: 14px 0 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; }
   .doc-cond-sec-hdr:first-child { margin-top: 0; }
   .doc-cond::before { counter-increment: cond; content: counter(cond) "."; font-weight: 700; color: var(--orange); min-width: 20px; }
@@ -1403,7 +1406,7 @@
         </div>
         <div class="custom-sow-label-row" style="max-width:760px">
           <label>Commercial Rates for Conditions</label>
-          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
             <div>
               <label for="commercial-engineer-daily-rate" style="font-size:10px;color:var(--gray-500)">Engineer Daily Rate (SAR/day)</label>
               <input id="commercial-engineer-daily-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,500" oninput="refreshCommercialConditionRates()">
@@ -1412,9 +1415,9 @@
               <label for="commercial-engineer-monthly-rate" style="font-size:10px;color:var(--gray-500)">Engineer Monthly Rate (SAR/month)</label>
               <input id="commercial-engineer-monthly-rate" type="number" min="0" step="0.01" placeholder="e.g. 30,000" oninput="refreshCommercialConditionRates()">
             </div>
-            <div>
-              <label for="commercial-mobilization-rate" style="font-size:10px;color:var(--gray-500)">Additional Mobilization (SAR/person/round trip)</label>
-              <input id="commercial-mobilization-rate" type="number" min="0" step="0.01" placeholder="e.g. 2,000" oninput="refreshCommercialConditionRates()">
+            <div style="grid-column:1 / -1">
+              <label for="commercial-mobilization-rate" style="font-size:10px;color:var(--gray-500)">Mobilization &amp; Demobilization Cost / Engineer (SAR)</label>
+              <input id="commercial-mobilization-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,000" oninput="refreshCommercialConditionRates()">
             </div>
           </div>
           <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
@@ -2474,29 +2477,57 @@ const ACTS = {"13.8 kV Switchgear":[["BB Contact Resistance","33.SWGXX.BB.CR",0.
 
 const EQ = [["AC HIPOT TESTER (HH60HVT)","HIPOTRONICS",1100],["AC HIPOT TESTER (30HVT-A)","HIPOTRONICS",950],["AC HIPOT TESTER (ALT-120/60F)","HIPOTRONICS",1250],["DC HIPOT TESTER 70 kV","MEGGER-BIDDLE",800],["VLF ANALOGUE HIPOT TESTER","HV VOLTAGE INST.",800],["VLF DIGITAL HIPOT TESTER (HVA60)","HV DIAGNOSTICS",1200],["TD TESTING SYSTEM B2 (TD60-30)","HV DIAGNOSTICS",1300],["TD & PD TESTING SYSTEM (TDPD60)","HV DIAGNOSTICS",3800],["PRIMARY CURRENT INJECTION (ODEN)","PTOGRAMMA",1000],["PRIMARY CURRENT INJECTION (PCITS 600)","MEGGER",450],["PRIMARY CURRENT INJECTION (PCITS2000/2)","MEGGER",700],["PRIMARY CURRENT INJECTION (INGVAR 1000)","MEGGER",750],["PRIMARY CURRENT INJECTION (COTTEL 750)","COTTEL",550],["TRANS. TURNS RATIO TESTER (ATRT-03)","VANGUARD",450],["TRANS. TURNS RATIO TESTER (TTR330A)","MEGGER",500],["TRANS. TTR & MTO ANALYSER (MI3280)","METRAL",800],["MTO TRANS. OHM METER (MTO 330A)","MEGGER",600],["MTO TRANS. OHM METER (MTO 330)","MEGGER",550],["OIL BREAKDOWN VOLTAGE TESTER (60 KV)","KINGRUN",400],["OIL BREAKDOWN VOLTAGE TESTER (80 KV)","MEGGER",450],["TEMPERATURE CALIBRATOR DRY WELL (MTO650A)","AMETEK",300],["TEMPERATURE CALIBRATOR DRY WELL","FLUKE",250],["TRANSFORMER TAN DELTA TESTER (4010)","MEGGER",1750],["TRANSFORMER FRA (FRAX101)","MEGGER",800],["CIRCUIT BREAKER ANALYZER (TR3100)","DOBLE",250],["CIRCUIT BREAKER ANALYZER (EGIL)","MEGGER",450],["SINGLE PHASE SECONDARY INJECTION (100ADM MK4)","T&R TEST",400],["SINGLE PHASE SECONDARY INJECTION (SEVERKER 750)","MEGGER",400],["SINGLE PHASE SECONDARY INJECTION (SEVERKER 650)","MEGGER",250],["CONTACT RESISTANCE METER (DLRO 10X)","MEGGER",250],["CONTACT RESISTANCE METER (DLRO 10)","MEGGER AVO",200],["CONTACT RESISTANCE METER (DLRO 600)","MEGGER",450],["CONTACT RESISTANCE METER (MOM200)","MEGGER",400],["CONTACT RESISTANCE METER (MOM600)","MEGGER",600],["SUBSTATION TEST SET (ISA T3000)","ISA",1250],["10KV IR TESTER","MEGGER",150],["5KV IR TESTER","MEGGER/FLUKE",100],["1KV IR TESTER","MEGGER",50],["DIGITAL EARTH TESTER (KEW 4102A)","KYORITSU",100],["3PH RELAY TEST SYSTEM (FREJA300)","MEGGER",700],["3PH RELAY TEST SYSTEM (PW636i)","PONOVO",500],["3PH RELAY TEST SYSTEM (CMC156)","OMICRON",600],["CT ANALYSER","OMICRON",900],["CT ANALYSER (MRCT MULTI TAP)","MEGGER",900],["STEP UP TRANSFORMER (MAGNUS)","PROGRAMMA",600],["FERRULE PRINTING MACHINE (LETATWIN)","LETATWIN",200],["3PH RELAY TEST SYSTEM (FREJA 306)","MEGGER",1000],["PRIMARY INJECTION TEST SET (PCITS2000/2)","MEGGER",800],["CABLE FAULT LOCATOR (Easyloc Tx & Rx)","SEBA KMT",250],["THERMAL IMAGER (Ti25)","FLUKE",200],["GPS TIMING REFERENCE (MGRT)","MEGGER",1250],["GAS LEAK DETECTOR (TIFXL 1)","TIF",250],["DEW POINT TESTER (DP-19)","—",300],["BATTERY LOAD TESTER (TORKEL 860)","GE ENERGY",900],["SF6 MULTI-ANALYZER (3-038R-R302)","DILO",1200],["CT TESTER (MCT1605)","MEGGER",1000],["POWER QUALITY ANALYZER (FLUKE 435)","FLUKE",600],["SF6 GAUGE CALIBRATOR (DG-10-S)","WIKA",1000],["SF6 REFILLING & VACUUM MACHINE","DILO",1100],["UNIVERSAL PRIMARY INJECTION (CPC 100)","OMICRON",1200],["CAPACITANCE METER (NCM-20)","NOKIAN",300],["PRIMARY INJECTION TEST SYSTEM (LU3000)","T&R TEST",900],["HAND HELD TEST KIT (HHTK)","SCHNEIDER",600],["AC CURRENT CLAMP (MINI 05)","CHAUVIN ARNOUX",100],["TEST PLUG 14/18/24 PIN","ABB/AREVA/SIEMENS",125],["PORTABLE CABLE FAULT LOCATOR (PFL20M1500)","MEGGER",1100]];
 
+// Canonical T&C set used by the legacy approved quotation format. Keep this
+// order stable: customer-facing numbering (including clauses 22 and 26) is
+// intentionally tied to the sequence below. The Payment row is replaced at
+// runtime by the payment option selected in the Conditions tab.
 const TESTING_CONDS = [
-  ["Prices are exclusive of 15% VAT, which will be added in accordance with the applicable Saudi tax regulations.","VAT",true],
-  ["This quotation is valid for 30 days from the date of issue. After expiry, availability, schedule, and pricing must be reconfirmed.","Validity",true],
-  ["Payment terms: 10% advance upon Purchase Order issuance. The remaining 90% shall be invoiced monthly based on approved progress and paid within 30 days from the invoice date, unless otherwise stated in the commercial offer.","Payment",true],
-  ["If an invoice remains unpaid after 30 days, Sky Field Company may issue a formal payment follow-up. If payment remains outstanding beyond 45 days, Sky Field Company may suspend site activities after reasonable prior written notice.","Payment – Late",true],
-  ["All bank transfer charges and Letter of Credit amendment fees, where applicable, shall be borne by the Client.","Payment – Bank",true],
-  ["The Client's Purchase Order must include complete invoicing details, including contact name, email, telephone number, and billing address, and must reference the quotation number.","Payment – PO",true],
-  ["Scope is strictly limited to the testing and commissioning activities and quantities expressly listed in this quotation. Any addition, reduction, variation, repetition, or specification change shall be separately priced and time-assessed.","Scope",true],
-  ["The Client/main contractor shall ensure the site is fully ready before mobilization, including completed installation and wiring, approved drawings, confirmed relay settings, available AC/DC supplies, safe access, and all required interfaces connected.","Site Readiness",true],
-  ["Work permits, gate passes, access approvals, shutdowns, energization permissions, coordination with the end client/consultant, and witnessing arrangements shall be provided by the Client/main contractor.","Exclusions – Permits",true],
-  ["All testing shall be performed in accordance with the applicable SEC requirements and relevant IEC/IEEE standards, unless a different approved project standard is stated in writing.","Standards",true],
-  ["Testing equipment required for the stated scope is included only as listed in the quotation. Specialized or additional equipment not listed shall be quoted separately.","Equipment",true],
-  ["Valid calibration certificates for Sky Field Company's test equipment will be provided upon request. Third-party laboratory tests, special calibration, or client-mandated external certification are excluded unless expressly included.","Calibration",true],
-  ["Mobilization and demobilization are included only as stated in the quotation. Any additional mobilization caused by site unavailability, suspension, repeated testing, or Client request shall be charged separately.","Mobilization",true],
-  ["Standard working hours are 8 hours per day, 6 days per week. Ramadan working hours shall follow applicable Saudi regulations.","Working Hours",true],
-  ["Overtime beyond standard working hours shall be charged at 1.5 times the normal hourly rate. Work on Fridays and official public holidays shall be charged at 2 times the normal hourly rate, unless otherwise agreed.","Overtime",true],
-  ["Any idle day, waiting time, or stoppage not attributable to Sky Field Company shall be counted as a normal working day and included in the agreed duration.","Idle Time",true],
-  ["Test formats and procedures shall be submitted for review where required. Test reports will be issued within the agreed reporting period after completion and receipt of all approved settings, drawings, and witness signatures.","Reporting",true],
-  ["Re-testing or repetition caused by incomplete installation, incorrect wiring, changed settings, equipment defects, failed client interfaces, or reasons not attributable to Sky Field Company shall be charged separately.","Repetition",true],
-  ["Supply, installation, replacement, repair, modification, material procurement, OEM attendance, OEM software, and manufacturer-specific tools are excluded unless explicitly included in the Scope of Work.","Exclusions – Material",true],
-  ["Sky Field Company shall not be liable for indirect, consequential, or special losses, including loss of production, revenue, use, or delay costs.","Liability",true],
-  ["Delays or stoppages caused by force majeure, government restrictions, unsafe site conditions, or events beyond Sky Field Company's reasonable control shall entitle Sky Field Company to a reasonable extension of time and reimbursement of resulting additional costs.","Force Majeure",true],
-  ["The Client shall not directly recruit, solicit, or employ any Sky Field Company engineer or staff member during the project and for 2 years after completion without prior written agreement.","Non-Solicit",true]
+  ["Payment Terms: 15% advance payment shall be made upon Purchase Order issuance. The remaining 85% shall be invoiced monthly based on the approved percentage of completed work and shall be paid within 30 days from the invoice date.","Payment",true],
+  ["Invoices not settled within 30 days of the invoice date will be subject to a formal follow-up notice. If payment remains outstanding beyond 45 days, Sky Field Company reserves the right to pause site activities until payment is regularized, with reasonable prior notice to the Client.","Payment – Late",true],
+  ["All bank transfer charges, LC amendment fees (if applicable), and related financial charges are the sole responsibility of the Client.","Payment – Bank",true],
+  ["The Client's official Purchase Order must include complete invoicing details (contact name, email, telephone, and billing address) for invoice issuance.","Payment – PO",true],
+  ["This quotation is valid for 30 days from the date of issue. Beyond this period, Sky Field Company should be consulted to reconfirm resource availability and pricing validity.","Validity",true],
+  ["All prices are exclusive of Value Added Tax (VAT) at 15%, which will be applied in accordance with applicable Saudi tax regulations.","VAT",true],
+  ["Scope of work is strictly limited to the commissioning and testing activities explicitly listed in this quotation. Any scope not mentioned herein is excluded unless agreed in writing prior to execution.","Scope",true],
+  ["The Client/main contractor shall ensure the site is fully ready for testing and commissioning prior to Sky Field Company's mobilization. This includes: completed installation, meggering, wiring and termination verification, availability of approved drawings, relay final settings confirmed, DC system energized or with sufficient DC source available, and all interfacing cables connected and reflected in drawings.","Site Readiness",true],
+  ["Site coordination, Client/consultant witnessing, scheduling of test start times, Safety Officer, QC Inspector, PTW/LOA Receiver, required shutdowns and isolations, work permits, gate passes, site inductions, and security/site access permissions are excluded from Sky Field Company's scope and shall be arranged by the Client/main contractor in advance, unless specifically included in Sky Field Company's quoted Scope of Work.","Exclusions – Permits",true],
+  ["A minimum of one (1) week's advance written notice is required for mobilization of Sky Field Company's engineers and test equipment, following receipt of the Purchase Order and applicable advance payment.","Mobilization",true],
+  ["Sky Field Company reserves the right to demobilize any of its engineers from site upon one (1) week's advance written notice to the Client/main contractor.","Demobilization",true],
+  ["Standard working hours are 8 hours/day, 6 days/week (Saturday-Thursday). During Ramadan, standard working hours are 6 hours/day.","Working Hours",true],
+  ["Overtime beyond standard working hours will be charged at 1.5x the normal hourly rate. Work performed on Fridays and official public holidays will be charged at 2x the normal hourly rate.","Overtime",true],
+  ["Any idle or standby time caused by the Client/main contractor/end client, including site unreadiness, unavailable permits, approved drawings, relay settings, required power supply, site access, witnessing, shutdowns/isolations, or interface readiness, shall count toward the agreed project duration. If such delay extends the work beyond the agreed duration, the applicable Daily/Monthly Rates stated in Clause 22 shall apply.","Idle Time",true],
+  ["Any delay, suspension, or stoppage caused by pandemics, epidemics, government actions, force majeure, or similar events beyond Sky Field Company's reasonable control shall entitle Sky Field Company to a reasonable extension of time and shall not be treated as delay attributable to Sky Field Company. Reasonable additional costs resulting from standby, extended accommodation, extended equipment rental, or remobilization shall be separately chargeable following written notification to the Client; where applicable, time-extension rates shall follow Clause 22 and remobilization charges shall follow Clause 26.","Force Majeure",true],
+  ["Test equipment calibration certificates for all Sky Field Company equipment will be provided upon request and shall be valid at time of use. All test equipment shall be calibrated by an approved calibration authority.","Calibration",true],
+  ["All commissioning and testing activities shall be conducted in accordance with IEC, IEEE, and applicable Saudi Aramco / SEC standards relevant to the project scope.","Standards",true],
+  ["Repeated testing, replacement, installation, or modification not caused by Sky Field Company's error or fault is excluded from this scope. Re-testing required due to unavailable Client/consultant witnessing, changes to relay settings or approved drawings, wiring modifications by others, equipment or vendor defects, or a Client/end-client request to repeat an already completed test shall be treated as additional work and shall be subject to a written Variation/Change Order in accordance with Clause 20.","Repetition",true],
+  ["This offer excludes any material or equipment delivery/procurement.","Exclusions – Material",true],
+  ["Prices quoted are for the Scope of Work listed in this quotation only. Any change, addition, or reduction in scope, quantities, or specifications shall be separately priced and time-assessed, and requires a written variation order prior to execution.","General – Variation",true],
+  ["Quoted lump-sum prices are not subject to deduction if work is completed ahead of the estimated duration, and remain payable in full regardless of the completion percentage reached at the end of the agreed work duration, provided the duration was not exceeded due to reasons attributable to Sky Field Company.","General – Lump Sum",true],
+  ["If the work extends beyond the agreed duration for reasons not attributable to Sky Field Company, additional services will be charged at the daily or monthly rate stated in the commercial offer.","General – Extension Rates",true],
+  ["If a project is suspended or placed on hold for more than 2 continuous months for reasons not attributable to Sky Field Company, the contract may be closed at the current percentage of completion, and any remaining activities shall be re-quoted at then-current prices.","General – Suspension",true],
+  ["The Client/main contractor shall provide throughout the duration of works: safe site access, required AC and DC power supply, suitable office and secure storage for equipment and files, toilet facilities (minimum 1 per 5 engineers), internet, telephone, drinking water, and parking for Sky Field Company's team. Scaffolding, manlifts, cranes, lifting arrangements, temporary access platforms, and any special site facilities required for safe execution of the testing activities shall also be provided by the Client/main contractor unless specifically included in this quotation.","General – Facilities",true],
+  ["The Client/main contractor shall provide a qualified assistant technician for each Sky Field Company testing engineer, and two technicians for each transformer testing engineer, with relevant electrical substation experience. All proposed support personnel are subject to interview and approval by the Sky Field Company team leader.","General – Assistants",true],
+  ["Mobilization and demobilization costs are included as stated in this quotation. Any additional round-trip mobilization required after the initial demobilization, including for energization support or other additional site attendance, will be charged as an extra at the agreed per-person round-trip rate.","General – Mobilization & Demobilization",true],
+  ["In accordance with Kingdom of Saudi Arabia regulations, all outdoor testing activities must be suspended between 12:00 PM and 3:00 PM during the period of 15 June to 15 September each year.","General – Outdoor Work",true],
+  ["Sky Field Company's engineers will observe official Kingdom of Saudi Arabia public holiday dates.","General – Public Holidays",true],
+  ["Test formats and test procedures shall be prepared by Sky Field Company and forwarded to the Client/main contractor for submission to the end client for review and approval prior to commencement of testing.","General – Test Formats",true],
+  ["Sky Field Company shall submit daily, weekly, and monthly progress reports as agreed with the Client. In the event of any delay, a recovery plan shall be submitted promptly.","General – Progress Reporting",true],
+  ["Commissioning test reports shall be submitted to the Client within 7 working days of each test completion, and the final commissioning report within 7 working days after final energization.","General – Report Submission",true],
+  ["As-built and modification markings shall be made by Sky Field Company on one (1) commissioning copy of drawings provided on-site by the main contractor.","General – As-Built",true],
+  ["All stationery, printed test formats, blank paper, folders, separators, and consumables required for documentation shall be arranged and provided by the main contractor.","General – Documentation",true],
+  ["Sky Field Company is not liable for any consequential, indirect, or special damages or losses of any kind, including but not limited to: loss of revenue, loss of use, loss of production, costs of capital, or costs connected with interruption of operations.","Liability",true],
+  ["In the event that a problem related to Sky Field Company's completed scope is identified after demobilization, Sky Field Company will rectify it at no additional charge if notified within 30 days of the work completion date. Beyond this period, any rectification shall be treated as new work and quoted separately.","General – Rectification",true],
+  ["Cleaning and general housekeeping of the work area are not within Sky Field Company's scope of work.","General – Housekeeping",true],
+  ["Manufacturer representation, special manufacturer tools, OEM-specific software or support equipment are excluded from this offer and shall be arranged by the main contractor/client unless explicitly stated otherwise.","General – OEM Exclusions",true],
+  ["Engineering, configuration, parameterization, or creation of SCD/CID files for protection IEDs, and any SAS/SCADA integration, communication engineering, cybersecurity scope, or telecom configuration are excluded from this offer unless explicitly listed in the scope of work.","General – Engineering Exclusions",true],
+  ["All numerical relays and controllers shall be configured to basic configuration and kept ready for testing by the main contractor or manufacturer prior to Sky Field Company's testing activities.","General – Relay Readiness",true],
+  ["As a matter of business ethics, the Client/main contractor shall not directly recruit, solicit, or offer employment to any Sky Field Company engineer or staff member for a period of 2 years from the date of project completion.","Non-Solicit",true],
+  ["No form of performance bond or back-charge will be accepted unless explicitly agreed in writing at the time of quotation issuance.","General – Bond",true],
+  ["Any Purchase Order or service order issued against this quotation shall reference this quotation number and shall be considered based on the Scope of Work, prices, and commercial conditions stated herein. Any additional or conflicting terms contained in the Purchase Order shall not be binding on Sky Field Company unless expressly accepted by Sky Field Company in writing.","General – PO Reference",true],
+  ["Operation of circuit breakers and motor drives for GIS equipment is the sole responsibility of the manufacturer's representative and is excluded from this scope.","General – GIS Operation",true],
+  ["Earthing system step-and-touch potential testing, fault recorder configuration/testing, OHL parameter testing, and media converter testing are excluded from this offer unless explicitly listed in the Scope of Work.","General – Special Tests",true],
+  ["No other subcontractor shall be permitted to perform work within Sky Field Company's scope without prior written agreement with Sky Field Company.","General – Other Subcontractors",true],
+  ["The Client/main contractor shall ensure protection relay final settings, the approved alarm list (SPL), and all required AC/DC power sources are confirmed and available prior to Sky Field Company's mobilization.","General – Protection Readiness",true]
 ];
 
 const ENGINEER_RENTAL_CONDS = [
@@ -2528,7 +2559,7 @@ const DEFAULT_CONDS = TESTING_CONDS;
 const COND_SECTION_ORDER = ['Commercial & Payment','Rental Basis','Scope & Responsibilities','Site Readiness & Mobilization','Working Hours & Schedule','Equipment, Standards & Reporting','Exclusions','Liability & General'];
 const CAT_SECTION = {
   'Payment':'Commercial & Payment','Payment – Selected':'Commercial & Payment','Payment – Late':'Commercial & Payment','Payment – Bank':'Commercial & Payment','Payment – PO':'Commercial & Payment','VAT':'Commercial & Payment','Validity':'Commercial & Payment',
-  'Rental Basis':'Rental Basis','Additional Days':'Rental Basis','Accommodation':'Rental Basis','Timesheet':'Rental Basis','Replacement':'Rental Basis',
+  'Rental Basis':'Rental Basis','LOA Start Date':'Rental Basis','Additional Days':'Rental Basis','Accommodation':'Rental Basis','Timesheet':'Rental Basis','Replacement':'Rental Basis',
   'Scope':'Scope & Responsibilities','Client Responsibilities':'Scope & Responsibilities',
   'Site Readiness':'Site Readiness & Mobilization','Exclusions – Permits':'Site Readiness & Mobilization','Mobilization':'Site Readiness & Mobilization','Demobilization':'Site Readiness & Mobilization',
   'Working Hours':'Working Hours & Schedule','Overtime':'Working Hours & Schedule','Idle Time':'Working Hours & Schedule','Force Majeure':'Working Hours & Schedule',
@@ -2586,10 +2617,10 @@ function conditionDisplayText(text,cat=''){
     out += ` Applicable engineer rates: ${rateParts.join(' or ')}.`;
   }
 
-  if(mobilization && (cat==='Mobilization' || /additional round-trip mobilization|required after initial demobilization|agreed per-person rate/i.test(out))){
-    const priced=`SAR ${fmtConditionRate(mobilization)} per person per round trip`;
-    if(/the agreed per-person rate/i.test(out)) out=out.replace(/the agreed per-person rate/gi,priced);
-    else if(!/Additional mobilization rate:\s*SAR/i.test(out)) out += ` Additional mobilization rate: ${priced}.`;
+  if(cat==='General – Mobilization & Demobilization' || /additional round-trip mobilization required after initial demobilization/i.test(out)){
+    if(mobilization && /the agreed per-person(?: round-trip)? rate/i.test(out)){
+      out=out.replace(/the agreed per-person(?: round-trip)? rate/gi,`SAR ${fmtConditionRate(mobilization)} per engineer per round trip`);
+    }
   }
   return out;
 }
@@ -3172,6 +3203,9 @@ function updateProjectDuration(val){
   projectDuration = val.trim();
   buildConds();
 }
+function isConditionEmphasized(cat=''){
+  return cat==='Payment – Selected' || cat==='General – Extension Rates' || cat==='General – Mobilization & Demobilization';
+}
 function durationConditionText(){
   return conditionType==='engineer_rental'
     ? `Assignment Duration: the engineer rental period under this offer is ${projectDuration||'[TBD]'}, commencing from the confirmed mobilization/start date.`
@@ -3200,7 +3234,7 @@ function buildConds(){
       const d=document.createElement('div');
       d.className='cond-item';
       d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked">
-        <div><div class="cond-text">${escHtml(conditionDisplayText(c.text,c.cat))}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
+        <div><div class="cond-text${isConditionEmphasized(c.cat)?' cond-emphasis':''}">${escHtml(conditionDisplayText(c.text,c.cat))}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
         <button class="cond-rm" onclick="conds.splice(${i},1);buildConds()" title="Remove">×</button>`;
       el.appendChild(d);
     });
@@ -3510,20 +3544,17 @@ function showExport(docType='quotation'){
   const condGroups={};
   activeConds.forEach(c=>{
     const sec=condSection(c.cat);
-    (condGroups[sec]=condGroups[sec]||[]).push({text:conditionDisplayText(c.text,c.cat)});
+    (condGroups[sec]=condGroups[sec]||[]).push({text:conditionDisplayText(c.text,c.cat),cat:c.cat});
   });
-  const priceDynamicLines = [
-    discA>0
-      ? `Grand Total Including VAT: SAR ${fmtN(tot)} (Subtotal SAR ${fmtN(subBeforeDiscount)} − Discount SAR ${fmtN(discA)} = SAR ${fmtN(sub)} + VAT ${v}% SAR ${fmtN(vatA)}).`
-      : `Grand Total Including VAT: SAR ${fmtN(tot)} (Subtotal SAR ${fmtN(sub)} + VAT ${v}% SAR ${fmtN(vatA)}).`,
-    `<strong>${durationConditionText()}</strong>`,
-    `Additional Work Cost (if scope extends beyond the agreed duration): SAR ${r.toLocaleString()}/day at the engineer rate stated above.`
-  ];
-  condGroups['Price'] = [...priceDynamicLines.map(t=>({text:t})), ...(condGroups['Price']||[])];
   const condRows = COND_SECTION_ORDER
     .filter(sec=>condGroups[sec]&&condGroups[sec].length)
-    .map(sec=>`<div class="doc-cond-sec-hdr">${escHtml(sec)}</div>${condGroups[sec].map(c=>`<div class="doc-cond">${escHtml(c.text)}</div>`).join('')}`)
+    .map(sec=>`<div class="doc-cond-sec-hdr">${escHtml(sec)}</div>${condGroups[sec].map(c=>`<div class="doc-cond${isConditionEmphasized(c.cat)?' doc-cond-emphasis':''}">${escHtml(c.text)}</div>`).join('')}`)
     .join('');
+  // Duration remains customer-facing but deliberately does not increment the
+  // T&C counter, so the canonical legacy clauses keep their original numbers.
+  const condLeadRows = projectDuration
+    ? `<div class="doc-cond-note doc-cond-emphasis"><strong>Project Duration:</strong> ${escHtml(durationConditionText().replace(/^Project Duration:\s*/i,''))}</div>`
+    : '';
 
   const LOGO_SRC=document.querySelector('.logo-wrap img').src;
 
@@ -3649,7 +3680,7 @@ function showExport(docType='quotation'){
       <p style="font-size:11px;color:var(--gray-600);margin:-10px 0 16px 2px">The item(s) above are offered at the Client's option and are <strong>excluded</strong> from the Grand Total and VAT calculated in the Cost Summary. If accepted, they will be invoiced additionally at the price(s) stated.</p>`:''}
 
       <div class="doc-section-hdr">${condSecNum}. Terms &amp; Conditions</div>
-      <div class="doc-conds">${condRows}</div>
+      <div class="doc-conds">${condLeadRows}${condRows}</div>
 
       ${sigBlock}
       <p style="text-align:center;margin-top:20px;font-size:12px;color:var(--orange);font-weight:600">
@@ -3791,7 +3822,7 @@ function collectQuotationSnapshot(type){
     const el=document.getElementById(id); if(el) meta[id]=el.value;
   });
   return {
-    version: 2,
+    version: 3,
     type: type||'quotation',
     meta,
     selActs: deepClone(selActs), selEq: deepClone(selEq), actQty: deepClone(actQty), eqQty: deepClone(eqQty),
@@ -3805,7 +3836,19 @@ function collectQuotationSnapshot(type){
 function applyQuotationSnapshot(snap){
   if(!snap)return;
   const meta=snap.meta||{};
+  // Avoid carrying a commercial rate from the previously opened quotation
+  // when loading an older snapshot that did not yet contain these fields.
+  ['commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{
+    const el=document.getElementById(id); if(el)el.value='';
+  });
   Object.entries(meta).forEach(([id,val])=>{ const el=document.getElementById(id); if(el)el.value=val; });
+  // Legacy snapshots stored mobilization and demobilization separately. The
+  // combined field keeps the former mobilization value; when it is absent,
+  // fall back to the former demobilization value so older quotations still load.
+  const combinedMobDemob=document.getElementById('commercial-mobilization-rate');
+  if(combinedMobDemob && !combinedMobDemob.value && meta['commercial-demobilization-rate']!=null){
+    combinedMobDemob.value=meta['commercial-demobilization-rate'];
+  }
   selActs=deepClone(snap.selActs||{}); selEq=deepClone(snap.selEq||{});
   actQty=deepClone(snap.actQty||{}); eqQty=deepClone(snap.eqQty||{});
   customSOW=deepClone(snap.customSOW||[]); normalizeCustomSOWHierarchy(); customSOWLabel=snap.customSOWLabel||'';
@@ -3816,7 +3859,23 @@ function applyQuotationSnapshot(snap){
   paymentDueDays=snap.paymentDueDays ?? 30;
   paymentBalanceBasis=snap.paymentBalanceBasis||'monthly_progress';
   paymentCustomText=snap.paymentCustomText||'';
-  conds=deepClone(snap.conds||conditionTemplate(conditionType));
+  const savedConds=deepClone(snap.conds||[]);
+  if(conditionType==='testing' && (((snap.version||0)<3) || savedConds.filter(c=>c.cat!=='Custom').length<40)){
+    // v1/v2 quotations used the shortened 22-condition set. Upgrade them to
+    // the restored canonical set while retaining any user-added conditions
+    // and matching enabled/disabled choices where a legacy category matches.
+    const canonical=conditionTemplate('testing');
+    const legacyNonCustom=savedConds.filter(c=>c.cat!=='Custom');
+    canonical.forEach(c=>{
+      const exact=legacyNonCustom.find(x=>x.text===c.text);
+      const sameCat=legacyNonCustom.filter(x=>x.cat===c.cat);
+      const prior=exact||(sameCat.length===1?sameCat[0]:null);
+      if(prior)c.enabled=prior.enabled!==false;
+    });
+    conds=canonical.concat(savedConds.filter(c=>c.cat==='Custom'));
+  }else{
+    conds=savedConds.length?savedConds:conditionTemplate(conditionType);
+  }
   refreshPaymentCondition();
   projectDuration=snap.projectDuration||'';
   quoteAttachments=deepClone(snap.attachments||[]);
