@@ -1043,7 +1043,7 @@
         <p>Secure access to the management, quotations, projects, invoices, payments, and company documents system.</p>
         <div class="sf-auth-security-list">
           <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Supabase secure email authentication</div>
-          <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Each account can access only its own data</div>
+          <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Approved company accounts share one Sky Field workspace</div>
           <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Encrypted cloud session and automatic renewal</div>
         </div>
       </div>
@@ -1943,9 +1943,9 @@
 
 <script>
 // ══════════════════════════════════════════════════════════════════
-// Secure authentication and user-isolated cloud synchronization.
+// Secure authentication and approved-team cloud synchronization.
 // Supabase Auth manages the session. Row Level Security in `sf_user_store`
-// ensures each authenticated account can read and write only its own rows.
+// allows only approved Sky Field accounts to use the shared company rows.
 // The browser keeps a local cache for speed and offline resilience.
 // ══════════════════════════════════════════════════════════════════
 // Suggest a meaningful PDF file name in the browser print dialog.
@@ -1994,17 +1994,53 @@ function sfPrintWithSuggestedName(kind='quotation'){
 const SF_USER_STORE_TABLE = 'sf_user_store';
 const SF_STORAGE_BUCKET = 'company-documents';
 const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',invoices:'sf_invoices',payments:'sf_payments',engineers:'sf_engineers',payroll:'sf_payroll_sheets',expenses:'sf_expenses',documents:'sf_documents'};
+const SF_TEAM_MEMBERS = Object.freeze({
+  'm.awwad@skyfield-sa.com':{name:'Mahmoud Awwad',role:'Administrator'},
+  'sa6476925@gmail.com':{name:'Mahmoud Abdelssamea',role:'Administrator'},
+  'rabieshaban900@gmail.com':{name:'Rabie Shaban',role:'Commercial Administrator',blocked:['engineers','payroll']}
+});
 const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);
 let sfNormalizedTablesAvailable = true;
 let sfCurrentUser = null;
+let sfWorkspaceUserId = '';
 let sfSyncPaused = false;
 let sfAuthReady = false;
 let sfActivationPromise = null;
 let sfActivationUserId = '';
+let sfAccessDeniedMessage = '';
 
-function sfShouldSyncKey(key){
-  return typeof key === 'string' && key.startsWith('sf') && !SF_LOCAL_ONLY_KEYS.has(key);
+function sfNormalizeEmail(value){return String(value||'').trim().toLowerCase()}
+function sfTeamMember(email){return SF_TEAM_MEMBERS[sfNormalizeEmail(email)]||null}
+function sfDataUserId(){return sfWorkspaceUserId||''}
+function sfHasAccess(area){return !(sfTeamMember(sfCurrentUser?.email)?.blocked||[]).includes(area)}
+function sfIsLimitedMember(){return !sfHasAccess('engineers')||!sfHasAccess('payroll')}
+function sfCanSyncKeyForRole(key){
+  if(!sfIsLimitedMember())return true;
+  return !['sfEngineers','sfPayrollSheets'].includes(String(key||''));
 }
+
+function sfApplyRoleAccess(){
+  const limited=sfIsLimitedMember();
+  ['engineers','payroll'].forEach(area=>{
+    document.querySelectorAll(`.side-nav-btn[data-module="${area}"]`).forEach(el=>el.style.display=sfHasAccess(area)?'':'none');
+  });
+  document.body.dataset.accessRole=limited?'commercial':'administrator';
+  if(limited&&['engineers','payroll'].includes(document.body.dataset.module||'')){
+    showTab('dashboard',document.querySelector('.side-nav-btn[data-module="dashboard"]'));
+  }
+}
+
+async function sfResolveWorkspaceUserId(user){
+  if(!sfTeamMember(user?.email))throw new Error('This email is not approved for the Sky Field company workspace.');
+  const {data,error}=await sfDb.rpc('sf_workspace_data_user_id');
+  if(error)throw new Error('Shared workspace setup is required. Run the supplied SkyField_Team_Access_Setup.sql file in Supabase, then sign in again.');
+  if(!data)throw new Error('The Sky Field workspace owner account was not found. Sign in or register the main administrator account first.');
+  sfWorkspaceUserId=String(data);
+  return sfWorkspaceUserId;
+}
+
+function sfIsManagedDataKey(key){return typeof key === 'string' && key.startsWith('sf') && !SF_LOCAL_ONLY_KEYS.has(key)}
+function sfShouldSyncKey(key){return sfIsManagedDataKey(key)&&sfCanSyncKeyForRole(key)}
 
 function sfCollectLocalUserData(){
   const result = {};
@@ -2024,7 +2060,7 @@ function sfClearLocalUserData(){
   const keys=[];
   for(let i=0;i<localStorage.length;i++){
     const key=localStorage.key(i);
-    if(sfShouldSyncKey(key)) keys.push(key);
+    if(sfIsManagedDataKey(key)) keys.push(key);
   }
   const wasPaused=sfSyncPaused;
   sfSyncPaused=true;
@@ -2074,6 +2110,7 @@ function sfAuthRedirectUrl(){
 function sfLockApp(clearSensitiveCache=false){
   sfAuthReady=false;
   sfCurrentUser=null;
+  sfWorkspaceUserId='';
   document.body.classList.add('sf-auth-locked');
   const overlay=document.getElementById('sf-auth-overlay');
   if(overlay)overlay.hidden=false;
@@ -2092,12 +2129,14 @@ function sfUnlockApp(user){
   const overlay=document.getElementById('sf-auth-overlay');
   if(overlay)overlay.hidden=true;
   const email=user?.email||'';
-  const fullName=user?.user_metadata?.full_name||email.split('@')[0]||'User';
+  const member=sfTeamMember(email);
+  const fullName=member?.name||user?.user_metadata?.full_name||email.split('@')[0]||'User';
   const account=document.getElementById('side-account');
   if(account)account.classList.add('show');
   const nameEl=document.getElementById('side-account-name'); if(nameEl)nameEl.textContent=fullName;
   const emailEl=document.getElementById('side-account-email'); if(emailEl)emailEl.textContent=email;
   const avatar=document.getElementById('side-account-avatar'); if(avatar)avatar.textContent=(fullName.trim()[0]||'U').toUpperCase();
+  sfApplyRoleAccess();
   setCloudStatus('','Secure cloud connected');
   if(!sessionStorage.getItem('sfNormalizedMigrationV1')){sessionStorage.setItem('sfNormalizedMigrationV1','1');setTimeout(sfMirrorAllCollections,800);}
 }
@@ -2108,6 +2147,7 @@ async function sfLogin(event){
   const form=event.currentTarget;
   const email=document.getElementById('sf-login-email').value.trim();
   const password=document.getElementById('sf-login-password').value;
+  if(!sfTeamMember(email)){sfSetAuthMessage('This email is not approved for the Sky Field company workspace.','error');return;}
   sfSetFormBusy(form,true,'Signing in…'); sfSetAuthMessage('Checking your account…','info');
   try{
     const {error}=await sfDb.auth.signInWithPassword({email,password});
@@ -2127,11 +2167,13 @@ async function sfRegister(event){
   const email=document.getElementById('sf-register-email').value.trim();
   const password=document.getElementById('sf-register-password').value;
   const confirmPassword=document.getElementById('sf-register-confirm').value;
+  const member=sfTeamMember(email);
+  if(!member){sfSetAuthMessage('Registration is limited to approved Sky Field company emails.','error');return;}
   if(password.length<8){sfSetAuthMessage('Password must contain at least 8 characters.','error');return;}
   if(password!==confirmPassword){sfSetAuthMessage('The password confirmation does not match.','error');return;}
   sfSetFormBusy(form,true,'Creating account…'); sfSetAuthMessage('Creating your secure account…','info');
   try{
-    const options={data:{full_name:fullName}};
+    const options={data:{full_name:member.name||fullName,company_role:member.role||'Administrator'}};
     const redirect=sfAuthRedirectUrl(); if(redirect)options.emailRedirectTo=redirect;
     const {data,error}=await sfDb.auth.signUp({email,password,options});
     if(error)throw error;
@@ -2188,7 +2230,7 @@ async function sfLogout(){
   if(!confirm('Log out from the secure Sky Field system?'))return;
   setCloudStatus('saving','Signing out…');
   try{
-    if(sfCurrentUser?.id)sessionStorage.removeItem('sfHydrationSnapshot:'+sfCurrentUser.id);
+    if(sfDataUserId())sessionStorage.removeItem('sfHydrationSnapshot:'+sfDataUserId());
     const {error}=await sfDb.auth.signOut();
     if(error)throw error;
     sfLockApp(true);
@@ -2208,9 +2250,7 @@ async function sfCloudPush(key){
     const raw=localStorage.getItem(key);
     if(raw===null)return;
     let value; try{value=JSON.parse(raw);}catch{value=raw;}
-    const {error}=await sfDb.from(SF_USER_STORE_TABLE).upsert({
-      user_id:sfCurrentUser.id,key,value,updated_at:new Date().toISOString()
-    },{onConflict:'user_id,key'});
+    const {error}=await sfDb.rpc('sf_workspace_save_key',{p_key:key,p_value:value});
     if(error)throw error;
     setCloudStatus('','Saved securely');
   }catch(error){
@@ -2224,17 +2264,17 @@ async function sfCloudPushAllLocal(){
   const local=sfCollectLocalUserData();
   const rows=Object.entries(local).map(([key,raw])=>{
     let value; try{value=JSON.parse(raw);}catch{value=raw;}
-    return {user_id:sfCurrentUser.id,key,value,updated_at:new Date().toISOString()};
+    return {key,value};
   });
   if(!rows.length)return;
-  const {error}=await sfDb.from(SF_USER_STORE_TABLE).upsert(rows,{onConflict:'user_id,key'});
-  if(error)throw error;
+  for(const row of rows){
+    const {error}=await sfDb.rpc('sf_workspace_save_key',{p_key:row.key,p_value:row.value});
+    if(error)throw error;
+  }
 }
 
 async function sfFetchUserCloudRows(userId){
-  const {data,error}=await sfDb.from(SF_USER_STORE_TABLE)
-    .select('key,value,updated_at')
-    .eq('user_id',userId);
+  const {data,error}=await sfDb.rpc('sf_workspace_rows_for_current_user');
   if(error)throw error;
   return data||[];
 }
@@ -2257,6 +2297,7 @@ function sfReloadApplicationStateFromLocal(){
   try{if(typeof savedQuotes!=='undefined')savedQuotes=JSON.parse(localStorage.getItem('sfSavedQuotations')||'[]')}catch(e){console.warn('Quotation state reload failed',e)}
   try{if(typeof proformaInvoices!=='undefined')proformaInvoices=JSON.parse(localStorage.getItem('sfProformaInvoices')||'[]')}catch(e){console.warn('Invoice state reload failed',e)}
   try{if(typeof sfEngineers!=='undefined')sfEngineers=JSON.parse(localStorage.getItem('sfEngineers')||'[]')}catch(e){console.warn('Engineer state reload failed',e)}
+  try{if(typeof sfDeletedDefaultEngineerIds!=='undefined')sfDeletedDefaultEngineerIds=new Set(JSON.parse(localStorage.getItem('sfDeletedDefaultEngineerIds')||'[]'))}catch(e){console.warn('Deleted engineer state reload failed',e)}
   try{if(typeof sfPayrollSheets!=='undefined')sfPayrollSheets=JSON.parse(localStorage.getItem('sfPayrollSheets')||'[]')}catch(e){console.warn('Payroll state reload failed',e)}
   try{
     if(typeof projects!=='undefined')projects=JSON.parse(localStorage.getItem('sfProjects')||'[]').map(p=>({...p,
@@ -2276,7 +2317,8 @@ function sfReloadApplicationStateFromLocal(){
 
 async function sfMirrorCollection(table,records){
   if(!sfDb||!sfCurrentUser||!sfNormalizedTablesAvailable||!Array.isArray(records))return;
-  const rows=records.filter(r=>r&&r.id).map(r=>({user_id:sfCurrentUser.id,id:String(r.id),payload:r,updated_at:r.updatedAt||new Date().toISOString()}));
+  if(sfIsLimitedMember()&&['sf_projects','sf_engineers','sf_payroll_sheets','sf_expenses'].includes(table))return;
+  const rows=records.filter(r=>r&&r.id).map(r=>({user_id:sfDataUserId(),id:String(r.id),payload:r,updated_at:r.updatedAt||new Date().toISOString()}));
   try{
     // Upsert the current records first. Then prune rows that no longer exist in
     // the local collection, so the normalized table remains a true mirror after
@@ -2285,12 +2327,12 @@ async function sfMirrorCollection(table,records){
       const {error}=await sfDb.from(table).upsert(rows,{onConflict:'user_id,id'});
       if(error)throw error;
     }
-    const {data:existing,error:selectError}=await sfDb.from(table).select('id').eq('user_id',sfCurrentUser.id);
+    const {data:existing,error:selectError}=await sfDb.from(table).select('id').eq('user_id',sfDataUserId());
     if(selectError)throw selectError;
     const keep=new Set(rows.map(r=>r.id));
     const stale=(existing||[]).map(r=>String(r.id)).filter(id=>!keep.has(id));
     if(stale.length){
-      const {error:deleteError}=await sfDb.from(table).delete().eq('user_id',sfCurrentUser.id).in('id',stale);
+      const {error:deleteError}=await sfDb.from(table).delete().eq('user_id',sfDataUserId()).in('id',stale);
       if(deleteError)throw deleteError;
     }
   }catch(error){
@@ -2325,8 +2367,8 @@ async function sfCloudPullAll(){
   if(!sfDb||!sfCurrentUser){setCloudStatus('error','Sign in required');return [];}
   setCloudStatus('saving','Syncing securely…');
   try{
-    const rows=await sfFetchUserCloudRows(sfCurrentUser.id);
-    sfWriteCloudRowsToLocal(rows,false);
+    const rows=await sfFetchUserCloudRows(sfDataUserId());
+    sfWriteCloudRowsToLocal(rows,true);
     sfReloadApplicationStateFromLocal();
     setCloudStatus('','Secure cloud connected');
     return rows;
@@ -2348,15 +2390,23 @@ async function sfActivateUser(user){
     sfSetAuthMessage('Loading and protecting your cloud data…','info');
     setCloudStatus('saving','Secure sync…');
 
+    let dataUserId;
+    try{dataUserId=await sfResolveWorkspaceUserId(user)}
+    catch(error){
+      sfAccessDeniedMessage=error?.message||'Unable to open the shared company workspace.';
+      try{await sfDb.auth.signOut({scope:'local'})}catch(e){}
+      throw error;
+    }
+
     const previousUserId=localStorage.getItem('sfActiveUserId')||'';
     const localBefore=sfLocalSnapshot();
-    const mayMigrateLegacy=!previousUserId||previousUserId===user.id;
+    const mayMigrateLegacy=!previousUserId||previousUserId===dataUserId;
     const legacyLocal=mayMigrateLegacy?sfCollectLocalUserData():{};
 
-    if(previousUserId&&previousUserId!==user.id)sfClearLocalUserData();
+    if(previousUserId&&previousUserId!==dataUserId)sfClearLocalUserData();
 
     let rows;
-    try{rows=await sfFetchUserCloudRows(user.id);}
+    try{rows=await sfFetchUserCloudRows(dataUserId);}
     catch(error){
       console.error('Unable to load secure user data',error);
       sfSetAuthMessage('Login succeeded, but the secure data table is not ready. Run the supplied Supabase SQL setup file.','error');
@@ -2369,7 +2419,7 @@ async function sfActivateUser(user){
     }else if(Object.keys(legacyLocal).length){
       // First secure login: migrate the old data already stored in this browser
       // into the authenticated user's private cloud rows.
-      if(previousUserId&&previousUserId!==user.id){
+      if(previousUserId&&previousUserId!==dataUserId){
         sfClearLocalUserData();
       }else{
         await sfCloudPushAllLocal();
@@ -2378,7 +2428,7 @@ async function sfActivateUser(user){
       sfClearLocalUserData();
     }
 
-    localStorage.setItem('sfActiveUserId',user.id);
+    localStorage.setItem('sfActiveUserId',dataUserId);
     const localAfter=sfLocalSnapshot();
 
     // The application modules read their data from localStorage before the
@@ -2386,7 +2436,7 @@ async function sfActivateUser(user){
     // distinct hydrated cloud snapshot so those modules can rebuild from the
     // downloaded data. The snapshot guard prevents an endless refresh loop
     // when startup code creates or normalizes local cache values on every load.
-    const hydrationKey='sfHydrationSnapshot:'+user.id;
+    const hydrationKey='sfHydrationSnapshot:'+dataUserId;
     const lastHydratedSnapshot=sessionStorage.getItem(hydrationKey)||'';
     if(localBefore!==localAfter && lastHydratedSnapshot!==localAfter){
       sessionStorage.setItem(hydrationKey,localAfter);
@@ -2394,6 +2444,7 @@ async function sfActivateUser(user){
       return;
     }
     sessionStorage.setItem(hydrationKey,localAfter);
+    sfReloadApplicationStateFromLocal();
     sfUnlockApp(user);
   })().catch(error=>{
     console.error('Secure activation failed',error);
@@ -2415,6 +2466,14 @@ async function sfHandleAuthState(event,session){
     return;
   }
   if(session?.user){
+    if(!sfTeamMember(session.user.email)){
+      sfAccessDeniedMessage='This email is not approved for the Sky Field company workspace.';
+      try{await sfDb.auth.signOut({scope:'local'})}catch(e){}
+      sfLockApp(true);
+      sfShowAuthPanel('login');
+      sfSetAuthMessage(sfAccessDeniedMessage,'error');
+      return;
+    }
     const sameUser=sfCurrentUser?.id===session.user.id;
     const passiveRefresh=event==='TOKEN_REFRESHED'||event==='USER_UPDATED';
 
@@ -2435,7 +2494,9 @@ async function sfHandleAuthState(event,session){
     const clearCache=event==='SIGNED_OUT'&&!!localStorage.getItem('sfActiveUserId');
     sfLockApp(clearCache);
     sfShowAuthPanel('login');
-    sfSetAuthMessage(event==='SIGNED_OUT'?'You have been logged out securely.':'Enter your account details to continue.','info');
+    const denied=sfAccessDeniedMessage;
+    sfAccessDeniedMessage='';
+    sfSetAuthMessage(denied||(event==='SIGNED_OUT'?'You have been logged out securely.':'Enter your account details to continue.'),denied?'error':'info');
     setCloudStatus('error','Sign in required');
   }
 }
@@ -2753,6 +2814,11 @@ function renderDashboard(){
 }
 
 function showTab(name,btn){
+  if((name==='engineers'&&!sfHasAccess('engineers'))||(name==='payroll'&&!sfHasAccess('payroll'))){
+    alert('Your account does not have access to Engineers or Payroll / Salaries.');
+    name='dashboard';
+    btn=document.querySelector('.side-nav-btn[data-module="dashboard"]');
+  }
   const builderTabs=['activities','equipment','costplanning','conditions'];
   const allTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','engineers','payroll','costsettings'];
   const isBuilder=builderTabs.includes(name);
@@ -2965,7 +3031,7 @@ async function sfUploadDocument(file,section,recordId){
   if(!file)return null;
   if(file.size>25*1024*1024)throw new Error('File exceeds the 25 MB upload limit.');
   if(sfDb&&sfCurrentUser){
-    const path=`${sfCurrentUser.id}/${sfSafeSegment(section)}/${sfSafeSegment(recordId||'draft')}/${Date.now()}_${sfSafeSegment(file.name)}`;
+    const path=`${sfDataUserId()}/${sfSafeSegment(section)}/${sfSafeSegment(recordId||'draft')}/${Date.now()}_${sfSafeSegment(file.name)}`;
     const {data,error}=await sfDb.storage.from(SF_STORAGE_BUCKET).upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});
     if(error)throw error;
     return{id:'doc_'+Date.now()+'_'+Math.floor(Math.random()*10000),name:file.name,size:file.size||0,mimeType:file.type||'',storagePath:data.path,type:'storage',uploadedAt:new Date().toISOString()};
@@ -4849,6 +4915,7 @@ function closeProformaPreview(){const el=document.getElementById('proforma-previ
 // ENGINEERS & SIMPLIFIED INTERNAL COSTING v10
 // ══════════════════════════════════════════════════════════════════════════════
 let sfEngineers = JSON.parse(localStorage.getItem('sfEngineers')||'[]');
+let sfDeletedDefaultEngineerIds = new Set(JSON.parse(localStorage.getItem('sfDeletedDefaultEngineerIds')||'[]'));
 const SKYFIELD_DEFAULT_ENGINEERS = [
   {id:'eng_260311',name:'محمود عبدالسميع سليمان عواد',nationality:'مصري',iqama:'2543037325',employeeNo:'260311',profession:'مهندس',specialization:'Project Management',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:1000,monthly:30000,overtime:0,housingTransport:0,siteAllowance:0,carAllowance:0,notes:'Imported from the approved monthly payroll list.'},
   {id:'eng_260401',name:'مجد جمال محمد حسين',nationality:'مصري',iqama:'2559460999',employeeNo:'260401',profession:'مهندس',specialization:'Testing & Commissioning',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:416.67,monthly:12500,overtime:0,housingTransport:4375,siteAllowance:0,carAllowance:1500,notes:'Imported from the approved monthly payroll list.'},
@@ -4872,6 +4939,9 @@ function sfNormalizeEngineerKey(value){return String(value||'').trim().toLowerCa
 function importSkyFieldEngineers(showMessage=false){
   let added=0,updated=0;
   SKYFIELD_DEFAULT_ENGINEERS.forEach(source=>{
+    // A default engineer deleted from the Engineers Database must stay deleted.
+    // Previously the automatic startup import recreated the record after refresh.
+    if(sfDeletedDefaultEngineerIds.has(source.id))return;
     const match=sfEngineers.find(x=>(source.employeeNo&&String(x.employeeNo||'')===source.employeeNo)||(source.iqama&&String(x.iqama||'')===source.iqama)||sfNormalizeEngineerKey(x.name)===sfNormalizeEngineerKey(source.name));
     if(!match){
       sfEngineers.push({...source,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
@@ -4911,7 +4981,63 @@ function saveEngineerRecord(){
   saveEngineerLibrary();resetEngineerForm();
 }
 function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)return;const set=(k,v)=>{const e=document.getElementById(k);if(e)e.value=v??''};set('eng-id',x.id);set('eng-name',x.name);set('eng-nationality',x.nationality);set('eng-iqama',x.iqama);set('eng-employee-no',x.employeeNo);set('eng-profession',x.profession);set('eng-specialization',x.specialization);set('eng-loa',x.loa);set('eng-employment',x.employment);set('eng-status',x.status);set('eng-daily',x.daily);set('eng-monthly',x.monthly);set('eng-overtime',x.overtime);set('eng-housing-transport',x.housingTransport);set('eng-site-allowance',x.siteAllowance||0);set('eng-car-allowance',x.carAllowance??x.siteCar??0);set('eng-notes',x.notes);document.getElementById('engineer-form-title').textContent='Edit Engineer';document.getElementById('eng-save-btn').textContent='Update Engineer';window.scrollTo({top:0,behavior:'smooth'});}
-function deleteEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x||!confirm('Delete engineer '+x.name+'?'))return;sfEngineers=sfEngineers.filter(e=>e.id!==id);saveEngineerLibrary();}
+async function deleteEngineerRecord(id){
+  if(!sfHasAccess('engineers')){alert('Your account does not have access to Engineers.');return;}
+  const x=sfEngineers.find(e=>e.id===id);
+  if(!x||!confirm('Delete engineer '+x.name+'?'))return;
+
+  const previousEngineers=sfEngineers.slice();
+  const previousDeletedIds=new Set(sfDeletedDefaultEngineerIds);
+  const isDefaultEngineer=SKYFIELD_DEFAULT_ENGINEERS.some(e=>e.id===id);
+
+  sfEngineers=sfEngineers.filter(e=>e.id!==id);
+  if(isDefaultEngineer)sfDeletedDefaultEngineerIds.add(id);
+
+  try{
+    const wasPaused=sfSyncPaused;sfSyncPaused=true;
+    try{
+      localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));
+      localStorage.setItem('sfDeletedDefaultEngineerIds',JSON.stringify([...sfDeletedDefaultEngineerIds]));
+    }finally{sfSyncPaused=wasPaused;}
+    renderEngineers();renderCostPlan();
+
+    if(!sfDb||!sfCurrentUser||!sfDataUserId())throw new Error('A secure cloud connection is required to delete an engineer.');
+    setCloudStatus('saving','Deleting engineer…');
+
+    // Wait for the shared workspace record to be updated instead of treating an
+    // unverified local-only deletion as complete.
+    if(isDefaultEngineer){
+      const {error:deletedIdsError}=await sfDb.rpc('sf_workspace_save_key',{p_key:'sfDeletedDefaultEngineerIds',p_value:[...sfDeletedDefaultEngineerIds]});
+      if(deletedIdsError)throw deletedIdsError;
+    }
+    const {error:storeError}=await sfDb.rpc('sf_workspace_save_key',{p_key:'sfEngineers',p_value:sfEngineers});
+    if(storeError)throw storeError;
+
+    // Keep the normalized reporting table aligned with the master list. The
+    // application still works when older installations do not have this table.
+    if(sfNormalizedTablesAvailable){
+      const {error:normalizedError}=await sfDb.from(SF_NORMALIZED_TABLES.engineers).delete().eq('user_id',sfDataUserId()).eq('id',String(id));
+      if(normalizedError){
+        if(String(normalizedError?.code||'')==='42P01'||/does not exist|schema cache/i.test(String(normalizedError?.message||'')))sfNormalizedTablesAvailable=false;
+        else console.warn('Engineer normalized delete failed',normalizedError);
+      }
+    }
+
+    setCloudStatus('','Engineer deleted securely');
+    alert('Engineer deleted successfully.');
+  }catch(error){
+    sfEngineers=previousEngineers;
+    sfDeletedDefaultEngineerIds=previousDeletedIds;
+    const wasPaused=sfSyncPaused;sfSyncPaused=true;
+    try{
+      localStorage.setItem('sfEngineers',JSON.stringify(sfEngineers));
+      localStorage.setItem('sfDeletedDefaultEngineerIds',JSON.stringify([...sfDeletedDefaultEngineerIds]));
+    }finally{sfSyncPaused=wasPaused;}
+    renderEngineers();renderCostPlan();
+    setCloudStatus('error','Engineer deletion failed');
+    alert('Could not delete the engineer. '+(error?.message||'Please check the cloud connection and try again.'));
+  }
+}
 function renderEngineers(){
   const body=document.getElementById('engineer-table-body');if(!body)return;
   const q=(document.getElementById('engineer-search')?.value||'').toLowerCase();
@@ -5179,7 +5305,7 @@ function renderProjects(){
           <div class="proj-fin-box"><div class="pfb-label">Outstanding</div><div class="pfb-value red">${fmtSAR(pending)}</div></div>
           <div class="proj-fin-box" style="grid-column:1/-1"><div class="pfb-label">Remaining to Invoice</div><div class="pfb-value">${fmtSAR(remainingToInvoice)}</div></div>
         </div>
-        ${estimatedInternalCost?`<div class="project-cost-strip"><div><small>Estimated Cost</small><strong>${fmtSAR(estimatedInternalCost)}</strong></div><div><small>Expected Profit</small><strong style="color:${expectedProjectProfit>=0?'#15803d':'#b91c1c'}">${fmtSAR(expectedProjectProfit)}</strong></div><div><small>Assigned Engineers</small><strong>${assignedEngineerCount}</strong></div></div>`:''}
+        ${estimatedInternalCost?`<div class="project-cost-strip"><div><small>Estimated Cost</small><strong>${fmtSAR(estimatedInternalCost)}</strong></div><div><small>Expected Profit</small><strong style="color:${expectedProjectProfit>=0?'#15803d':'#b91c1c'}">${fmtSAR(expectedProjectProfit)}</strong></div>${sfHasAccess('engineers')?`<div><small>Assigned Engineers</small><strong>${assignedEngineerCount}</strong></div>`:''}</div>`:''}
         ${totalComm?`<div class="proj-fin-row" style="grid-template-columns:1fr">
           <div class="proj-fin-box"><div class="pfb-label">Total Commission (عمولة)</div><div class="pfb-value" style="color:#f59e0b">${fmtSAR(totalComm)}</div></div>
         </div>`:''}
@@ -5228,17 +5354,27 @@ function openProjectDetails(projectId){
   showTab('projectdetails',null);renderProjectDetails();
 }
 function closeProjectDetails(){sfActiveProjectDetailsId='';showTab('projects',document.querySelector('.side-nav-btn[data-module="projects"]'));}
-function setProjectDetailsPanel(panel){sfProjectDetailsPanel=panel;renderProjectDetails();}
+function setProjectDetailsPanel(panel){
+  if((panel==='engineers'&&!sfHasAccess('engineers'))||(panel==='payroll'&&!sfHasAccess('payroll'))){
+    alert('Your account does not have access to Engineers or Payroll / Salaries.');
+    sfProjectDetailsPanel='overview';
+  }else sfProjectDetailsPanel=panel;
+  renderProjectDetails();
+}
 function pdDate(v){if(!v)return '—';try{return new Date(v+'T00:00:00').toLocaleDateString('en-GB')}catch{return v}}
 function pdStatusBadge(status){const s=String(status||'pending').toLowerCase();return `<span class="pay-badge ${escHtml(s)}">${escHtml(s)}</span>`}
 function projectInvoiceRecords(p){return proformaInvoices.filter(x=>x.projectId===p.id)}
-function projectPayrollRecords(p){return sfPayrollSheets.filter(x=>x.projectId===p.id)}
-function projectActualExpenseTotal(p){return (p.actualExpenses||[]).reduce((a,x)=>a+sfNum(x.amount),0)}
+function projectPayrollRecords(p){return sfHasAccess('payroll')?sfPayrollSheets.filter(x=>x.projectId===p.id):[]}
+function projectActualExpenseTotal(p){
+  if(sfIsLimitedMember()&&Number.isFinite(Number(p.restrictedActualCost)))return sfNum(p.restrictedActualCost);
+  return (p.actualExpenses||[]).reduce((a,x)=>a+sfNum(x.amount),0);
+}
 function projectReceivedTotal(p){return (p.payments||[]).reduce((a,x)=>a+paymentReceivedAmount(sfNormalizePaymentRecord(x)),0)}
 function projectInvoiceTotal(p){return (p.payments||[]).reduce((a,x)=>a+sfNum(x.amount),0)}
 function projectDetailsTabs(){
   const tabs=[['overview','Overview'],['commercial','Quotations & PO'],['invoices','Invoices & Payments'],['engineers','Engineers'],['payroll','Timesheets & Payroll'],['expenses','Expenses'],['documents','Documents'],['profitability','Profitability']];
-  return `<div class="pd-tabs">${tabs.map(([k,l])=>`<button class="pd-tab ${sfProjectDetailsPanel===k?'active':''}" onclick="setProjectDetailsPanel('${k}')">${l}</button>`).join('')}</div>`;
+  const visible=tabs.filter(([k])=>(k!=='engineers'||sfHasAccess('engineers'))&&(k!=='payroll'||sfHasAccess('payroll')));
+  return `<div class="pd-tabs">${visible.map(([k,l])=>`<button class="pd-tab ${sfProjectDetailsPanel===k?'active':''}" onclick="setProjectDetailsPanel('${k}')">${l}</button>`).join('')}</div>`;
 }
 function renderProjectDetails(){
   const root=document.getElementById('project-details-root');if(!root)return;
@@ -5256,7 +5392,7 @@ function renderProjectDetailsPanel(p,m){
   const empty=t=>`<div class="pd-empty">${t}</div>`;
   if(sfProjectDetailsPanel==='overview')return `<div class="pd-panel active"><div class="pd-grid">
     <div class="pd-card"><div class="pd-card-hdr"><h3>Project Information</h3></div><div class="pd-card-body"><dl class="pd-info"><dt>Project Name</dt><dd>${escHtml(p.name||'—')}</dd><dt>Client</dt><dd>${escHtml(p.client||'—')}</dd><dt>Status</dt><dd>${escHtml(p.status||'active')}</dd><dt>Start Date</dt><dd>${escHtml(pdDate(p.start))}</dd><dt>Contract Value</dt><dd>${fmtSAR(m.contract)}</dd><dt>Last Updated</dt><dd>${escHtml(p.updatedAt?new Date(p.updatedAt).toLocaleString():'—')}</dd></dl></div></div>
-    <div class="pd-card"><div class="pd-card-hdr"><h3>Workspace Summary</h3></div><div class="pd-card-body"><dl class="pd-info"><dt>Quotations</dt><dd>${(p.quotes||[]).length}</dd><dt>Invoices</dt><dd>${m.invoices.length}</dd><dt>Purchase Orders</dt><dd>${(p.pos||[]).length}</dd><dt>Assigned Engineers</dt><dd>${(p.assignedEngineers||[]).length}</dd><dt>Payroll Sheets</dt><dd>${m.payroll.length}</dd><dt>Documents</dt><dd>${(p.docs||[]).length}</dd></dl></div></div>
+    <div class="pd-card"><div class="pd-card-hdr"><h3>Workspace Summary</h3></div><div class="pd-card-body"><dl class="pd-info"><dt>Quotations</dt><dd>${(p.quotes||[]).length}</dd><dt>Invoices</dt><dd>${m.invoices.length}</dd><dt>Purchase Orders</dt><dd>${(p.pos||[]).length}</dd>${sfHasAccess('engineers')?`<dt>Assigned Engineers</dt><dd>${(p.assignedEngineers||[]).length}</dd>`:''}${sfHasAccess('payroll')?`<dt>Payroll Sheets</dt><dd>${m.payroll.length}</dd>`:''}<dt>Documents</dt><dd>${(p.docs||[]).length}</dd></dl></div></div>
     <div class="pd-card full"><div class="pd-card-hdr"><h3>Notes</h3></div><div class="pd-card-body">${p.notes?`<div style="white-space:pre-wrap;font-size:12px;line-height:1.65">${escHtml(p.notes)}</div>`:empty('No project notes recorded.')}</div></div></div></div>`;
   if(sfProjectDetailsPanel==='commercial'){
     const qs=(p.quotes||[]).map(q=>`<tr><td>${escHtml(q.number||'—')}</td><td>${escHtml(q.type||'Quotation')}</td><td>${escHtml(pdDate(q.date))}</td><td>${fmtSAR(q.total||0)}</td><td><button class="btn-sm" onclick="showTab('quotes',document.querySelector('.side-nav-btn[data-module=quotes]'))">Open Register</button></td></tr>`).join('');
