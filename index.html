@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v20</title>
+<title>SKY FIELD – Management System v27</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -268,8 +268,10 @@
   /* ── CONDITIONS ── */
   .cond-panel { padding: 14px 16px; }
   .cond-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .cond-sec-hdr { font-size: 11px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .04em; margin: 12px 0 2px; padding: 4px 8px; background: var(--gray-100); border-radius: 4px; }
+  .cond-sec-hdr { display:flex;align-items:center;justify-content:space-between;gap:10px;font-size: 11px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .04em; margin: 12px 0 2px; padding: 4px 8px; background: var(--gray-100); border-radius: 4px; }
   .cond-sec-hdr:first-child { margin-top: 0; }
+  .cond-sec-add { border:1px solid var(--navy-mid);background:#fff;color:var(--navy-mid);border-radius:6px;padding:4px 8px;font:700 10px 'Inter',Tahoma,sans-serif;cursor:pointer;text-transform:none;letter-spacing:0;white-space:nowrap; }
+  .cond-sec-add:hover { background:var(--navy-mid);color:#fff; }
   .cond-item {
     display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px;
     border: 1px solid var(--gray-200); border-radius: 8px; background: var(--white);
@@ -280,6 +282,11 @@
   .cond-cat { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
   .cond-rm { background: none; border: none; color: var(--gray-500); cursor: pointer; font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0; }
   .cond-rm:hover { color: var(--red); }
+  .cond-actions { display:flex;align-items:center;gap:4px;flex-shrink:0; }
+  .cond-edit,.cond-reset { border:0;background:var(--gray-100);color:var(--navy);border-radius:6px;padding:4px 7px;font:700 10px 'Inter',Tahoma,sans-serif;cursor:pointer; }
+  .cond-edit:hover,.cond-reset:hover { background:var(--navy-mid);color:#fff; }
+  .cond-modified { display:inline-flex;margin-left:6px;padding:1px 5px;border-radius:999px;background:#fff1e8;color:#b45309;font-size:9px;font-weight:800;vertical-align:middle; }
+  .cond-system-note { color:var(--navy-mid);font-weight:700; }
   .cond-add { display: flex; gap: 10px; }
   .cond-add textarea {
     flex: 1; border: 1px solid var(--gray-200); border-radius: 8px; padding: 8px 12px;
@@ -291,6 +298,11 @@
     border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
     cursor: pointer; font-family: 'Inter', sans-serif; align-self: flex-end;
   }
+  .condition-modal-overlay{display:none;position:fixed;inset:0;background:rgba(9,20,38,.62);z-index:1600;align-items:center;justify-content:center;padding:18px}
+  .condition-modal-overlay.show{display:flex}.condition-modal{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+  .condition-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--navy);color:#fff}.condition-modal-hdr h3{margin:0;font-size:15px}.condition-modal-close{border:0;background:transparent;color:#fff;font-size:22px;cursor:pointer}
+  .condition-modal-body{padding:16px 18px}.condition-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.condition-edit-field label{display:block;margin-bottom:5px;font-size:10px;font-weight:800;color:var(--gray-600)}
+  .condition-edit-field textarea,.condition-edit-field select{width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:9px 10px;font:12px/1.55 'Inter',Tahoma,sans-serif;background:#fff}.condition-edit-field textarea{min-height:150px;resize:vertical}.condition-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.condition-modal-actions button{border:0;border-radius:8px;padding:8px 13px;font:700 11px 'Inter',Tahoma,sans-serif;cursor:pointer}.condition-modal-save{background:var(--orange);color:#fff}.condition-modal-cancel{background:var(--gray-100);color:var(--navy)}
 
   /* ── QUOTATION TABLE ── */
   .quot-section { background: var(--white); border-radius: 12px; border: 1px solid var(--gray-200); padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
@@ -373,19 +385,31 @@
   /* ── PRINT / EXPORT PREVIEW ── */
   #export-preview {
     display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,.6); z-index: 200; overflow-y: auto; padding: 30px;
+    background: rgba(0,0,0,.68); z-index: 3000; overflow-y: auto; padding: 70px 30px 30px;
   }
+  body.preview-open { overflow: hidden; }
   .preview-doc {
     background: var(--white); max-width: 1080px; margin: 0 auto;
     border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.3);
     overflow: hidden;
   }
   .preview-close {
-    position: fixed; top: 14px; right: 20px; background: var(--white); border: none;
-    border-radius: 50%; width: 38px; height: 38px; font-size: 20px; cursor: pointer;
+    position: fixed; top: 14px; right: 20px; background: var(--orange); color: var(--white); border: 2px solid var(--white);
+    border-radius: 50%; width: 42px; height: 42px; font-size: 22px; line-height:1; cursor: pointer;
     display: flex; align-items: center; justify-content: center; font-weight: 700;
-    box-shadow: 0 2px 8px rgba(0,0,0,.2); z-index: 201;
+    box-shadow: 0 5px 18px rgba(0,0,0,.38); z-index: 3010; opacity:1; visibility:visible;
   }
+  .preview-close:hover { background: var(--red); transform: scale(1.05); }
+  .preview-close:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  #export-preview > .preview-close { display:flex; }
+  .preview-language-toggle {
+    position:fixed;top:14px;left:20px;z-index:3010;display:flex;align-items:center;gap:8px;
+    min-height:42px;padding:8px 13px;border:2px solid var(--white);border-radius:22px;
+    background:var(--navy);color:var(--white);box-shadow:0 5px 18px rgba(0,0,0,.38);
+    font-size:11px;font-weight:700;cursor:pointer;user-select:none;
+  }
+  .preview-language-toggle input{accent-color:var(--orange);width:16px;height:16px;cursor:pointer}
+  @media(max-width:600px){#export-preview{padding:68px 8px 16px}.preview-close{right:10px}.preview-language-toggle{left:10px;padding:8px 10px;font-size:10px}}
   .doc-header { background: var(--navy); padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; }
   .doc-header img { height: 50px; }
   .doc-header-right { text-align: right; color: var(--white); }
@@ -442,7 +466,7 @@
   .doc-cond.doc-cond-emphasis, .doc-cond-note.doc-cond-emphasis { font-weight: 700; color: var(--navy); }
   .doc-cond-sec-hdr { font-size: 11px; font-weight: 700; color: var(--white); background: var(--navy-mid,var(--navy)); padding: 5px 10px; margin: 14px 0 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; }
   .doc-cond-sec-hdr:first-child { margin-top: 0; }
-  .doc-cond::before { counter-increment: cond; content: counter(cond) "."; font-weight: 700; color: var(--orange); min-width: 20px; }
+  .doc-cond::before { content: attr(data-cond-no) "."; font-weight: 700; color: var(--orange); min-width: 25px; }
   .doc-sig { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
   .doc-sig-box { border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; }
   .doc-sig-hdr { padding: 8px 12px; font-size: 11px; font-weight: 700; text-align: center; color: var(--white); }
@@ -460,7 +484,7 @@
       display: block !important; position: static !important; background: none !important;
       padding: 0 !important; overflow: visible !important; height: auto !important; inset: auto !important;
     }
-    .preview-close, .preview-actions { display: none !important; }
+    .preview-close, .preview-actions, .preview-language-toggle { display: none !important; }
     .preview-doc {
       box-shadow: none !important; border-radius: 0 !important; max-width: 100% !important;
       margin: 0 !important; overflow: visible !important;
@@ -1011,6 +1035,41 @@
   @media(max-width:900px){.resource-layout{grid-template-columns:1fr}.cost-summary-grid{grid-template-columns:1fr 1fr}.cost-plan-table{min-width:780px}.cost-plan-section{overflow:auto}}
   @media(max-width:600px){.resource-grid{grid-template-columns:1fr}.resource-grid .span-2{grid-column:auto}.cost-summary-grid{grid-template-columns:1fr}.project-cost-strip{grid-template-columns:1fr}}
 
+  /* Bilingual interface and quotation-condition language controls. */
+  .sf-language-switcher{position:fixed;top:12px;right:14px;z-index:1300;display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid rgba(255,255,255,.28);border-radius:10px;background:rgba(17,36,65,.92);box-shadow:0 5px 18px rgba(0,0,0,.18);color:#fff;backdrop-filter:blur(8px)}
+  .sf-language-switcher select{border:0;border-radius:7px;background:#fff;color:var(--navy);padding:5px 8px;font:700 11px 'Inter',Tahoma,Arial,sans-serif;cursor:pointer;outline:none}
+  .sf-language-switcher .sf-language-icon{font-size:14px;line-height:1}
+  .lc-summary-card{display:none;margin-top:9px;padding:10px 11px;border:1px solid #f1c9a9;border-radius:8px;background:var(--orange-light);color:var(--gray-700);font-size:10.5px;line-height:1.65}
+  .lc-summary-card.show{display:block}.lc-summary-card strong{color:var(--navy)}
+  .lc-controls{display:none;margin-top:10px;padding:12px;border:1px solid var(--gray-200);border-radius:9px;background:#fff}
+  .lc-controls.show{display:block}.lc-controls-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+  .lc-field label{display:block;font-size:9.5px;color:var(--gray-500);font-weight:700;margin-bottom:4px}
+  .lc-field input,.lc-field select{width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px;background:#fff;color:var(--navy);font:11px 'Inter',Tahoma,Arial,sans-serif}
+  .lc-field input[readonly]{background:var(--gray-100);font-weight:800}.lc-private-note{margin-top:9px;font-size:10px;color:var(--gray-500);line-height:1.55}
+  .lc-subsection{grid-column:1/-1;margin-top:4px;padding-top:9px;border-top:1px solid var(--gray-200);font-size:10px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.04em}
+  .lc-documents{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:9px;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)}
+  .lc-documents label{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--gray-700);cursor:pointer}.lc-documents input{width:auto}
+  .lc-amount-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.lc-amount-card{padding:9px;border-radius:8px;background:var(--gray-100);font-size:10px;color:var(--gray-600)}.lc-amount-card strong{display:block;margin-top:3px;color:var(--navy);font-size:12px}
+  .standard-payment-controls.lc-disabled{opacity:.48;pointer-events:none;filter:grayscale(.25)}
+  .condition-language-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  .cond-copy{flex:1;min-width:0}.cond-copy-en{direction:ltr;text-align:left;white-space:pre-line}.cond-copy-ar{direction:rtl;text-align:right;font-family:Tahoma,'Inter',Arial,sans-serif;margin-top:5px;padding-top:5px;border-top:1px dashed var(--gray-200);white-space:pre-line}
+  .cond-copy-ar:only-child,.cond-copy-en:only-child{margin-top:0;padding-top:0;border-top:0}
+  .doc-cond-body{flex:1;min-width:0}.doc-cond-en{direction:ltr;text-align:left;white-space:pre-line}.doc-cond-ar{direction:rtl;text-align:right;font-family:Tahoma,'Inter',Arial,sans-serif;margin-top:4px;padding-top:4px;border-top:1px dashed #d6dce5;white-space:pre-line}
+  .doc-cond-ar:only-child,.doc-cond-en:only-child{margin-top:0;padding-top:0;border-top:0}.doc-cond-note .doc-cond-ar{margin-top:5px}
+
+  html[dir="rtl"] body{padding-left:0;padding-right:var(--sidebar-w);font-family:Tahoma,'Inter',Arial,sans-serif}
+  html[dir="rtl"] .app-sidebar{inset:0 0 0 auto;box-shadow:-8px 0 28px rgba(16,35,65,.13)}
+  html[dir="rtl"] .side-nav-btn{text-align:right;font-family:Tahoma,'Inter',Arial,sans-serif}
+  html[dir="rtl"] .side-nav-count{margin-left:0;margin-right:auto}
+  html[dir="rtl"] .header-title,html[dir="rtl"] .page-command-title,html[dir="rtl"] .quotation-section-heading{text-align:right}
+  html[dir="rtl"] .tabs{padding-left:0;padding-right:4px}html[dir="rtl"] .cat-panel{border-right:0;border-left:1px solid var(--gray-200)}
+  html[dir="rtl"] .dash-action{text-align:right}html[dir="rtl"] .sf-auth-brand::after{right:auto;left:-130px}html[dir="rtl"] .sf-language-switcher{right:auto;left:14px}
+  html[dir="rtl"] .doc-body,html[dir="rtl"] .doc-header,html[dir="rtl"] .doc-footer{direction:ltr}
+  html[dir="rtl"] input:not([type="checkbox"]):not([type="radio"]),html[dir="rtl"] textarea,html[dir="rtl"] select{text-align:right}
+  html[dir="rtl"] input[type="email"],html[dir="rtl"] input[type="tel"],html[dir="rtl"] input[type="number"]{direction:ltr;text-align:right}
+  @media(max-width:820px){html[dir="rtl"] body{padding-right:0}html[dir="rtl"] .app-sidebar{transform:translateX(105%);box-shadow:-10px 0 35px rgba(0,0,0,.25)}html[dir="rtl"] body.nav-open .app-sidebar{transform:translateX(0)}html[dir="rtl"] .header-title{margin-left:0;margin-right:10px;text-align:right}.sf-language-switcher{top:auto;right:10px;bottom:10px}html[dir="rtl"] .sf-language-switcher{right:auto;left:10px}.condition-language-grid,.lc-controls-grid,.condition-edit-grid,.lc-amount-summary{grid-template-columns:1fr}.lc-documents{grid-template-columns:1fr 1fr}}
+  @media print{.sf-language-switcher{display:none!important}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1032,6 +1091,14 @@
 </script>
 </head>
 <body data-module="dashboard" class="sf-auth-locked">
+
+<div class="sf-language-switcher" aria-label="Interface language">
+  <span class="sf-language-icon" aria-hidden="true">🌐</span>
+  <select id="sf-ui-language" onchange="sfSetInterfaceLanguage(this.value)" aria-label="Interface language">
+    <option value="en">English</option>
+    <option value="ar">العربية</option>
+  </select>
+</div>
 
 
 <div class="sf-auth-overlay" id="sf-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="sf-auth-title">
@@ -1172,11 +1239,11 @@
   <!-- BACKUP / RESTORE (for OneDrive sync) -->
   <div class="backup-tools-panel" id="backup-tools">
     <div style="font-size:12px;color:var(--gray-700);flex:1;min-width:200px">
-      💾 <strong>النسخ الاحتياطي:</strong> صدّر كل بياناتك (المشاريع + عروض الأسعار + الفواتير المحفوظة) كملف JSON احتياطي. استخدم "استيراد" لاسترجاعها عند الحاجة، بينما تتم المزامنة اليومية تلقائيًا مع Supabase.
+      💾 <strong>Data backup:</strong> Export all data (projects, saved quotations, and invoices) as a JSON backup file. Use Import to restore it when needed; daily synchronization with Supabase remains automatic.
     </div>
-    <button class="btn-sm" type="button" onclick="exportBackup()">⬇ تصدير نسخة احتياطية (JSON)</button>
-    <button class="btn-sm" type="button" onclick="document.getElementById('backup-file-input').click()">⬆ استيراد نسخة احتياطية</button>
-    <button class="btn-sm" type="button" onclick="migrateLegacyDocumentsToStorage()">☁ نقل المستندات القديمة إلى Storage</button>
+    <button class="btn-sm" type="button" onclick="exportBackup()">⬇ Export Backup (JSON)</button>
+    <button class="btn-sm" type="button" onclick="document.getElementById('backup-file-input').click()">⬆ Import Backup</button>
+    <button class="btn-sm" type="button" onclick="migrateLegacyDocumentsToStorage()">☁ Move Legacy Documents to Storage</button>
     <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
   </div>
 
@@ -1187,7 +1254,7 @@
     <button class="btn-outline" id="advanced-fields-btn" type="button" onclick="toggleAdvancedFields()">Show Commercial Fields</button>
   </div>
   <div class="meta-grid quotation-workspace">
-    <div class="meta-card"><label>Client / Project (To)</label><input id="client" placeholder="Enter client name…"></div>
+    <div class="meta-card"><label>Client / Project (To)</label><input id="client" placeholder="Enter client name…" oninput="updateLcApplicantFromClient()"></div>
     <div class="meta-card"><label>Attention</label><input id="client-attn" placeholder="Contact person name…"></div>
     <div class="meta-card"><label>Client Telephone</label><input id="client-tel" placeholder="05xxxxxxxx"></div>
     <div class="meta-card"><label>Client Email</label><input id="client-email" type="email" placeholder="contact@client.com"></div>
@@ -1372,7 +1439,15 @@
           <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">The system loads only the conditions relevant to the selected quotation type.</div>
         </div>
         <div class="custom-sow-label-row" style="max-width:520px">
-          <label for="payment-term-type">Payment Terms</label>
+          <label>Quotation Language / لغة عرض السعر</label>
+          <label class="eo-row" style="margin-top:7px;padding:9px 11px;border:1px solid var(--gray-200);border-radius:8px;background:#fff">
+            <span class="eo-switch"><input id="include-arabic-translation" type="checkbox" onchange="setIncludeArabicTranslation(this.checked)"><span class="slider"></span></span>
+            <span class="eo-row-text"><strong>Include Arabic Translation / إضافة الترجمة العربية</strong></span>
+          </label>
+          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">English is always included. Turn this on to add Arabic to the quotation header, fixed labels, and every Terms &amp; Conditions clause.</div>
+        </div>
+        <div class="custom-sow-label-row standard-payment-controls" id="standard-payment-controls" style="max-width:760px">
+          <label for="payment-term-type">Invoice &amp; Bank Transfer Schedule</label>
           <select id="payment-term-type" onchange="setPaymentTermType(this.value)" style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;color:var(--navy);background:#fff">
             <option value="full_advance">100% Advance Payment</option>
             <option value="advance_balance">Advance Payment + Balance</option>
@@ -1383,7 +1458,7 @@
           <div id="payment-term-extra" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
             <div id="advance-pct-wrap" style="display:none">
               <label for="payment-advance-pct" style="font-size:10px;color:var(--gray-500)">Advance Percentage</label>
-              <input id="payment-advance-pct" type="number" min="0" max="100" value="10" oninput="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px">
+              <input id="payment-advance-pct" type="number" min="0" max="100" value="30" oninput="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px">
             </div>
             <div id="payment-balance-basis-wrap" style="display:none">
               <label for="payment-balance-basis" style="font-size:10px;color:var(--gray-500)">Remaining Balance Method</label>
@@ -1398,7 +1473,57 @@
             </div>
           </div>
           <textarea id="payment-custom-text" placeholder="Enter the custom payment condition..." oninput="updatePaymentTerms()" style="display:none;width:100%;margin-top:8px;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;min-height:58px"></textarea>
+          <textarea id="payment-custom-text-ar" placeholder="أدخل ترجمة شرط الدفع المخصص بالعربية..." dir="rtl" oninput="updatePaymentTerms()" style="display:none;width:100%;margin-top:8px;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:Tahoma,'Inter',sans-serif;min-height:58px"></textarea>
           <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Only the selected payment condition will appear in the quotation.</div>
+        </div>
+        <div class="custom-sow-label-row" style="max-width:900px">
+          <div class="condition-language-grid">
+            <div>
+              <label for="payment-method">Payment Method / طريقة الدفع</label>
+              <select id="payment-method" onchange="setPaymentMethod(this.value)" style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',Tahoma,sans-serif;color:var(--navy);background:#fff">
+                <option value="bank_transfer">Invoice &amp; Bank Transfer</option>
+                <option value="lc">Letter of Credit (L/C)</option>
+              </select>
+            </div>
+            <div id="lc-quick-status" style="font-size:10.5px;color:var(--gray-500);line-height:1.6;padding-top:20px">Invoice and bank-transfer conditions are currently selected.</div>
+          </div>
+          <div id="lc-summary-card" class="lc-summary-card">
+            <strong>L/C payment structure:</strong> 30% mobilization payment by bank transfer + 70% irrevocable L/C at sight, paid against monthly progress invoices. The mandatory 14-day countersignature protection is included in Payment Condition No. 1 so Conditions 22 and 26 remain unchanged.
+          </div>
+          <div id="lc-controls" class="lc-controls">
+            <div class="lc-controls-grid">
+              <div class="lc-field"><label for="lc-advance-pct">Advance Payment (%)</label><input id="lc-advance-pct" type="number" min="0" max="100" step="0.01" value="30" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-balance-pct">L/C Balance (%) — Auto</label><input id="lc-balance-pct" type="number" value="70" readonly></div>
+              <div class="lc-field"><label for="lc-type">L/C Type</label><select id="lc-type" onchange="updateLcTerms()"><option value="irrevocable_at_sight">Irrevocable L/C at Sight</option><option value="confirmed_at_sight">Confirmed Irrevocable L/C at Sight</option></select></div>
+              <div class="lc-field"><label for="lc-advance-days">Advance Due Within (Calendar Days)</label><input id="lc-advance-days" type="number" min="0" max="365" value="7" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-open-days">Open L/C Within (Calendar Days)</label><input id="lc-open-days" type="number" min="0" max="365" value="10" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-document-days">Countersignature Period (Calendar Days)</label><input id="lc-document-days" type="number" min="1" max="365" value="14" oninput="updateLcTerms()"></div>
+              <div class="lc-subsection">Payment and parties</div>
+              <div class="lc-field"><label for="lc-payment-basis">Payment Basis</label><select id="lc-payment-basis" onchange="updateLcTerms()"><option value="monthly_progress">Monthly Progress Invoices</option><option value="after_completion">After Completion</option></select></div>
+              <div class="lc-field"><label for="lc-currency">Currency</label><select id="lc-currency" onchange="updateLcTerms()"><option value="SAR">SAR</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+              <div class="lc-field"><label for="lc-calculation-basis">Percentage Calculation Basis</label><select id="lc-calculation-basis" onchange="updateLcTerms()"><option value="before_vat">Before VAT</option><option value="including_vat">Including VAT</option></select></div>
+              <div class="lc-field"><label for="lc-applicant">Applicant — Auto from Client</label><input id="lc-applicant" type="text" readonly></div>
+              <div class="lc-field"><label for="lc-beneficiary">Beneficiary</label><input id="lc-beneficiary" type="text" value="Sky Field Company Limited" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-bank-charges">Bank/L/C Charges Borne By</label><select id="lc-bank-charges" onchange="updateLcTerms()"><option value="client">Customer</option><option value="shared" selected>Both Parties</option><option value="beneficiary">Beneficiary</option></select></div>
+              <div class="lc-subsection">Rules, bank and validity</div>
+              <div class="lc-field"><label for="lc-rules">Applicable Rules</label><input id="lc-rules" type="text" value="UCP 600" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-acceptable-bank">Acceptable Issuing Bank (optional)</label><input id="lc-acceptable-bank" type="text" placeholder="e.g. Saudi National Bank" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-validity-days">Valid After Expected Completion (Days)</label><input id="lc-validity-days" type="number" min="0" max="365" value="30" oninput="updateLcTerms()"></div>
+              <div class="lc-subsection">Required L/C documents</div>
+              <div class="lc-documents">
+                <label><input id="lc-doc-commercial-invoice" type="checkbox" checked onchange="updateLcTerms()"> Commercial Invoice</label>
+                <label><input id="lc-doc-delivery-note" type="checkbox" checked onchange="updateLcTerms()"> Delivery Note</label>
+                <label><input id="lc-doc-progress-certificate" type="checkbox" checked onchange="updateLcTerms()"> Progress Certificate</label>
+                <label><input id="lc-doc-timesheet" type="checkbox" onchange="updateLcTerms()"> Signed Timesheet</label>
+              </div>
+            </div>
+            <div class="lc-amount-summary">
+              <div class="lc-amount-card">Calculation Base<strong id="lc-base-amount">SAR 0</strong></div>
+              <div class="lc-amount-card">Advance Amount<strong id="lc-advance-amount">SAR 0</strong></div>
+              <div class="lc-amount-card">L/C Amount<strong id="lc-balance-amount">SAR 0</strong></div>
+            </div>
+            <div class="lc-private-note">The remaining percentage and amounts are calculated automatically. The Applicant is taken from the quotation Client field. Selecting another currency relabels the quotation values and does not apply an exchange-rate conversion. Confirm the final L/C wording and document set with the issuing bank before acceptance.</div>
+          </div>
         </div>
         <div class="custom-sow-label-row" style="max-width:340px">
           <label for="proj-duration">Project Duration</label>
@@ -1423,9 +1548,20 @@
           <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
         </div>
         <div class="cond-list" id="cond-list"></div>
-        <div class="cond-add">
-          <textarea id="new-cond" placeholder="Add a custom condition…"></textarea>
-          <button onclick="addCond()">+ Add</button>
+      </div>
+    </div>
+
+    <div class="condition-modal-overlay" id="condition-modal-overlay" onclick="if(event.target===this)closeConditionEditor()">
+      <div class="condition-modal" role="dialog" aria-modal="true" aria-labelledby="condition-modal-title">
+        <div class="condition-modal-hdr"><h3 id="condition-modal-title">Edit Condition</h3><button class="condition-modal-close" onclick="closeConditionEditor()" aria-label="Close">×</button></div>
+        <div class="condition-modal-body">
+          <div class="condition-edit-grid">
+            <div class="condition-edit-field"><label>Section</label><select id="condition-edit-section"></select></div>
+            <div class="condition-edit-field"><label>Condition Number</label><select id="condition-edit-number" disabled><option>Automatic</option></select></div>
+            <div class="condition-edit-field"><label>English Text</label><textarea id="condition-edit-en" dir="ltr"></textarea></div>
+            <div class="condition-edit-field"><label>النص العربي</label><textarea id="condition-edit-ar" dir="rtl"></textarea></div>
+          </div>
+          <div class="condition-modal-actions"><button class="condition-modal-cancel" onclick="resetConditionEditor()">Reset to Default</button><button class="condition-modal-cancel" id="condition-save-default" onclick="saveConditionAsCompanyDefault()" style="display:none">Save as Company Default</button><button class="condition-modal-cancel" onclick="closeConditionEditor()">Cancel</button><button class="condition-modal-save" onclick="saveConditionEditor()">Save Condition</button></div>
         </div>
       </div>
     </div>
@@ -1924,8 +2060,9 @@
 </main>
 
 <!-- EXPORT PREVIEW MODAL -->
-<div id="export-preview">
-  <button class="preview-close" onclick="closeExport()">✕</button>
+<div id="export-preview" onclick="if(event.target===this)closeExport()">
+  <label class="preview-language-toggle"><input id="preview-include-arabic" type="checkbox" onchange="togglePreviewArabicTranslation(this.checked)"><span>Include Arabic / إضافة العربية</span></label>
+  <button class="preview-close" id="export-preview-close" type="button" onclick="closeExport()" aria-label="Close quotation preview" title="Close quotation preview">×</button>
   <div class="preview-doc" id="preview-doc"></div>
   <div class="preview-actions" style="text-align:center;margin-top:16px">
     <button class="btn-primary" onclick="sfPrintWithSuggestedName('quotation')">🖨 Print / Save as PDF</button>
@@ -2013,6 +2150,7 @@ function sfNormalizeEmail(value){return String(value||'').trim().toLowerCase()}
 function sfTeamMember(email){return SF_TEAM_MEMBERS[sfNormalizeEmail(email)]||null}
 function sfDataUserId(){return sfWorkspaceUserId||''}
 function sfHasAccess(area){const member=sfTeamMember(sfCurrentUser?.email);return !!member&&!(member.blocked||[]).includes(area)}
+function sfIsAdmin(){return sfTeamMember(sfCurrentUser?.email)?.role==='Administrator'}
 function sfIsLimitedMember(){return !sfHasAccess('engineers')||!sfHasAccess('payroll')}
 function sfCanSyncKeyForRole(key){
   if(!sfIsLimitedMember())return true;
@@ -2177,6 +2315,7 @@ function sfUnlockApp(user){
   const emailEl=document.getElementById('side-account-email'); if(emailEl)emailEl.textContent=email;
   const avatar=document.getElementById('side-account-avatar'); if(avatar)avatar.textContent=(fullName.trim()[0]||'U').toUpperCase();
   sfApplyRoleAccess();
+  try{sfLoadUserInterfaceLanguage(user);}catch(e){console.warn('Unable to restore interface language preference.',e);}
   setCloudStatus('','Secure cloud connected');
   if(!sessionStorage.getItem('sfNormalizedMigrationV1')){sessionStorage.setItem('sfNormalizedMigrationV1','1');setTimeout(sfMirrorAllCollections,800);}
 }
@@ -2661,9 +2800,97 @@ const ENGINEER_RENTAL_CONDS = [
   ["Delays, travel restrictions, government actions, unsafe site conditions, or force majeure events beyond Sky Field Company's reasonable control shall entitle Sky Field Company to a reasonable extension and reimbursement of resulting additional costs.","Force Majeure",true]
 ];
 
+// Reviewed Arabic equivalents. Array positions intentionally mirror the
+// approved English clauses so legacy numbering (especially 22 and 26) stays
+// stable in English, Arabic, and bilingual quotation output.
+const TESTING_CONDS_AR = [
+  "شروط الدفع: تُدفع دفعة مقدمة بنسبة 15% عند إصدار أمر الشراء، وتُفوتر النسبة المتبقية البالغة 85% شهريًا وفق نسبة الأعمال المنجزة والمعتمدة، وتُسدد خلال 30 يومًا من تاريخ الفاتورة.",
+  "تخضع الفواتير غير المسددة خلال 30 يومًا من تاريخ الفاتورة لإشعار متابعة رسمي. وإذا استمر عدم السداد لأكثر من 45 يومًا، يحق لشركة سماء الميدان إيقاف أنشطة الموقع مؤقتًا إلى حين تسوية المستحقات، بعد توجيه إشعار مسبق معقول إلى العميل.",
+  "يتحمل العميل وحده جميع رسوم التحويلات البنكية ورسوم تعديل الاعتماد المستندي، إن وجدت، وأي رسوم مالية ذات صلة.",
+  "يجب أن يتضمن أمر الشراء الرسمي الصادر من العميل بيانات الفوترة كاملة، بما في ذلك اسم جهة الاتصال والبريد الإلكتروني ورقم الهاتف وعنوان الفوترة، ليتسنى إصدار الفواتير.",
+  "يسري عرض السعر لمدة 30 يومًا من تاريخ إصداره. وبعد انتهاء هذه المدة يجب الرجوع إلى شركة سماء الميدان لإعادة تأكيد توافر الموارد وسريان الأسعار.",
+  "جميع الأسعار لا تشمل ضريبة القيمة المضافة بنسبة 15%، وتُضاف الضريبة وفق الأنظمة الضريبية السعودية السارية.",
+  "يقتصر نطاق العمل حصرًا على أنشطة الاختبارات والتشغيل المدرجة صراحةً في هذا العرض. ويُستثنى أي نطاق غير مذكور ما لم تتم الموافقة عليه كتابيًا قبل التنفيذ.",
+  "يلتزم العميل أو المقاول الرئيسي بالتأكد من جاهزية الموقع بالكامل للاختبارات والتشغيل قبل تعبئة موارد شركة سماء الميدان، ويشمل ذلك اكتمال التركيبات، واختبارات العزل، والتحقق من التوصيلات والنهايات، وتوافر الرسومات المعتمدة، واعتماد الإعدادات النهائية للمرحلات، وتشغيل نظام التيار المستمر أو توفير مصدر تيار مستمر كافٍ، وربط جميع كابلات الواجهات وإظهارها في الرسومات.",
+  "لا يشمل نطاق شركة سماء الميدان تنسيق الموقع، أو ترتيب حضور العميل أو الاستشاري، أو جدولة بدء الاختبارات، أو توفير مسؤول السلامة، أو مفتش الجودة، أو مستلم تصريح العمل أو LOA، أو أعمال الفصل والعزل المطلوبة، أو تصاريح العمل، أو تصاريح الدخول، أو التعريف بالموقع، أو الموافقات الأمنية وموافقات الدخول. ويتولى العميل أو المقاول الرئيسي ترتيبها مسبقًا ما لم تكن مشمولة صراحةً في نطاق عرض شركة سماء الميدان.",
+  "يلزم إرسال إشعار كتابي مسبق قبل أسبوع واحد على الأقل لتعبئة مهندسي شركة سماء الميدان وأجهزة الاختبار، وذلك بعد استلام أمر الشراء والدفعة المقدمة المطبقة.",
+  "تحتفظ شركة سماء الميدان بحق سحب أي من مهندسيها من الموقع بعد توجيه إشعار كتابي مسبق لمدة أسبوع واحد إلى العميل أو المقاول الرئيسي.",
+  "ساعات العمل القياسية هي 8 ساعات يوميًا ولمدة 6 أيام أسبوعيًا من السبت إلى الخميس. وخلال شهر رمضان تكون ساعات العمل القياسية 6 ساعات يوميًا.",
+  "تُحتسب ساعات العمل الإضافية بعد ساعات العمل القياسية بمعدل 1.5 من سعر الساعة العادي، ويُحتسب العمل أيام الجمعة والعطلات الرسمية بمعدل ضعفي سعر الساعة العادي.",
+  "تُحتسب ضمن مدة المشروع المتفق عليها جميع فترات التوقف أو الانتظار الناتجة عن العميل أو المقاول الرئيسي أو العميل النهائي، بما في ذلك عدم جاهزية الموقع، أو عدم توافر التصاريح أو الرسومات المعتمدة أو إعدادات المرحلات أو مصادر القدرة المطلوبة أو الدخول للموقع أو جهة الحضور، أو عدم توافر الفصل والعزل أو جاهزية الواجهات. وإذا أدى ذلك إلى تجاوز المدة المتفق عليها، فتطبق الأسعار اليومية أو الشهرية الواردة في البند 22.",
+  "أي تأخير أو تعليق أو توقف ناتج عن جائحة أو وباء أو إجراء حكومي أو قوة قاهرة أو أحداث مماثلة خارجة عن السيطرة المعقولة لشركة سماء الميدان يمنح الشركة تمديدًا زمنيًا معقولًا، ولا يُعد تأخيرًا منسوبًا إليها. وتُحتسب بصورة منفصلة التكاليف الإضافية المعقولة الناتجة عن الانتظار أو تمديد السكن أو تمديد استئجار الأجهزة أو إعادة التعبئة بعد إشعار العميل كتابيًا؛ وعند انطباق ذلك تُطبق أسعار تمديد المدة وفق البند 22 وتكاليف إعادة التعبئة وفق البند 26.",
+  "تُقدم شهادات معايرة أجهزة شركة سماء الميدان عند الطلب، على أن تكون سارية وقت الاستخدام. وتكون جميع أجهزة الاختبار معايرة لدى جهة معايرة معتمدة.",
+  "تُنفذ جميع أنشطة الاختبارات والتشغيل وفق معايير IEC وIEEE ومعايير أرامكو السعودية أو الشركة السعودية للكهرباء المنطبقة على نطاق المشروع.",
+  "لا يشمل هذا النطاق أي إعادة اختبار أو استبدال أو تركيب أو تعديل لا ينتج عن خطأ أو تقصير من شركة سماء الميدان. وتُعد إعادة الاختبار الناتجة عن عدم حضور العميل أو الاستشاري، أو تغيير إعدادات المرحلات أو الرسومات المعتمدة، أو تعديل التوصيلات بواسطة الغير، أو عيوب المعدات أو المورد، أو طلب العميل أو العميل النهائي إعادة اختبار سبق إنجازه، أعمالًا إضافية تخضع لأمر تغيير كتابي وفق البند 20.",
+  "لا يشمل هذا العرض توريد أو شراء أي مواد أو معدات.",
+  "تخص الأسعار نطاق العمل المدرج في هذا العرض فقط. وأي تغيير أو إضافة أو تخفيض في النطاق أو الكميات أو المواصفات يخضع لتسعير وتقييم زمني منفصلين، ويتطلب أمر تغيير كتابيًا قبل التنفيذ.",
+  "لا تخضع الأسعار الإجمالية المقطوعة لأي خصم إذا أُنجز العمل قبل المدة التقديرية، وتظل مستحقة بالكامل بصرف النظر عن نسبة الإنجاز المحققة عند نهاية مدة العمل المتفق عليها، بشرط ألا يكون عدم الإنجاز ناتجًا عن أسباب تُنسب إلى شركة سماء الميدان.",
+  "إذا امتد العمل إلى ما بعد المدة المتفق عليها لأسباب لا تُنسب إلى شركة سماء الميدان، فتُحتسب الخدمات الإضافية بالسعر اليومي أو الشهري المبين في العرض التجاري.",
+  "إذا تم تعليق المشروع أو إيقافه لأكثر من شهرين متصلين لأسباب لا تُنسب إلى شركة سماء الميدان، فيجوز إغلاق العقد وفق نسبة الإنجاز الفعلية، وتُعاد تسعير الأنشطة المتبقية بالأسعار السارية حينها.",
+  "يلتزم العميل أو المقاول الرئيسي طوال مدة الأعمال بتوفير الدخول الآمن للموقع، ومصادر التيار المتردد والمستمر المطلوبة، ومكتب مناسب ومكان آمن لحفظ الأجهزة والملفات، ودورات مياه بحد أدنى دورة واحدة لكل خمسة مهندسين، وخدمة الإنترنت والهاتف ومياه الشرب ومواقف السيارات لفريق شركة سماء الميدان. كما يلتزم بتوفير السقالات والرافعات الشخصية والرافعات وترتيبات الرفع ومنصات الوصول المؤقتة وأي تجهيزات خاصة لازمة للتنفيذ الآمن لأنشطة الاختبار، ما لم تكن مشمولة صراحةً في هذا العرض.",
+  "يلتزم العميل أو المقاول الرئيسي بتوفير فني مساعد مؤهل لكل مهندس اختبارات من شركة سماء الميدان، وفنيين اثنين لكل مهندس اختبارات محولات، على أن تكون لديهم خبرة ذات صلة بمحطات الكهرباء. ويخضع جميع أفراد الدعم المقترحين للمقابلة والاعتماد من قائد فريق شركة سماء الميدان.",
+  "تكون تكاليف التعبئة وسحب الموارد مشمولة وفق ما هو مبين في هذا العرض. وتُحتسب كتكلفة إضافية أي رحلة تعبئة وعودة أخرى بعد السحب الأول، بما في ذلك دعم التشغيل أو أي حضور إضافي للموقع، وذلك بالسعر المتفق عليه لكل شخص لكل رحلة ذهاب وعودة.",
+  "وفق أنظمة المملكة العربية السعودية، يجب تعليق جميع أعمال الاختبارات الخارجية من الساعة 12:00 ظهرًا حتى الساعة 3:00 عصرًا خلال الفترة من 15 يونيو إلى 15 سبتمبر من كل عام.",
+  "يلتزم مهندسو شركة سماء الميدان بمواعيد العطلات الرسمية المعتمدة في المملكة العربية السعودية.",
+  "تُعد شركة سماء الميدان نماذج وإجراءات الاختبار وترسلها إلى العميل أو المقاول الرئيسي لرفعها إلى العميل النهائي للمراجعة والاعتماد قبل بدء الاختبارات.",
+  "تقدم شركة سماء الميدان تقارير تقدم يومية وأسبوعية وشهرية وفق ما يتم الاتفاق عليه مع العميل. وفي حال حدوث أي تأخير، تُقدم خطة تعافٍ بصورة عاجلة.",
+  "تُسلم تقارير اختبارات التشغيل إلى العميل خلال 7 أيام عمل من اكتمال كل اختبار، ويُسلم تقرير التشغيل النهائي خلال 7 أيام عمل من التشغيل النهائي.",
+  "تقوم شركة سماء الميدان بتسجيل تعديلات مخططات كما نُفذ على نسخة تشغيل واحدة من الرسومات التي يوفرها المقاول الرئيسي في الموقع.",
+  "يتولى المقاول الرئيسي ترتيب وتوفير جميع القرطاسية ونماذج الاختبار المطبوعة والأوراق الفارغة والملفات والفواصل والمواد الاستهلاكية اللازمة للتوثيق.",
+  "لا تتحمل شركة سماء الميدان المسؤولية عن أي أضرار أو خسائر تبعية أو غير مباشرة أو خاصة، بما في ذلك على سبيل المثال لا الحصر فقدان الإيرادات أو الانتفاع أو الإنتاج أو تكاليف رأس المال أو التكاليف المرتبطة بتوقف العمليات.",
+  "إذا ظهرت بعد سحب الموارد مشكلة مرتبطة بنطاق عمل شركة سماء الميدان المنجز، فتقوم الشركة بمعالجتها دون تكلفة إضافية إذا أُخطرت بها خلال 30 يومًا من تاريخ اكتمال العمل. وبعد هذه المدة تُعد أي معالجة عملًا جديدًا يُسعر بصورة منفصلة.",
+  "لا تشمل أعمال شركة سماء الميدان تنظيف منطقة العمل أو أعمال النظافة العامة.",
+  "لا يشمل هذا العرض تمثيل المصنع أو أدوات المصنع الخاصة أو البرامج أو معدات الدعم الخاصة بالمصنع الأصلي، ويتولى المقاول الرئيسي أو العميل ترتيبها ما لم ينص العرض صراحةً على خلاف ذلك.",
+  "لا يشمل هذا العرض أعمال الهندسة أو التهيئة أو ضبط المعاملات أو إنشاء ملفات SCD أو CID لأجهزة الحماية الذكية، كما لا يشمل تكامل SAS أو SCADA أو هندسة الاتصالات أو نطاق الأمن السيبراني أو إعدادات الاتصالات، ما لم تُدرج صراحةً في نطاق العمل.",
+  "يلتزم المقاول الرئيسي أو المصنع بإعداد جميع المرحلات الرقمية ووحدات التحكم بالتهيئة الأساسية وجعلها جاهزة للاختبار قبل بدء أعمال شركة سماء الميدان.",
+  "التزامًا بأخلاقيات العمل، لا يجوز للعميل أو المقاول الرئيسي توظيف أو استقطاب أو عرض العمل مباشرةً على أي مهندس أو موظف لدى شركة سماء الميدان لمدة سنتين من تاريخ اكتمال المشروع.",
+  "لا يُقبل أي ضمان أداء أو تحميل عكسي للتكاليف ما لم تتم الموافقة عليه صراحةً وكتابيًا عند إصدار عرض السعر.",
+  "يجب أن يشير أي أمر شراء أو أمر خدمة يصدر مقابل هذا العرض إلى رقم العرض، ويُعد صادرًا على أساس نطاق العمل والأسعار والشروط التجارية الواردة فيه. ولا تكون أي شروط إضافية أو متعارضة واردة في أمر الشراء ملزمة لشركة سماء الميدان ما لم تقبلها الشركة صراحةً وكتابيًا.",
+  "يكون تشغيل قواطع الدائرة ومحركات معدات GIS مسؤولية ممثل المصنع وحده، وهو خارج نطاق هذا العرض.",
+  "لا يشمل هذا العرض اختبار جهد الخطوة واللمس لنظام التأريض، أو تهيئة واختبار مسجل الأعطال، أو اختبار معاملات الخطوط الهوائية، أو اختبار محولات الوسائط، ما لم تُدرج صراحةً في نطاق العمل.",
+  "لا يجوز السماح لأي مقاول باطن آخر بتنفيذ أعمال ضمن نطاق شركة سماء الميدان دون موافقة كتابية مسبقة من الشركة.",
+  "يلتزم العميل أو المقاول الرئيسي بالتأكد قبل تعبئة موارد شركة سماء الميدان من اعتماد الإعدادات النهائية لمرحلات الحماية، وتوافر قائمة الإنذارات المعتمدة SPL، وتأكيد جميع مصادر التيار المتردد والمستمر المطلوبة وجاهزيتها."
+];
+
+const ENGINEER_RENTAL_CONDS_AR = [
+  "الأسعار لا تشمل ضريبة القيمة المضافة بنسبة 15%، وتُضاف الضريبة وفق الأنظمة الضريبية السعودية السارية.",
+  "يسري عرض السعر لمدة 30 يومًا من تاريخ إصداره، ويخضع لتأكيد توافر المهندس عند إصدار أمر الشراء.",
+  "هذا العرض مخصص لتأجير مهندس على أساس شهر متصل، ولا يُعد تعاقدًا بالسعر اليومي.",
+  "تبدأ مدة التأجير من تاريخ فتح تصريح LOA أو تصريح العمل للمهندس. وتُعد جميع الأيام التالية، بما فيها أيام التوقف أو الانتظار أو الاستعداد ما دام التصريح ساريًا، أيامًا مستحقة الدفع.",
+  "تُحسب أي مدة إضافية بعد إتمام شهر واحد وحتى 15 يومًا تقويميًا وفق السعر اليومي المطبق. أما أي مدة إضافية تتجاوز 15 يومًا تقويميًا فتُعد شهرًا إضافيًا كاملًا وتُحتسب على هذا الأساس.",
+  "يُحتسب أي يوم توقف أو انتظار أو تعطل بالموقع أو أي يوم يكون فيه المهندس متاحًا ولا يستطيع العمل لأسباب لا تُنسب إلى شركة سماء الميدان يومًا مستحق الدفع.",
+  "تتولى شركة سماء الميدان ترتيب وتحمل تكاليف نقل وسكن المهندس المؤجر، ما لم ينص العرض التجاري على خلاف ذلك.",
+  "يلتزم العميل بتوفير الدخول الآمن للموقع، وتصاريح العمل، وتصاريح الدخول، والتعريف بالموقع، ومتطلبات معدات الوقاية الشخصية، والرسومات والإعدادات المعتمدة، ومرافق العمل المناسبة، وجميع أعمال التنسيق اللازمة لأداء المهندس لمهامه.",
+  "يؤدي المهندس الدور والنطاق المتفق عليهما في العرض فقط. وأي تغيير في الدور أو مستوى الصلاحية أو الموقع أو نظام الورديات أو نطاق العمل يتطلب موافقة كتابية مسبقة من شركة سماء الميدان، وقد يخضع لتسعير معدل.",
+  "ساعات العمل القياسية هي 8 ساعات يوميًا ولمدة 6 أيام أسبوعيًا، وتخضع ساعات العمل في رمضان والعطلات الرسمية للأنظمة السعودية المطبقة.",
+  "تُحتسب ساعات العمل الإضافية بعد ساعات العمل القياسية بمعدل 1.5 من سعر الساعة العادي، ويُحتسب العمل أيام الجمعة والعطلات الرسمية بمعدل ضعفي سعر الساعة العادي ما لم يُتفق على خلاف ذلك.",
+  "يُعد كشف ساعات شهري ويُقدم إلى العميل للتوقيع، ويكون الكشف الموقع أساس إصدار الفاتورة، ويلتزم العميل بإعادته دون تأخير غير مبرر.",
+  "تُصدر الفواتير شهريًا استنادًا إلى كشف الساعات الموقع، وتكون مستحقة السداد خلال 30 يومًا من تاريخ الفاتورة ما لم ينص العرض التجاري على شروط دفع مختلفة.",
+  "إذا ظلت الفاتورة غير مسددة بعد 30 يومًا، فيجوز لشركة سماء الميدان إصدار متابعة رسمية للسداد. وإذا استمر عدم السداد لأكثر من 45 يومًا، فيجوز للشركة تعليق عمل المهندس أو سحبه بعد إشعار كتابي مسبق معقول.",
+  "يتحمل العميل جميع رسوم التحويلات البنكية ورسوم تعديل الاعتماد المستندي، عند انطباقها.",
+  "يجب أن يتضمن أمر شراء العميل جميع بيانات الفوترة وأن يشير إلى رقم عرض السعر هذا.",
+  "يجوز لشركة سماء الميدان استبدال المهندس المعين بمهندس آخر مؤهل بصورة مناسبة عند الحاجة المعقولة، مع مراعاة متطلبات اعتماد المشروع المطبقة.",
+  "يجوز لأي من الطرفين طلب سحب المهندس بعد توجيه إشعار كتابي معقول. وتظل الرسوم مستحقة حتى تاريخ السحب المؤكد، بما في ذلك أي رسوم مطبقة للأيام الإضافية أو الشهر الإضافي.",
+  "يظل المهندس موظفًا لدى شركة سماء الميدان، ولا يجوز للعميل توظيفه أو استقطابه أو تشغيله مباشرةً أثناء المهمة ولمدة سنتين بعد اكتمالها دون موافقة كتابية مسبقة.",
+  "لا تتحمل شركة سماء الميدان المسؤولية عن الخسائر غير المباشرة أو التبعية أو الخاصة، بما في ذلك فقدان الإنتاج أو الإيرادات أو الانتفاع أو تكاليف التأخير.",
+  "تمنح التأخيرات أو قيود السفر أو الإجراءات الحكومية أو ظروف الموقع غير الآمنة أو أحداث القوة القاهرة الخارجة عن السيطرة المعقولة لشركة سماء الميدان الشركة تمديدًا معقولًا وتعويضًا عن التكاليف الإضافية الناتجة."
+];
+
 const DEFAULT_CONDS = TESTING_CONDS;
 
 const COND_SECTION_ORDER = ['Commercial & Payment','Rental Basis','Scope & Responsibilities','Site Readiness & Mobilization','Working Hours & Schedule','Equipment, Standards & Reporting','Exclusions','Liability & General'];
+const COND_SECTION_AR = {
+  'Commercial & Payment':'الشروط التجارية والدفع','Rental Basis':'أساس تأجير المهندس','Scope & Responsibilities':'النطاق والمسؤوليات',
+  'Site Readiness & Mobilization':'جاهزية الموقع والتعبئة','Working Hours & Schedule':'ساعات العمل والبرنامج',
+  'Equipment, Standards & Reporting':'الأجهزة والمعايير والتقارير','Exclusions':'الاستثناءات','Liability & General':'المسؤولية والشروط العامة'
+};
+const COND_CATEGORY_AR = {
+  'Payment':'الدفع','Payment – Selected':'شروط الدفع المختارة','Payment – Late':'تأخر السداد','Payment – Bank':'الرسوم البنكية','Payment – PO':'أمر الشراء','VAT':'ضريبة القيمة المضافة','Validity':'صلاحية العرض',
+  'Rental Basis':'أساس التأجير','LOA Start Date':'تاريخ بدء LOA','Additional Days':'الأيام الإضافية','Accommodation':'السكن والنقل','Timesheet':'كشف الساعات','Replacement':'الاستبدال',
+  'Scope':'نطاق العمل','Client Responsibilities':'مسؤوليات العميل','Site Readiness':'جاهزية الموقع','Exclusions – Permits':'استثناءات التصاريح','Mobilization':'التعبئة','Demobilization':'سحب الموارد',
+  'Working Hours':'ساعات العمل','Overtime':'العمل الإضافي','Idle Time':'التوقف والانتظار','Force Majeure':'القوة القاهرة','Calibration':'المعايرة','Standards':'المعايير','Repetition':'إعادة الاختبارات',
+  'Exclusions – Material':'استثناء المواد','Liability':'المسؤولية','Non-Solicit':'عدم الاستقطاب','Custom':'شرط مخصص'
+};
 const CAT_SECTION = {
   'Payment':'Commercial & Payment','Payment – Selected':'Commercial & Payment','Payment – Late':'Commercial & Payment','Payment – Bank':'Commercial & Payment','Payment – PO':'Commercial & Payment','VAT':'Commercial & Payment','Validity':'Commercial & Payment',
   'Rental Basis':'Rental Basis','LOA Start Date':'Rental Basis','Additional Days':'Rental Basis','Accommodation':'Rental Basis','Timesheet':'Rental Basis','Replacement':'Rental Basis',
@@ -2674,18 +2901,43 @@ const CAT_SECTION = {
   'Repetition':'Exclusions','Exclusions – Material':'Exclusions',
   'Liability':'Liability & General','Non-Solicit':'Liability & General'
 };
-function condSection(cat){ return CAT_SECTION[cat] || 'Liability & General'; }
+function condSection(cat,condition){ return condition?.section || CAT_SECTION[cat] || 'Liability & General'; }
 
 let activeCat = Object.keys(ACTS)[0];
 let selActs = {}, selEq = {}, actQty = {}, eqQty = {};
 let conditionType = 'testing';
-let conds = TESTING_CONDS.map(([t,c,e])=>({text:t,cat:c,enabled:e}));
+// Customer quotation text is always English-first. Arabic is optional and,
+// when enabled, is added to the header, fixed labels, and every condition.
+let conditionLanguage = 'en';
+let paymentMethod = 'bank_transfer';
+let lcApplicable = false;
+let lcAdvancePct = 30;
+let lcType = 'irrevocable_at_sight';
+let lcAdvanceDays = 7;
+let lcOpenDays = 10;
+let lcDocumentDays = 14;
+let lcPaymentBasis = 'monthly_progress';
+let lcCurrency = 'SAR';
+let lcCalculationBasis = 'before_vat';
+let lcBeneficiary = 'Sky Field Company Limited';
+let lcBankCharges = 'shared';
+let lcRules = 'UCP 600';
+let lcAcceptableBank = '';
+let lcValidityDays = 30;
+let lcDocuments = {commercial_invoice:true,delivery_note:true,progress_certificate:true,timesheet:false};
+let paymentConditionOverrideEn = '';
+let paymentConditionOverrideAr = '';
+let conditionEditorIndex = -1;
+let conditionEditorMode = 'edit';
+let conditionEditorSection = '';
+let conds = TESTING_CONDS.map(([t,c,e],i)=>({text:t,textAr:TESTING_CONDS_AR[i]||'',cat:c,enabled:e}));
 let projectDuration = ''; // e.g. "6 months" — set via the Conditions tab and reflected automatically in the contract conditions
-let paymentTermType = 'full_advance';
-let paymentAdvancePct = 10;
+let paymentTermType = 'advance_balance';
+let paymentAdvancePct = 30;
 let paymentDueDays = 30;
 let paymentBalanceBasis = 'monthly_progress';
 let paymentCustomText = '';
+let paymentCustomTextAr = '';
 conds = conditionTemplate('testing');
 let customSOW = []; // manually typed scope-of-work items: {id,text,qty,unit,hours}
 let customSOWLabel = ''; // optional description shown instead of "Custom / Manual Entry"
@@ -2711,19 +2963,31 @@ function commercialEngineerDailyRate(){return Math.max(0,parseFloat(document.get
 function commercialEngineerMonthlyRate(){return Math.max(0,parseFloat(document.getElementById('commercial-engineer-monthly-rate')?.value)||0)}
 function commercialMobilizationRate(){return Math.max(0,parseFloat(document.getElementById('commercial-mobilization-rate')?.value)||0)}
 function fmtConditionRate(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2})}
-function conditionDisplayText(text,cat=''){
+function conditionDisplayText(text,cat='',lang='en'){
   let out=String(text||'');
   const daily=commercialEngineerDailyRate(), monthly=commercialEngineerMonthlyRate(), mobilization=commercialMobilizationRate();
   const rateParts=[];
+  if(lang==='ar'){
+    if(daily)rateParts.push(`السعر اليومي: ${fmtConditionRate(daily)} ريال/يوم`);
+    if(monthly)rateParts.push(`السعر الشهري: ${fmtConditionRate(monthly)} ريال/شهر`);
+    if(rateParts.length && /بالسعر اليومي أو الشهري المبين في العرض التجاري/.test(out)){
+      out=out.replace(/بالسعر اليومي أو الشهري المبين في العرض التجاري/g,`بسعر المهندس المطبق (${rateParts.join(' أو ')})`);
+    }else if(rateParts.length && cat==='Additional Days' && !/السعر اليومي:\s*/.test(out)){
+      out += ` أسعار المهندس المطبقة: ${rateParts.join(' أو ')}.`;
+    }
+    if((cat==='General – Mobilization & Demobilization' || /رحلة تعبئة وعودة أخرى/.test(out)) && mobilization){
+      out=out.replace(/بالسعر المتفق عليه لكل شخص لكل رحلة ذهاب وعودة/g,`بمبلغ ${fmtConditionRate(mobilization)} ريال لكل مهندس عن كل رحلة ذهاب وعودة`);
+    }
+    return out;
+  }
+
   if(daily)rateParts.push(`Daily Rate: SAR ${fmtConditionRate(daily)}/day`);
   if(monthly)rateParts.push(`Monthly Rate: SAR ${fmtConditionRate(monthly)}/month`);
-
   if(rateParts.length && /daily or monthly rate stated in the commercial offer/i.test(out)){
     out=out.replace(/the daily or monthly rate stated in the commercial offer/gi,`the applicable engineer rate (${rateParts.join(' or ')})`);
   }else if(rateParts.length && cat==='Additional Days' && !/Daily Rate:\s*SAR/i.test(out)){
     out += ` Applicable engineer rates: ${rateParts.join(' or ')}.`;
   }
-
   if(cat==='General – Mobilization & Demobilization' || /additional round-trip mobilization required after initial demobilization/i.test(out)){
     if(mobilization && /the agreed per-person(?: round-trip)? rate/i.test(out)){
       out=out.replace(/the agreed per-person(?: round-trip)? rate/gi,`SAR ${fmtConditionRate(mobilization)} per engineer per round trip`);
@@ -2731,7 +2995,147 @@ function conditionDisplayText(text,cat=''){
   }
   return out;
 }
-function refreshCommercialConditionRates(){buildConds();}
+const GENERAL_CATEGORY_AR={
+  'General – Variation':'عام – أوامر التغيير','General – Lump Sum':'عام – السعر المقطوع','General – Extension Rates':'عام – أسعار تمديد المدة',
+  'General – Suspension':'عام – تعليق المشروع','General – Facilities':'عام – مرافق الموقع','General – Assistants':'عام – الفنيون المساعدون',
+  'General – Mobilization & Demobilization':'عام – التعبئة وسحب الموارد','General – Outdoor Work':'عام – العمل الخارجي','General – Public Holidays':'عام – العطلات الرسمية',
+  'General – Test Formats':'عام – نماذج الاختبار','General – Progress Reporting':'عام – تقارير التقدم','General – Report Submission':'عام – تسليم التقارير',
+  'General – As-Built':'عام – مخططات كما نُفذ','General – Documentation':'عام – التوثيق','General – Rectification':'عام – معالجة الملاحظات',
+  'General – Housekeeping':'عام – نظافة الموقع','General – OEM Exclusions':'عام – استثناءات المصنع','General – Engineering Exclusions':'عام – الاستثناءات الهندسية',
+  'General – Relay Readiness':'عام – جاهزية المرحلات','General – Bond':'عام – الضمانات والتحميل العكسي','General – PO Reference':'عام – مرجعية أمر الشراء',
+  'General – GIS Operation':'عام – تشغيل GIS','General – Special Tests':'عام – الاختبارات الخاصة','General – Other Subcontractors':'عام – مقاولو الباطن الآخرون',
+  'General – Protection Readiness':'عام – جاهزية أنظمة الحماية'
+};
+function conditionSectionLabel(sec){
+  const ar=COND_SECTION_AR[sec]||sec;
+  return conditionLanguage==='ar'?ar:(conditionLanguage==='both'?`${sec} / ${ar}`:sec);
+}
+function conditionCategoryLabel(cat){
+  const ar=COND_CATEGORY_AR[cat]||GENERAL_CATEGORY_AR[cat]||cat;
+  return conditionLanguage==='ar'?ar:(conditionLanguage==='both'&&ar!==cat?`${cat} / ${ar}`:cat);
+}
+function quotationLabel(en,ar){
+  const enSafe=escHtml(String(en||'')),arSafe=escHtml(String(ar||''));
+  if(conditionLanguage==='ar')return `<span dir="rtl">${arSafe}</span>`;
+  if(conditionLanguage==='both')return `<span dir="ltr">${enSafe}</span> / <span dir="rtl">${arSafe}</span>`;
+  return `<span dir="ltr">${enSafe}</span>`;
+}
+function quotationUnit(value,enSingular,enPlural,ar){
+  if(conditionLanguage==='ar')return `${value} ${ar}`;
+  const one=parseFloat(value)===1;
+  if(conditionLanguage==='both')return `${value} ${one?enSingular:enPlural} / ${ar}`;
+  return `${value} ${one?enSingular:enPlural}`;
+}
+function conditionCopyHtml(c,doc=false){
+  const en=conditionDisplayText(c?.text||'',c?.cat||'','en');
+  const ar=conditionDisplayText(c?.textAr||c?.text||'',c?.cat||'','ar');
+  const ep=doc?'doc-cond-en':'cond-copy-en',ap=doc?'doc-cond-ar':'cond-copy-ar',wrap=doc?'doc-cond-body':'cond-copy';
+  if(conditionLanguage==='ar')return `<div class="${wrap}"><div class="${ap}" dir="rtl">${escHtml(ar)}</div></div>`;
+  if(conditionLanguage==='en')return `<div class="${wrap}"><div class="${ep}" dir="ltr">${escHtml(en)}</div></div>`;
+  const arBlock=(c?.textAr||'').trim()?`<div class="${ap}" dir="rtl">${escHtml(ar)}</div>`:'';
+  return `<div class="${wrap}"><div class="${ep}" dir="ltr">${escHtml(en)}</div>${arBlock}</div>`;
+}
+function setConditionLanguage(lang){
+  conditionLanguage=(lang==='both'||lang==='ar')?'both':'en';
+  const toggle=document.getElementById('include-arabic-translation');if(toggle)toggle.checked=conditionLanguage==='both';
+  buildConds();renderQuot();
+}
+function setIncludeArabicTranslation(includeArabic){setConditionLanguage(includeArabic?'both':'en')}
+function setPaymentMethod(value){
+  paymentMethod=value==='lc'?'lc':'bank_transfer';
+  lcApplicable=paymentMethod==='lc';
+  paymentConditionOverrideEn='';paymentConditionOverrideAr='';
+  const bank=conds.find(c=>c.cat==='Payment – Bank');
+  if(bank&&!bank.modified){bank.text=paymentBankConditionText('en');bank.textAr=paymentBankConditionText('ar');}
+  updatePaymentTermControls();refreshPaymentCondition();buildConds();renderQuot();
+}
+function setLcApplicable(value){setPaymentMethod(value?'lc':'bank_transfer')}
+function lcApplicantName(){return document.getElementById('client')?.value.trim()||'Customer'}
+function updateLcApplicantFromClient(){
+  updateLcControls();
+  if(lcApplicable){refreshPaymentCondition();buildConds();renderQuot()}
+}
+function lcDocumentLabels(lang='en'){
+  const labels=lang==='ar'
+    ? {commercial_invoice:'الفاتورة التجارية',delivery_note:'إشعار التسليم',progress_certificate:'شهادة التقدم',timesheet:'كشف الساعات الموقع'}
+    : {commercial_invoice:'commercial invoice',delivery_note:'delivery note',progress_certificate:'progress certificate',timesheet:'signed timesheet'};
+  return Object.keys(labels).filter(key=>lcDocuments[key]).map(key=>labels[key]);
+}
+function lcDocumentsPhrase(lang='en'){
+  const list=lcDocumentLabels(lang);if(!list.length)return lang==='ar'?'المستندات المحددة في الاعتماد':'the documents specified in the L/C';
+  if(list.length===1)return list[0];
+  return list.slice(0,-1).join(lang==='ar'?' و/أو ':' and/or ')+(lang==='ar'?' و/أو ':' and/or ')+list[list.length-1];
+}
+function updateLcAmountSummary(){
+  let totals={sub:0,tot:0};try{totals=calcQuotationTotals()}catch(_error){}
+  const base=lcCalculationBasis==='including_vat'?totals.tot:totals.sub;
+  const advance=base*Math.max(0,Math.min(100,lcAdvancePct))/100,balance=base-advance;
+  const currency=lcCurrency||'SAR';
+  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=`${currency} ${fmtN(value)}`};
+  set('lc-base-amount',base);set('lc-advance-amount',advance);set('lc-balance-amount',balance);
+}
+function updateLcControls(){
+  const sel=document.getElementById('payment-method');if(sel)sel.value=paymentMethod;
+  const card=document.getElementById('lc-summary-card');if(card)card.classList.toggle('show',lcApplicable);
+  const controls=document.getElementById('lc-controls');if(controls)controls.classList.toggle('show',lcApplicable);
+  const standard=document.getElementById('standard-payment-controls');if(standard)standard.classList.toggle('lc-disabled',lcApplicable);
+  const balance=Math.max(0,100-lcAdvancePct);
+  const ap=document.getElementById('lc-advance-pct');if(ap)ap.value=lcAdvancePct;
+  const bp=document.getElementById('lc-balance-pct');if(bp)bp.value=balance;
+  const type=document.getElementById('lc-type');if(type)type.value=lcType;
+  const ad=document.getElementById('lc-advance-days');if(ad)ad.value=lcAdvanceDays;
+  const od=document.getElementById('lc-open-days');if(od)od.value=lcOpenDays;
+  const dd=document.getElementById('lc-document-days');if(dd)dd.value=lcDocumentDays;
+  const basis=document.getElementById('lc-payment-basis');if(basis)basis.value=lcPaymentBasis;
+  const currency=document.getElementById('lc-currency');if(currency)currency.value=lcCurrency;
+  const calcBasis=document.getElementById('lc-calculation-basis');if(calcBasis)calcBasis.value=lcCalculationBasis;
+  const applicant=document.getElementById('lc-applicant');if(applicant)applicant.value=lcApplicantName();
+  const beneficiary=document.getElementById('lc-beneficiary');if(beneficiary)beneficiary.value=lcBeneficiary;
+  const charges=document.getElementById('lc-bank-charges');if(charges)charges.value=lcBankCharges;
+  const rules=document.getElementById('lc-rules');if(rules)rules.value=lcRules;
+  const bank=document.getElementById('lc-acceptable-bank');if(bank)bank.value=lcAcceptableBank;
+  const validity=document.getElementById('lc-validity-days');if(validity)validity.value=lcValidityDays;
+  const docIds={commercial_invoice:'lc-doc-commercial-invoice',delivery_note:'lc-doc-delivery-note',progress_certificate:'lc-doc-progress-certificate',timesheet:'lc-doc-timesheet'};
+  Object.entries(docIds).forEach(([key,id])=>{const el=document.getElementById(id);if(el)el.checked=!!lcDocuments[key]});
+  const isAr=document.documentElement.lang==='ar';
+  const typeEn=lcType==='confirmed_at_sight'?'confirmed irrevocable L/C at sight':'irrevocable L/C at sight';
+  const typeAr=lcType==='confirmed_at_sight'?'اعتماد مستندي مؤكد وغير قابل للإلغاء ومستحق الدفع عند الاطلاع':'اعتماد مستندي غير قابل للإلغاء ومستحق الدفع عند الاطلاع';
+  const basisEn=lcPaymentBasis==='after_completion'?'after completion of the work':'against monthly progress invoices';
+  const basisAr=lcPaymentBasis==='after_completion'?'بعد اكتمال الأعمال':'مقابل فواتير التقدم الشهرية';
+  if(card)card.innerHTML=isAr
+    ? `<strong>هيكل الدفع بالاعتماد المستندي:</strong> دفعة تعبئة ${lcAdvancePct}% بالتحويل البنكي + ${balance}% عن طريق ${typeAr}، ويتم السحب ${basisAr}، مع إدراج شرط التوقيع خلال ${lcDocumentDays} يومًا داخل شرط الدفع رقم 1.`
+    : `<strong>L/C payment structure:</strong> ${lcAdvancePct}% mobilization payment by bank transfer + ${balance}% by ${typeEn}, drawn ${basisEn}. The ${lcDocumentDays}-day countersignature protection is included in Payment Condition No. 1.`;
+  const status=document.getElementById('lc-quick-status');if(status)status.textContent=lcApplicable
+    ? (isAr?'شروط الاعتماد المستندي مدرجة في شرط الدفع رقم 1.':'L/C conditions are included in Payment Condition No. 1.')
+    : (isAr?'تم اختيار الدفع بالفاتورة والتحويل البنكي.':'Invoice and bank-transfer conditions are currently selected.');
+  updateLcAmountSummary();
+}
+function updateLcTerms(){
+  lcAdvancePct=Math.min(100,Math.max(0,parseFloat(document.getElementById('lc-advance-pct')?.value)||0));
+  lcType=['irrevocable_at_sight','confirmed_at_sight'].includes(document.getElementById('lc-type')?.value)?document.getElementById('lc-type').value:'irrevocable_at_sight';
+  lcAdvanceDays=Math.max(0,parseInt(document.getElementById('lc-advance-days')?.value)||0);
+  lcOpenDays=Math.max(0,parseInt(document.getElementById('lc-open-days')?.value)||0);
+  lcDocumentDays=Math.max(1,parseInt(document.getElementById('lc-document-days')?.value)||14);
+  lcPaymentBasis=['monthly_progress','after_completion'].includes(document.getElementById('lc-payment-basis')?.value)?document.getElementById('lc-payment-basis').value:'monthly_progress';
+  lcCurrency=['SAR','USD','EUR'].includes(document.getElementById('lc-currency')?.value)?document.getElementById('lc-currency').value:'SAR';
+  lcCalculationBasis=document.getElementById('lc-calculation-basis')?.value==='including_vat'?'including_vat':'before_vat';
+  lcBeneficiary=document.getElementById('lc-beneficiary')?.value.trim()||'Sky Field Company Limited';
+  lcBankCharges=['client','shared','beneficiary'].includes(document.getElementById('lc-bank-charges')?.value)?document.getElementById('lc-bank-charges').value:'shared';
+  lcRules=document.getElementById('lc-rules')?.value.trim()||'UCP 600';
+  lcAcceptableBank=document.getElementById('lc-acceptable-bank')?.value.trim()||'';
+  lcValidityDays=Math.max(0,parseInt(document.getElementById('lc-validity-days')?.value)||0);
+  lcDocuments={
+    commercial_invoice:!!document.getElementById('lc-doc-commercial-invoice')?.checked,
+    delivery_note:!!document.getElementById('lc-doc-delivery-note')?.checked,
+    progress_certificate:!!document.getElementById('lc-doc-progress-certificate')?.checked,
+    timesheet:!!document.getElementById('lc-doc-timesheet')?.checked
+  };
+  paymentConditionOverrideEn='';paymentConditionOverrideAr='';
+  const bank=conds.find(c=>c.cat==='Payment – Bank');
+  if(bank&&!bank.modified){bank.text=paymentBankConditionText('en');bank.textAr=paymentBankConditionText('ar');}
+  updateLcControls();refreshPaymentCondition();buildConds();renderQuot();
+}
+function refreshCommercialConditionRates(){buildConds();renderQuot();}
 
 const sfReservedDocumentNumbers=new Set();
 function sfLocalMaxSequence(kind){
@@ -2774,6 +3178,194 @@ const APP_PAGE_META = {
   payroll: ['Monthly Timesheets','Prepare monthly attendance, payroll, approvals, Excel export, and actual project cost.'],
   costsettings: ['Cost Library','Maintain equipment rates and default logistics costs for internal estimates.']
 };
+
+// Interface language is independent from the customer-facing condition
+// language. Exact English UI phrases are translated at runtime, including UI
+// fragments created later by the dashboard/project renderers. Customer PDFs
+// are deliberately excluded and continue to follow conditionLanguage.
+const SF_UI_AR = Object.freeze({
+  "Secure access to the management, quotations, projects, invoices, payments, and company documents system.":"وصول آمن إلى نظام الإدارة وعروض الأسعار والمشاريع والفواتير والمدفوعات ومستندات الشركة.",
+  "Supabase secure email authentication":"مصادقة آمنة عبر البريد الإلكتروني",
+  "Approved company accounts share one Sky Field workspace":"الحسابات المعتمدة تعمل داخل مساحة عمل سماء الميدان المشتركة",
+  "Encrypted cloud session and automatic renewal":"جلسة سحابية مشفرة وتجديد تلقائي",
+  "Secure Account Access":"الدخول الآمن إلى الحساب",
+  "Sign in to open your company workspace.":"سجل الدخول لفتح مساحة عمل الشركة.",
+  "Login":"تسجيل الدخول","Register":"تسجيل حساب","Checking secure session…":"جارٍ التحقق من الجلسة الآمنة…",
+  "Email Address":"البريد الإلكتروني","Password":"كلمة المرور","Enter your password":"أدخل كلمة المرور",
+  "Login Securely":"دخول آمن","Forgot password?":"نسيت كلمة المرور؟","Full Name":"الاسم الكامل","Full name":"الاسم الكامل",
+  "Minimum 8 characters":"8 أحرف على الأقل","Use at least 8 characters with letters and numbers.":"استخدم 8 أحرف على الأقل تتضمن حروفًا وأرقامًا.",
+  "Confirm Password":"تأكيد كلمة المرور","Repeat password":"أعد إدخال كلمة المرور","Create Account":"إنشاء الحساب",
+  "← Back to login":"← العودة لتسجيل الدخول","Send Password Reset Link":"إرسال رابط إعادة تعيين كلمة المرور",
+  "New Password":"كلمة المرور الجديدة","Confirm New Password":"تأكيد كلمة المرور الجديدة","Repeat new password":"أعد إدخال كلمة المرور الجديدة","Update Password":"تحديث كلمة المرور",
+  "Use the public Supabase publishable key only. Database access is protected by authenticated Row Level Security policies.":"استخدم مفتاح Supabase العام القابل للنشر فقط. الوصول إلى قاعدة البيانات محمي بسياسات أمان الصفوف للمستخدمين الموثقين.",
+  "Main navigation":"التنقل الرئيسي","Management & Commercial System":"نظام الإدارة والشؤون التجارية","Overview":"نظرة عامة",
+  "Dashboard":"لوحة التحكم","Commercial":"الشؤون التجارية","New Quotation":"عرض سعر جديد","Quotations":"عروض الأسعار","Projects":"المشاريع","Invoices":"الفواتير",
+  "Resources & Costing":"الموارد والتكاليف","Engineers":"المهندسون","Monthly Timesheets":"كشوف الساعات الشهرية","Cost Library":"مكتبة التكاليف",
+  "User":"المستخدم","Log out securely":"تسجيل خروج آمن","Data Backup & Restore":"النسخ الاحتياطي والاستعادة",
+  "SKY FIELD MANAGEMENT SYSTEM":"نظام إدارة سماء الميدان","Quotations · Projects · Invoices · Testing & Commissioning":"عروض الأسعار · المشاريع · الفواتير · الاختبارات والتشغيل",
+  "Internal Business System":"نظام أعمال داخلي","Quotations · Projects · Invoices":"عروض الأسعار · المشاريع · الفواتير","Open menu":"فتح القائمة",
+  "Business overview, projects, quotations, and invoice status.":"نظرة عامة على الأعمال والمشاريع وعروض الأسعار وحالة الفواتير.",
+  "Checking cloud…":"جارٍ التحقق من السحابة…","Cloud synchronization status":"حالة المزامنة السحابية","Data Tools":"أدوات البيانات",
+  "Data backup:":"النسخ الاحتياطي:","Export all data (projects, saved quotations, and invoices) as a JSON backup file. Use Import to restore it when needed; daily synchronization with Supabase remains automatic.":"صدّر جميع البيانات (المشاريع وعروض الأسعار والفواتير المحفوظة) كملف JSON احتياطي. استخدم الاستيراد لاستعادتها عند الحاجة، مع استمرار المزامنة اليومية التلقائية مع Supabase.",
+  "⬇ Export Backup (JSON)":"⬇ تصدير نسخة احتياطية (JSON)","⬆ Import Backup":"⬆ استيراد نسخة احتياطية","☁ Move Legacy Documents to Storage":"☁ نقل المستندات القديمة إلى Storage",
+  "+ New Quotation":"+ عرض سعر جديد","Quotation Setup":"إعداد عرض السعر","Enter the client and project details, then build the scope and commercial offer.":"أدخل بيانات العميل والمشروع، ثم جهز نطاق العمل والعرض التجاري.",
+  "Show Commercial Fields":"إظهار الحقول التجارية","Hide Commercial Fields":"إخفاء الحقول التجارية","Client / Project (To)":"العميل / المشروع (إلى)",
+  "Enter client name…":"أدخل اسم العميل…","Attention":"عناية","Contact person name…":"اسم جهة الاتصال…","Client Telephone":"هاتف العميل","Client Email":"بريد العميل الإلكتروني",
+  "Project (Internal)":"المشروع (داخلي)","Station / Section":"المحطة / القسم","e.g. Station 1 / BSP-01 / Feeder A":"مثال: المحطة 1 / BSP-01 / المغذي A",
+  "Subject":"الموضوع","Subject of the quotation…":"موضوع عرض السعر…","Quotation No.":"رقم عرض السعر","New No.":"رقم جديد","Generate a new sequential quotation number":"إنشاء رقم عرض سعر تسلسلي جديد",
+  "Date":"التاريخ","VAT %":"ضريبة القيمة المضافة %","Profit Margin %":"هامش الربح %","(applies to Engineering + Equipment + Custom SOW subtotal, before VAT)":"(يطبق على المجموع الفرعي للهندسة والأجهزة ونطاق العمل اليدوي قبل الضريبة)",
+  "Discount":"الخصم","(applied to subtotal, before VAT)":"(يطبق على المجموع الفرعي قبل الضريبة)","Percentage %":"نسبة مئوية %","Fixed Amount (SAR)":"مبلغ ثابت (ريال)",
+  "Commission %":"العمولة %","(deducted from Grand Total incl. VAT, if any)":"(تخصم من الإجمالي شامل الضريبة إن وجدت)",
+  "Prepared By (Engineer Name)":"إعداد (اسم المهندس)","Enter engineer name…":"أدخل اسم المهندس…","Prepared By Email":"البريد الإلكتروني لمعد العرض","Substation / Project Title":"اسم المحطة / المشروع",
+  "🔒 Internal Cost Settings":"🔒 إعدادات التكاليف الداخلية","Private costing data — not shown in customer documents":"بيانات تكاليف خاصة — لا تظهر في مستندات العميل",
+  "Use these values only for internal costing and quotation calculations. They remain hidden unless this section is opened.":"استخدم هذه القيم للتكاليف الداخلية وحسابات العرض فقط. تظل مخفية ما لم يتم فتح هذا القسم.",
+  "Engineer Rate (SAR/day)":"سعر المهندس (ريال/يوم)","Working Hours/day":"ساعات العمل/يوم","Working Days/week":"أيام العمل/أسبوع",
+  "📎 Quotation Attachments":"📎 مرفقات عرض السعر","(saved with this quotation; copied into its project when you create/link one)":"(تُحفظ مع العرض وتُنسخ إلى المشروع عند إنشائه أو ربطه)","+ Attach File(s)":"+ إرفاق ملف/ملفات",
+  "Activities":"الأنشطة","Equipment":"الأجهزة","Total Hours":"إجمالي الساعات","Engineer Cost":"تكلفة المهندس","Equipment Cost":"تكلفة الأجهزة",
+  "Subtotal After Discount":"المجموع بعد الخصم","Grand Total Including VAT":"الإجمالي شامل الضريبة","Net Total After Commission":"الصافي بعد العمولة",
+  "1. Scope of Work":"1. نطاق العمل","2. Equipment":"2. الأجهزة","3. Internal Cost":"3. التكلفة الداخلية","4. Conditions":"4. الشروط",
+  "Scope of Work":"نطاق العمل","Equipment Rental":"تأجير الأجهزة","MAIN":"رئيسي","Main Item":"بند رئيسي","Priced Item":"بند مسعّر","Sub-item":"بند فرعي","Custom":"مخصص","Optional":"اختياري","Specification":"المواصفات","Remark":"ملاحظات","Unit":"الوحدة","Unit Price (SAR)":"سعر الوحدة (ريال)",
+  "Scope of Work menu (browse categories & select test items)":"قائمة نطاق العمل (استعراض الفئات واختيار بنود الاختبار)","Hide Scope of Work Menu":"إخفاء قائمة نطاق العمل","Show Scope of Work Menu":"إظهار قائمة نطاق العمل",
+  "Search categories…":"البحث في الفئات…","Select a category":"اختر فئة","Select all":"تحديد الكل","Clear":"مسح",
+  "+ Add Scope of Work manually":"+ إضافة نطاق العمل يدويًا","Section description (shown in report instead of \"Custom / Manual Entry\")":"وصف القسم (يظهر في التقرير بدلًا من \"إدخال مخصص / يدوي\")",
+  "e.g. Additional Scope of Work":"مثال: نطاق عمل إضافي","Type the main heading or priced scope item here (multiple lines allowed)...":"اكتب العنوان الرئيسي أو بند نطاق العمل المسعّر هنا (يمكن استخدام عدة أسطر)...",
+  "+ Main Item":"+ بند رئيسي","+ Priced Item":"+ بند مسعّر","Split each line into a separate priced item instead of one combined item":"تحويل كل سطر إلى بند مسعّر مستقل بدلًا من بند واحد مجمع",
+  "Equipment / Kit":"الجهاز / الطقم","Manufacturer":"المُصنّع","Daily (SAR)":"اليومي (ريال)","Days ⓘ":"الأيام ⓘ","Total (SAR)":"الإجمالي (ريال)",
+  "Private internal estimate.":"تقدير داخلي خاص.","Manpower":"القوى العاملة","+ Add Engineer / Role":"+ إضافة مهندس / وظيفة","Engineer / Role":"المهندس / الوظيفة",
+  "Qty":"الكمية","Duration":"المدة","Basis":"الأساس","Rate":"السعر","Cost":"التكلفة","Equipment Cost":"تكلفة الأجهزة","+ Add Equipment":"+ إضافة جهاز",
+  "Other Project Costs":"تكاليف المشروع الأخرى","+ Add Cost":"+ إضافة تكلفة","Description":"الوصف","Amount (SAR)":"المبلغ (ريال)","Manpower Cost":"تكلفة القوى العاملة",
+  "Equipment + Other":"الأجهزة + أخرى","Total Internal Cost":"إجمالي التكلفة الداخلية","Expected Profit / Margin":"الربح / الهامش المتوقع","🔒 Internal only — excluded from quotation PDF, Proforma Invoice, and client reports.":"🔒 للاستخدام الداخلي فقط — لا يظهر في عرض السعر أو الفاتورة الأولية أو تقارير العميل.",
+  "Project / Quotation Type":"نوع المشروع / عرض السعر","Testing & Commissioning Project":"مشروع اختبارات وتشغيل","Engineer Rental / LOA Holder":"تأجير مهندس / حامل LOA",
+  "The system loads only the conditions relevant to the selected quotation type.":"يحمّل النظام الشروط المرتبطة فقط بنوع عرض السعر المحدد.","Conditions Language / لغة الشروط":"لغة الشروط / Conditions Language",
+  "Quotation & Conditions Language / لغة العرض والشروط":"لغة العرض والشروط / Quotation & Conditions Language","Controls the fixed quotation headings and the Terms & Conditions shown in the quotation and PDF. Manually entered scope descriptions remain as entered.":"يحدد لغة العناوين الثابتة والشروط والأحكام في عرض السعر وملف PDF. وتظل أوصاف نطاق العمل المدخلة يدويًا كما كُتبت.",
+  "Quotation Language / لغة عرض السعر":"لغة عرض السعر / Quotation Language","Include Arabic Translation / إضافة الترجمة العربية":"إضافة الترجمة العربية / Include Arabic Translation","English is always included. Turn this on to add Arabic to the quotation header, fixed labels, and every Terms & Conditions clause.":"اللغة الإنجليزية مدرجة دائمًا. فعّل هذا الخيار لإضافة العربية إلى رأس عرض السعر والعناوين الثابتة وجميع بنود الشروط والأحكام.",
+  "English only":"الإنجليزية فقط","Controls how the Terms & Conditions appear in the quotation and PDF.":"يحدد كيفية ظهور الشروط والأحكام في عرض السعر وملف PDF.",
+  "Payment Terms (when L/C is not applicable)":"شروط الدفع (عندما لا ينطبق الاعتماد المستندي)","100% Advance Payment":"دفعة مقدمة 100%","Advance Payment + Balance":"دفعة مقدمة + الرصيد",
+  "Payment After Completion":"الدفع بعد الإنجاز","Monthly / Progress Payment":"دفعات شهرية / حسب التقدم","Custom Payment Condition":"شرط دفع مخصص",
+  "Advance Percentage":"نسبة الدفعة المقدمة","Remaining Balance Method":"طريقة سداد الرصيد","Monthly invoices based on approved progress":"فواتير شهرية وفق التقدم المعتمد","After completion of the work":"بعد اكتمال العمل",
+  "Payment Due Within (Days)":"استحقاق الدفع خلال (أيام)","Enter the custom payment condition...":"أدخل شرط الدفع المخصص…","Only the selected payment condition will appear in the quotation.":"يظهر في عرض السعر شرط الدفع المحدد فقط.",
+  "Letter of Credit (L/C) Applicable?":"هل ينطبق الاعتماد المستندي (L/C)؟","No — use the selected payment terms":"لا — استخدم شروط الدفع المحددة","Yes — add L/C conditions":"نعم — أضف شروط الاعتماد المستندي",
+  "L/C conditions are currently excluded.":"شروط الاعتماد المستندي غير مدرجة حاليًا.","L/C conditions are included in Payment Condition No. 1.":"شروط الاعتماد المستندي مدرجة في شرط الدفع رقم 1.",
+  "Advance Payment (%)":"الدفعة المقدمة (%)","L/C Balance (%) — Auto":"رصيد الاعتماد (%) — تلقائي","L/C Type":"نوع الاعتماد المستندي","Irrevocable L/C at Sight":"اعتماد غير قابل للإلغاء ومستحق عند الاطلاع","Confirmed Irrevocable L/C at Sight":"اعتماد مؤكد وغير قابل للإلغاء ومستحق عند الاطلاع",
+  "Advance Due Within (Calendar Days)":"استحقاق المقدم خلال (أيام تقويمية)","Open L/C Within (Calendar Days)":"فتح الاعتماد خلال (أيام تقويمية)","Countersignature Period (Calendar Days)":"مهلة التوقيع المقابل (أيام تقويمية)",
+  "The remaining percentage is calculated automatically so the advance and L/C always equal 100%. Confirm the final L/C wording and document set with the issuing bank before acceptance.":"تُحسب النسبة المتبقية تلقائيًا ليكون مجموع المقدم والاعتماد 100%. يجب تأكيد الصياغة النهائية ومستندات الاعتماد مع البنك المصدر قبل القبول.",
+  "Project Duration":"مدة المشروع","e.g. 6 months":"مثال: 6 أشهر","Commercial Rates for Conditions":"الأسعار التجارية المستخدمة في الشروط","Engineer Daily Rate (SAR/day)":"سعر المهندس اليومي (ريال/يوم)",
+  "Engineer Monthly Rate (SAR/month)":"سعر المهندس الشهري (ريال/شهر)","Mobilization & Demobilization Cost / Engineer (SAR)":"تكلفة التحريك وسحب المهندس (ريال)","Customer-facing rates. These values are inserted automatically into the relevant Terms & Conditions in the quotation/PDF.":"أسعار تظهر للعميل وتُدرج تلقائيًا في الشروط ذات الصلة داخل عرض السعر وملف PDF.",
+  "+ Add":"+ إضافة","Remove":"حذف","Edit":"تعديل","Delete":"حذف","Save":"حفظ","Cancel":"إلغاء","Close":"إغلاق","Open":"فتح","Preview":"معاينة","Print":"طباعة","Download":"تنزيل","Search":"بحث",
+  "Engineers Database":"قاعدة بيانات المهندسين","Search name / ID / nationality / LOA...":"البحث بالاسم / الهوية / الجنسية / LOA…","Import Sky Field Engineers":"استيراد مهندسي سماء الميدان","Add Engineer":"إضافة مهندس",
+  "Engineer Name *":"اسم المهندس *","Nationality":"الجنسية","Iqama / ID Number":"رقم الإقامة / الهوية","Employee Number":"الرقم الوظيفي","Profession":"المهنة","Specialization":"التخصص","LOA Classification":"تصنيف LOA","Phone":"الهاتف","Email":"البريد الإلكتروني","Status":"الحالة","Notes":"ملاحظات",
+  "Monthly Rate (SAR)":"السعر الشهري (ريال)","Daily Rate (SAR)":"السعر اليومي (ريال)","Overtime Rate (SAR/hour)":"سعر العمل الإضافي (ريال/ساعة)","Save Engineer":"حفظ المهندس","Reset":"إعادة تعيين",
+  "Project Details":"تفاصيل المشروع","Complete project workspace: finance, invoices, engineers, payroll, expenses, and documents.":"مساحة المشروع الكاملة: المالية والفواتير والمهندسون والرواتب والمصروفات والمستندات.",
+  "Review saved offers and convert approved quotations into projects.":"مراجعة العروض المحفوظة وتحويل العروض المعتمدة إلى مشاريع.","Create and track advance, progress-based, fixed, and full invoices.":"إنشاء ومتابعة فواتير الدفعة المقدمة والتقدم والمبالغ الثابتة والفواتير الكاملة.",
+  "Maintain engineer availability, LOA classification, payroll details, and internal rates.":"إدارة توافر المهندسين وتصنيف LOA وبيانات الرواتب والأسعار الداخلية.","Prepare monthly attendance, payroll, approvals, Excel export, and actual project cost.":"إعداد الحضور والرواتب والاعتمادات الشهرية وتصدير Excel والتكلفة الفعلية للمشروع.",
+  "Maintain equipment rates and default logistics costs for internal estimates.":"إدارة أسعار الأجهزة وتكاليف الخدمات اللوجستية الافتراضية للتقديرات الداخلية.",
+  "Step 1 of 4 — define the scope of work and commercial details.":"الخطوة 1 من 4 — تحديد نطاق العمل والتفاصيل التجارية.","Step 2 of 4 — select testing equipment and rental duration.":"الخطوة 2 من 4 — اختيار أجهزة الاختبار ومدة الإيجار.",
+  "Step 3 of 4 — prepare the private manpower, equipment, and logistics cost estimate.":"الخطوة 3 من 4 — إعداد التقدير الخاص للقوى العاملة والأجهزة والخدمات اللوجستية.","Step 4 of 4 — review commercial and technical conditions.":"الخطوة 4 من 4 — مراجعة الشروط التجارية والفنية.",
+  "Track contract value, invoices, receipts, documents, and commission.":"متابعة قيمة العقد والفواتير والتحصيلات والمستندات والعمولة.",
+  "Secure cloud connected":"السحابة الآمنة متصلة","Syncing securely…":"جارٍ إجراء مزامنة آمنة…","Cloud unavailable":"السحابة غير متاحة","Offline — local cache":"غير متصل — نسخة محلية","Sign in required":"يلزم تسجيل الدخول",
+  "No engineers saved yet.":"لا يوجد مهندسون محفوظون حتى الآن.","No projects yet.":"لا توجد مشاريع حتى الآن.","No saved quotations.":"لا توجد عروض أسعار محفوظة.","No invoices issued for this project.":"لم تُصدر فواتير لهذا المشروع.",
+  "Available":"متاح","Assigned":"مكلف","Unavailable":"غير متاح","On Leave":"في إجازة","Inactive":"غير نشط","Active":"نشط","On Hold":"معلق","Completed":"مكتمل","Pending":"قيد الانتظار","Paid":"مدفوع","Overdue":"متأخر","Administrator":"مدير النظام","Commercial Administrator":"مسؤول تجاري",
+  "Save Quotation":"حفظ عرض السعر","💾 Save Quotation":"💾 حفظ عرض السعر","💾 Save Current":"💾 حفظ الحالي","💾 Save Project":"💾 حفظ المشروع","✕ Clear All":"✕ مسح الكل","⬇ Preview / Print Quotation":"⬇ معاينة / طباعة عرض السعر","🖨 Print / Save as PDF":"🖨 طباعة / حفظ PDF",
+  "Project Management":"إدارة المشاريع","+ New Project":"+ مشروع جديد","Project Name *":"اسم المشروع *","Client Name *":"اسم العميل *","Contract Value (SAR)":"قيمة العقد (ريال)","Start Date":"تاريخ البدء","Purchase Orders (PO)":"أوامر الشراء","Payment Installments":"دفعات المشروع","Attached Documents":"المستندات المرفقة","Actual Expenses":"المصروفات الفعلية",
+  "🧾 Saved Quotations & Legacy Invoice Quotations":"🧾 عروض الأسعار المحفوظة والعروض القديمة","+ New Separate Quotation":"+ عرض سعر منفصل جديد","📁 Add as Project":"📁 إضافة كمشروع","Search quotation / station / client…":"البحث برقم العرض / المحطة / العميل…",
+  "Proforma Invoices / الفواتير المبدئية":"الفواتير المبدئية / Proforma Invoices","Create Proforma":"إنشاء فاتورة مبدئية","Create Proforma Invoice":"إنشاء فاتورة مبدئية","+ From Current Project Quotation":"+ من عرض المشروع الحالي","Invoice Amount Basis *":"أساس مبلغ الفاتورة *","Full Quotation Amount":"كامل مبلغ عرض السعر","Fixed Advance Percentage":"نسبة مقدمة ثابتة","Fixed Amount":"مبلغ ثابت","Progress-Based (Per-Item Completion %)":"حسب التقدم (نسبة إنجاز كل بند)","Advance Percentage %":"نسبة الدفعة المقدمة %","Payment Description":"وصف الدفعة","Issue Date *":"تاريخ الإصدار *",
+  "Monthly Timesheets & Payroll":"كشوف الساعات والرواتب الشهرية","Payroll Month":"شهر الرواتب","Load Engineers":"تحميل المهندسين","New Sheet":"كشف جديد","Save Month":"حفظ الشهر","Approve Sheet":"اعتماد الكشف","Print / Save PDF":"طباعة / حفظ PDF","Employee / ID":"الموظف / الرقم","Attendance Days":"أيام الحضور","Basic Salary":"الراتب الأساسي","Housing & Transport":"السكن والنقل","Other Earnings":"إيرادات أخرى","Deductions":"الخصومات","OT Hours":"ساعات إضافية","OT Rate":"سعر الإضافي","OT Amount":"مبلغ الإضافي",
+  "Internal Cost Library":"مكتبة التكاليف الداخلية","Equipment Rates":"أسعار الأجهزة","Default Logistics Costs":"تكاليف الخدمات اللوجستية الافتراضية","Save Defaults":"حفظ القيم الافتراضية","Add to Current Quotation":"إضافة إلى عرض السعر الحالي","Category":"الفئة","Daily":"يومي","Weekly":"أسبوعي","Monthly":"شهري","Transportation":"النقل","Accommodation":"السكن","Mobilization":"التحريك",
+  "Scope of Work — Columns":"أعمدة نطاق العمل","Show this section":"إظهار هذا القسم","Show Code column":"إظهار عمود الكود","Show Qty column":"إظهار عمود الكمية","Show Hours column":"إظهار عمود الساعات","Show Cost column":"إظهار عمود التكلفة","Equipment Rental Section":"قسم تأجير الأجهزة","Manufacturer column":"عمود الشركة المصنعة","Daily Rate column":"عمود السعر اليومي","Days column":"عمود الأيام","Total column":"عمود الإجمالي","Cost Summary — Line Items":"ملخص التكلفة — البنود","Total Engineering Hours":"إجمالي الساعات الهندسية","Total Working Days":"إجمالي أيام العمل","Sub-Total":"الإجمالي الفرعي","Signature Block":"خانات التوقيع","Sky Field signature box":"خانة توقيع سماء الميدان","Client Acceptance box":"خانة اعتماد العميل","Company Stamp":"ختم الشركة","⚙ Export Document Options — choose what appears on the printed quotation":"⚙ خيارات تصدير المستند — اختر ما يظهر في عرض السعر المطبوع"
+});
+
+let sfUiLanguage='en';
+let sfUiObserver=null;
+let sfUiMutationGuard=false;
+const sfUiOriginalText=new WeakMap();
+const sfUiOriginalAttrs=new WeakMap();
+const SF_UI_EXCLUDE_SELECTOR='.sf-language-switcher,#preview-doc,.pi-page,script,style';
+
+function sfUiStorageKey(user=sfCurrentUser){
+  const email=sfNormalizeEmail(user?.email||'guest')||'guest';
+  return `skyfieldUiLanguage:${email}`;
+}
+function sfUiLookup(value){
+  const key=String(value||'').replace(/\s+/g,' ').trim();
+  return SF_UI_AR[key]||'';
+}
+function sfUiExcluded(element){
+  return !!(element&&element.closest&&element.closest(SF_UI_EXCLUDE_SELECTOR));
+}
+function sfTranslateUiTextNode(node){
+  if(!node||node.nodeType!==Node.TEXT_NODE||sfUiExcluded(node.parentElement))return;
+  if(sfUiLanguage==='en'){
+    if(sfUiOriginalText.has(node)){node.nodeValue=sfUiOriginalText.get(node);sfUiOriginalText.delete(node);}
+    return;
+  }
+  const raw=sfUiOriginalText.get(node)??node.nodeValue;
+  const trimmed=String(raw||'').trim(),translated=sfUiLookup(trimmed);
+  if(!translated)return;
+  if(!sfUiOriginalText.has(node))sfUiOriginalText.set(node,raw);
+  const leading=String(raw).match(/^\s*/)?.[0]||'',trailing=String(raw).match(/\s*$/)?.[0]||'';
+  const next=leading+translated+trailing;
+  if(node.nodeValue!==next)node.nodeValue=next;
+}
+function sfTranslateUiAttributes(element){
+  if(!element||element.nodeType!==Node.ELEMENT_NODE||sfUiExcluded(element))return;
+  const attrs=['placeholder','title','aria-label'];
+  let originals=sfUiOriginalAttrs.get(element);
+  if(sfUiLanguage==='en'){
+    if(originals){Object.entries(originals).forEach(([name,value])=>element.setAttribute(name,value));sfUiOriginalAttrs.delete(element);}
+    return;
+  }
+  attrs.forEach(name=>{
+    if(!element.hasAttribute(name))return;
+    const current=element.getAttribute(name),source=originals?.[name]??current,translated=sfUiLookup(source);
+    if(!translated)return;
+    if(!originals){originals={};sfUiOriginalAttrs.set(element,originals);}
+    if(!(name in originals))originals[name]=current;
+    if(current!==translated)element.setAttribute(name,translated);
+  });
+}
+function sfApplyUiTranslation(root=document.body){
+  if(!root||sfUiMutationGuard)return;
+  sfUiMutationGuard=true;
+  try{
+    if(root.nodeType===Node.TEXT_NODE){sfTranslateUiTextNode(root);return;}
+    if(root.nodeType===Node.ELEMENT_NODE)sfTranslateUiAttributes(root);
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);
+    let node;
+    while((node=walker.nextNode())){
+      if(node.nodeType===Node.TEXT_NODE)sfTranslateUiTextNode(node);else sfTranslateUiAttributes(node);
+    }
+  }finally{sfUiMutationGuard=false;}
+}
+function sfSetInterfaceLanguage(lang,persist=true){
+  sfUiLanguage=lang==='ar'?'ar':'en';
+  document.documentElement.lang=sfUiLanguage;
+  document.documentElement.dir=sfUiLanguage==='ar'?'rtl':'ltr';
+  document.body.dataset.uiLanguage=sfUiLanguage;
+  const select=document.getElementById('sf-ui-language');if(select)select.value=sfUiLanguage;
+  if(persist)try{localStorage.setItem(sfUiStorageKey(),sfUiLanguage);}catch(e){}
+  sfApplyUiTranslation(document.body);
+  try{updateLcControls();}catch(e){}
+  requestAnimationFrame(()=>sfApplyUiTranslation(document.body));
+}
+function sfLoadUserInterfaceLanguage(user){
+  let selected='';
+  try{selected=localStorage.getItem(sfUiStorageKey(user))||localStorage.getItem(sfUiStorageKey(null))||'';}catch(e){}
+  sfSetInterfaceLanguage(selected==='ar'?'ar':'en',false);
+}
+function sfInitInterfaceLanguage(){
+  if(!sfUiObserver){
+    sfUiObserver=new MutationObserver(mutations=>{
+      if(sfUiMutationGuard||sfUiLanguage!=='ar')return;
+      mutations.forEach(m=>{
+        if(m.type==='characterData')sfApplyUiTranslation(m.target);
+        else if(m.type==='attributes')sfApplyUiTranslation(m.target);
+        else m.addedNodes.forEach(node=>sfApplyUiTranslation(node));
+      });
+    });
+    sfUiObserver.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label']});
+  }
+  sfLoadUserInterfaceLanguage(sfCurrentUser);
+}
 
 function toggleSidebar(){ document.body.classList.toggle('nav-open'); }
 function closeSidebar(){ document.body.classList.remove('nav-open'); }
@@ -2967,7 +3559,27 @@ function clrCat(){
   ACTS[activeCat].forEach(([,code])=>delete selActs[k(activeCat,code)]);
   buildTasks();buildCatList();recalc();renderQuot();
 }
-function clearAll(){selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';paymentTermType='full_advance';paymentAdvancePct=10;paymentDueDays=30;paymentBalanceBasis='monthly_progress';paymentCustomText='';conds=conditionTemplate('testing');projectDuration='';quoteAttachments=[];const lbl=document.getElementById('custom-sow-label');if(lbl)lbl.value='';const dur=document.getElementById('proj-duration');if(dur)dur.value='';['commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});const ct=document.getElementById('condition-type');if(ct)ct.value='testing';const pt=document.getElementById('payment-term-type');if(pt)pt.value='full_advance';const ap=document.getElementById('payment-advance-pct');if(ap)ap.value='10';const pd=document.getElementById('payment-due-days');if(pd)pd.value='30';const pb=document.getElementById('payment-balance-basis');if(pb)pb.value='monthly_progress';const pc=document.getElementById('payment-custom-text');if(pc)pc.value='';updatePaymentTermControls();buildTasks();buildCatList();buildEq();buildCustomSOWList();buildConds();recalc();renderQuot();renderQuoteAttachments();}
+function clearAll(){
+  selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';conditionLanguage='en';
+  paymentMethod='bank_transfer';lcApplicable=false;lcAdvancePct=30;lcType='irrevocable_at_sight';lcAdvanceDays=7;lcOpenDays=10;lcDocumentDays=14;
+  lcPaymentBasis='monthly_progress';lcCurrency='SAR';lcCalculationBasis='before_vat';lcBeneficiary='Sky Field Company Limited';lcBankCharges='shared';lcRules='UCP 600';lcAcceptableBank='';lcValidityDays=30;
+  lcDocuments={commercial_invoice:true,delivery_note:true,progress_certificate:true,timesheet:false};paymentConditionOverrideEn='';paymentConditionOverrideAr='';
+  paymentTermType='advance_balance';paymentAdvancePct=30;paymentDueDays=30;paymentBalanceBasis='monthly_progress';paymentCustomText='';paymentCustomTextAr='';
+  conds=conditionTemplate('testing');projectDuration='';quoteAttachments=[];
+  const lbl=document.getElementById('custom-sow-label');if(lbl)lbl.value='';
+  const dur=document.getElementById('proj-duration');if(dur)dur.value='';
+  ['commercial-engineer-daily-rate','commercial-engineer-monthly-rate','commercial-mobilization-rate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  const ct=document.getElementById('condition-type');if(ct)ct.value='testing';
+  const arToggle=document.getElementById('include-arabic-translation');if(arToggle)arToggle.checked=false;
+  const pm=document.getElementById('payment-method');if(pm)pm.value='bank_transfer';
+  const pt=document.getElementById('payment-term-type');if(pt)pt.value='advance_balance';
+  const ap=document.getElementById('payment-advance-pct');if(ap)ap.value='30';
+  const pd=document.getElementById('payment-due-days');if(pd)pd.value='30';
+  const pb=document.getElementById('payment-balance-basis');if(pb)pb.value='monthly_progress';
+  const pc=document.getElementById('payment-custom-text');if(pc)pc.value='';
+  const pca=document.getElementById('payment-custom-text-ar');if(pca)pca.value='';
+  updatePaymentTermControls();buildTasks();buildCatList();buildEq();buildCustomSOWList();buildConds();recalc();renderQuot();renderQuoteAttachments();
+}
 
 function toggleSOWMenu(){
   const menu=document.getElementById('sow-menu');
@@ -3248,55 +3860,160 @@ function setEqQty(i,val,kit,mfr,daily){
   buildEq();recalc();renderQuot();
 }
 
+const SF_COMPANY_CONDITION_DEFAULTS_KEY='sfCompanyConditionDefaultsV1';
+function sfCompanyConditionDefaults(){try{return JSON.parse(localStorage.getItem(SF_COMPANY_CONDITION_DEFAULTS_KEY)||'{}')}catch(_error){return {}}}
+function conditionDefaultKey(type,number){return `${type||'testing'}:${number}`}
+function conditionAlpha(value){let n=Math.max(1,parseInt(value)||1),out='';while(n){n--;out=String.fromCharCode(65+n%26)+out;n=Math.floor(n/26)}return out}
+function normalizeConditionMetadata(list,type=conditionType){
+  let core=0;
+  const defaults=sfCompanyConditionDefaults();
+  (Array.isArray(list)?list:[]).forEach((c,index)=>{
+    c.custom=!!c.custom||c.cat==='Custom';
+    c.id=c.id||`${c.custom?'custom':'core'}_${Date.now()}_${index}_${Math.floor(Math.random()*10000)}`;
+    if(c.custom){c.section=c.section||'Liability & General';c.defaultText=c.defaultText??c.text;c.defaultTextAr=c.defaultTextAr??c.textAr;return}
+    core++;
+    c.coreNumber=core;
+    const saved=defaults[conditionDefaultKey(type,core)];
+    if(saved&&c.defaultText==null&&!c.modified){c.text=saved.text||c.text;c.textAr=saved.textAr||c.textAr}
+    c.defaultText=c.defaultText??c.text;c.defaultTextAr=c.defaultTextAr??c.textAr;
+  });
+  return list;
+}
+function conditionDisplayNumbers(list=conds){
+  const maxBySection={};
+  list.forEach(c=>{if(c.custom)return;const sec=condSection(c.cat,c);maxBySection[sec]=Math.max(maxBySection[sec]||0,c.coreNumber||0)});
+  const counts={};
+  return list.map(c=>{
+    if(!c.custom)return String(c.coreNumber||'');
+    const sec=condSection(c.cat,c),base=maxBySection[sec]||46;
+    counts[sec]=(counts[sec]||0)+1;
+    return `${base}${conditionAlpha(counts[sec])}`;
+  });
+}
+
 function conditionTemplate(type){
-  const list=(type==='engineer_rental' ? ENGINEER_RENTAL_CONDS : TESTING_CONDS)
-    .map(([text,cat,enabled])=>({text,cat,enabled}))
+  const source=type==='engineer_rental' ? ENGINEER_RENTAL_CONDS : TESTING_CONDS;
+  const sourceAr=type==='engineer_rental' ? ENGINEER_RENTAL_CONDS_AR : TESTING_CONDS_AR;
+  const list=source
+    .map(([text,cat,enabled],i)=>cat==='Payment – Bank'
+      ? {text:paymentBankConditionText('en'),textAr:paymentBankConditionText('ar'),cat,enabled}
+      : {text,textAr:sourceAr[i]||'',cat,enabled})
     .filter(c=>c.cat!=='Payment');
   const idx=Math.max(0,list.findIndex(c=>c.cat==='Payment – Late'));
-  const pay={text:paymentConditionText(),cat:'Payment – Selected',enabled:true};
+  const pay={text:paymentConditionText('en'),textAr:paymentConditionText('ar'),cat:'Payment – Selected',enabled:true};
   if(idx>=0) list.splice(idx,0,pay); else list.unshift(pay);
-  return list;
+  return normalizeConditionMetadata(list,type);
+}
+function paymentBankConditionText(lang='en'){
+  if(!lcApplicable)return lang==='ar'
+    ? 'يتحمل العميل جميع رسوم التحويلات البنكية وأي رسوم مالية ذات صلة.'
+    : 'All bank transfer charges and related financial charges shall be borne solely by the Client.';
+  const payerEn=lcBankCharges==='shared'?'equally by the Customer and the Beneficiary':lcBankCharges==='beneficiary'?'solely by the Beneficiary':'solely by the Customer';
+  const payerAr=lcBankCharges==='shared'?'بالتساوي بين العميل والمستفيد':lcBankCharges==='beneficiary'?'بالكامل من قبل المستفيد':'بالكامل من قبل العميل';
+  return lang==='ar'
+    ? `تُتحمل جميع رسوم التحويلات البنكية وإصدار الاعتماد المستندي وتأكيده وإبلاغه وتعديله وتمديده وفروقات المستندات والتفاوض وأي رسوم مالية ذات صلة ${payerAr}.`
+    : `All bank transfer charges and all L/C issuance, advising, confirmation, amendment, extension, discrepancy, negotiation, and related financial charges shall be borne ${payerEn}.`;
+}
+function hydrateConditionTranslations(list,type){
+  const canonical=conditionTemplate(type);
+  let position=0;
+  const hydrated=(Array.isArray(list)?list:[]).map(c=>{
+    if(c.cat==='Custom')return {...c,textAr:c.textAr||''};
+    const exact=canonical.find(x=>x.text===c.text);
+    const sameCat=canonical.filter(x=>x.cat===c.cat);
+    const ref=exact||(sameCat.length===1?sameCat[0]:canonical[position])||{};
+    position++;
+    return {...c,textAr:c.textAr||ref.textAr||''};
+  });
+  return normalizeConditionMetadata(hydrated,type);
 }
 function setConditionType(type, preserveCustom=false){
   const next = type==='engineer_rental' ? 'engineer_rental' : 'testing';
   if(next===conditionType && conds.length) return;
   const custom = preserveCustom ? conds.filter(c=>c.cat==='Custom') : [];
   conditionType = next;
-  conds = conditionTemplate(next).concat(custom);
+  conds = normalizeConditionMetadata(conditionTemplate(next).concat(custom),next);
   const sel=document.getElementById('condition-type'); if(sel) sel.value=next;
-  buildConds();
+  buildConds();renderQuot();
 }
 
-function paymentConditionText(){
+const SF_EN_NUMBER_WORDS={0:'zero',1:'one',2:'two',3:'three',4:'four',5:'five',6:'six',7:'seven',8:'eight',9:'nine',10:'ten',11:'eleven',12:'twelve',13:'thirteen',14:'fourteen',15:'fifteen',16:'sixteen',17:'seventeen',18:'eighteen',19:'nineteen',20:'twenty',21:'twenty-one',30:'thirty'};
+const SF_AR_NUMBER_WORDS={0:'صفر',1:'واحد',2:'اثنان',3:'ثلاثة',4:'أربعة',5:'خمسة',6:'ستة',7:'سبعة',8:'ثمانية',9:'تسعة',10:'عشرة',11:'أحد عشر',12:'اثنا عشر',13:'ثلاثة عشر',14:'أربعة عشر',15:'خمسة عشر',16:'ستة عشر',17:'سبعة عشر',18:'ثمانية عشر',19:'تسعة عشر',20:'عشرون',21:'واحد وعشرون',30:'ثلاثون'};
+function sfNumberWithDigits(value,lang='en'){
+  const n=Math.max(0,parseInt(value)||0),words=lang==='ar'?SF_AR_NUMBER_WORDS:SF_EN_NUMBER_WORDS;
+  return words[n]?`${words[n]} (${n})`:String(n);
+}
+
+function generatedPaymentConditionText(lang='en'){
   const days=Math.max(0,parseInt(paymentDueDays)||0);
-  if(paymentTermType==='full_advance') return 'Payment Terms: 100% advance payment shall be made upon Purchase Order issuance and before mobilization or commencement of the work.';
+  const ar=lang==='ar';
+  const transferInstruction=ar
+    ? ' وتُسدد جميع الدفعات مقابل فاتورة صادرة من شركة سماء الميدان، عن طريق تحويل بنكي من الحساب البنكي الرسمي للعميل إلى الحساب المبين في الفاتورة.'
+    : " All payments shall be made against Sky Field Company's invoice by bank transfer from the Customer's official corporate bank account to the bank account stated on the invoice.";
+  if(lcApplicable){
+    const advance=Math.min(100,Math.max(0,parseFloat(lcAdvancePct)||0)),balance=100-advance;
+    const lcEn=lcType==='confirmed_at_sight'?'confirmed irrevocable L/C at sight':'irrevocable L/C at sight';
+    const lcArticle=lcType==='confirmed_at_sight'?'a':'an';
+    const lcAr=lcType==='confirmed_at_sight'?'اعتمادًا مستنديًا مؤكدًا وغير قابل للإلغاء ومستحق الدفع عند الاطلاع':'اعتمادًا مستنديًا غير قابل للإلغاء ومستحق الدفع عند الاطلاع';
+    const applicant=lcApplicantName(),beneficiary=lcBeneficiary||'Sky Field Company Limited',docsEn=lcDocumentsPhrase('en'),docsAr=lcDocumentsPhrase('ar');
+    const basisEn=lcPaymentBasis==='after_completion'?'after completion of the work':'against monthly progress invoices';
+    const basisAr=lcPaymentBasis==='after_completion'?'بعد اكتمال الأعمال':'مقابل فواتير التقدم الشهرية';
+    const valueBasisEn=lcCalculationBasis==='including_vat'?'including VAT':'excluding VAT';
+    const valueBasisAr=lcCalculationBasis==='including_vat'?'شاملة ضريبة القيمة المضافة':'غير شاملة ضريبة القيمة المضافة';
+    const bankEn=lcAcceptableBank?` The issuing bank shall be ${lcAcceptableBank} or another bank accepted in writing by the Beneficiary.`:'';
+    const bankAr=lcAcceptableBank?` ويكون البنك المصدر هو ${lcAcceptableBank} أو أي بنك آخر يقبله المستفيد كتابيًا.`:'';
+    const validityEn=lcValidityDays?` The L/C shall remain valid for at least ${sfNumberWithDigits(lcValidityDays,'en')} calendar days after the expected completion date.`:'';
+    const validityAr=lcValidityDays?` ويظل الاعتماد ساريًا لمدة لا تقل عن ${sfNumberWithDigits(lcValidityDays,'ar')} يومًا تقويميًا بعد تاريخ الإنجاز المتوقع.`:'';
+    if(ar)return `شروط الدفع — الاعتماد المستندي (L/C):\n(أ) دفعة التعبئة: يدفع العميل ${advance}% من قيمة أمر الشراء عن طريق التحويل البنكي خلال ${sfNumberWithDigits(lcAdvanceDays,'ar')} أيام تقويمية من تاريخ توقيع أمر الشراء، وفي جميع الأحوال قبل بدء التعبئة.\n(ب) دفعة التقدم: يفتح العميل خلال ${sfNumberWithDigits(lcOpenDays,'ar')} أيام تقويمية من توقيع أمر الشراء وقبل التعبئة ${lcAr} لصالح ${beneficiary}، وبعملة ${lcCurrency}، يغطي نسبة ${balance}% من قيمة أمر الشراء ${valueBasisAr}. ويتم السحب ${basisAr}.${bankAr}\n(ج) شرط التوقيع خلال ${sfNumberWithDigits(lcDocumentDays,'ar')} يومًا: إذا لم يوقع طالب الاعتماد (${applicant}) على أي من المستندات المطلوبة (${docsAr}) أو يرفضها بملاحظات كتابية مبررة خلال ${sfNumberWithDigits(lcDocumentDays,'ar')} يومًا تقويميًا من تاريخ ثبوت الاستلام، فيحق للمستفيد تقديم المستندات والتفاوض على الاعتماد دون توقيع طالب الاعتماد، بموجب إقرار من المستفيد مع ما يثبت الإرسال أو الاستلام.\n(د) التزام دفع مستقل: تُسدد جميع المبالغ المستحقة إلى ${beneficiary} في مواعيدها دون ربطها بتحصيل العميل من المالك أو العميل النهائي أو أي طرف ثالث. ويمنح تأخر السداد شركة سماء الميدان تمديدًا مناسبًا للمدة واسترداد التكاليف الإضافية الموثقة، دون الإخلال بحقها في تعليق الأعمال وفق شرط تأخر السداد.\n(هـ) الصياغة والقواعد: يقدم العميل مسودة الاعتماد وقائمة المستندات إلى ${beneficiary} للمراجعة والموافقة الكتابية قبل الإصدار. ويخضع الاعتماد إلى ${lcRules}، ولا يسري أي تعديل دون موافقة المستفيد كتابيًا.${validityAr}`;
+    return `Payment Terms — Letter of Credit (L/C):\n(a) Mobilization Payment: The Customer shall pay ${advance}% of the Purchase Order value by bank transfer within ${sfNumberWithDigits(lcAdvanceDays,'en')} calendar days from signing the Purchase Order and, in all cases, before mobilization.\n(b) Progress Payment: Within ${sfNumberWithDigits(lcOpenDays,'en')} calendar days from signing the Purchase Order and before mobilization, the Customer shall open ${lcArticle} ${lcEn} in favour of ${beneficiary}, in ${lcCurrency}, covering ${balance}% of the Purchase Order value ${valueBasisEn}. Drawings shall be made ${basisEn}.${bankEn}\n(c) Mandatory Countersignature Clause — ${sfNumberWithDigits(lcDocumentDays,'en')} calendar days: If any of the required documents (${docsEn}) are not countersigned by the Applicant (${applicant}) or rejected with justified written comments within ${sfNumberWithDigits(lcDocumentDays,'en')} calendar days from confirmed receipt, the Beneficiary may present and negotiate under the L/C without the Applicant's countersignature by providing a Beneficiary declaration together with evidence of submission or receipt.\n(d) Independent Payment Obligation: All amounts due to ${beneficiary} shall be paid on time and shall not be conditional upon or linked to the Customer's receipt of payment from the Project Owner, End Client, or any other third party. Payment delay shall entitle Sky Field Company to a corresponding extension of time and reimbursement of documented additional costs, without prejudice to its right to suspend work under the late-payment condition.\n(e) L/C Wording and Rules: The Customer shall submit the draft L/C and document list to ${beneficiary} for written review and acceptance before issuance. The L/C shall be subject to ${lcRules}, and no amendment shall become effective without the Beneficiary's written acceptance.${validityEn}`;
+  }
+  if(paymentTermType==='full_advance') return (ar?'شروط الدفع: تُدفع نسبة 100% مقدمًا عند إصدار أمر الشراء وقبل تعبئة الموارد أو بدء العمل.':'Payment Terms: 100% advance payment shall be made upon Purchase Order issuance and before mobilization or commencement of the work.')+transferInstruction;
   if(paymentTermType==='advance_balance'){
     const pct=Math.min(100,Math.max(0,parseFloat(paymentAdvancePct)||0));
     const bal=100-pct;
     if(paymentBalanceBasis==='monthly_progress') {
-      return `Payment Terms: ${pct}% advance payment shall be made upon Purchase Order issuance. The remaining ${bal}% shall be invoiced monthly based on the approved percentage of completed work and shall be paid within ${days} days from the invoice date.`;
+      return (ar?`شروط الدفع: تُدفع نسبة ${pct}% مقدمًا عند إصدار أمر الشراء، وتُفوتر النسبة المتبقية البالغة ${bal}% شهريًا وفق نسبة الأعمال المنجزة والمعتمدة، وتُسدد خلال ${days} يومًا من تاريخ الفاتورة.`:`Payment Terms: ${pct}% advance payment shall be made upon Purchase Order issuance. The remaining ${bal}% shall be invoiced monthly based on the approved percentage of completed work and shall be paid within ${days} days from the invoice date.`)+transferInstruction;
     }
-    return `Payment Terms: ${pct}% advance payment shall be made upon Purchase Order issuance, and the remaining ${bal}% shall be paid within ${days} days after completion of the work and submission of the invoice.`;
+    return (ar?`شروط الدفع: تُدفع نسبة ${pct}% مقدمًا عند إصدار أمر الشراء، وتُسدد النسبة المتبقية البالغة ${bal}% خلال ${days} يومًا بعد اكتمال العمل وتقديم الفاتورة.`:`Payment Terms: ${pct}% advance payment shall be made upon Purchase Order issuance, and the remaining ${bal}% shall be paid within ${days} days after completion of the work and submission of the invoice.`)+transferInstruction;
   }
-  if(paymentTermType==='after_completion') return `Payment Terms: 100% of the contract value shall be invoiced after completion of the work and shall be paid within ${days} days from the invoice date.`;
-  if(paymentTermType==='monthly_progress') return `Payment Terms: invoices shall be issued based on approved monthly progress or signed timesheets and shall be paid within ${days} days from the invoice date.`;
-  return paymentCustomText.trim() || 'Payment Terms: as mutually agreed and stated in the Purchase Order.';
+  if(paymentTermType==='after_completion') return (ar?`شروط الدفع: تُفوتر نسبة 100% من قيمة العقد بعد اكتمال العمل، وتُسدد خلال ${days} يومًا من تاريخ الفاتورة.`:`Payment Terms: 100% of the contract value shall be invoiced after completion of the work and shall be paid within ${days} days from the invoice date.`)+transferInstruction;
+  if(paymentTermType==='monthly_progress') return (ar?`شروط الدفع: تُصدر الفواتير وفق التقدم الشهري المعتمد أو كشوف الساعات الموقعة، وتُسدد خلال ${days} يومًا من تاريخ الفاتورة.`:`Payment Terms: invoices shall be issued based on approved monthly progress or signed timesheets and shall be paid within ${days} days from the invoice date.`)+transferInstruction;
+  return ar?(paymentCustomTextAr.trim()||paymentCustomText.trim()||'شروط الدفع: وفق ما يتم الاتفاق عليه ويُذكر في أمر الشراء.'):(paymentCustomText.trim()||'Payment Terms: as mutually agreed and stated in the Purchase Order.');
+}
+function paymentConditionText(lang='en'){
+  if(lang==='ar'&&paymentConditionOverrideAr.trim())return paymentConditionOverrideAr.trim();
+  if(lang==='en'&&paymentConditionOverrideEn.trim())return paymentConditionOverrideEn.trim();
+  return generatedPaymentConditionText(lang);
 }
 function refreshPaymentCondition(){
+  const bank=conds.find(c=>c.cat==='Payment – Bank');
+  if(bank&&!bank.modified){bank.text=paymentBankConditionText('en');bank.textAr=paymentBankConditionText('ar');}
+  const previous=conds.find(c=>c.cat==='Payment – Selected');
   conds=conds.filter(c=>c.cat!=='Payment' && c.cat!=='Payment – Selected');
   const insertAt=Math.max(0,conds.findIndex(c=>c.cat==='Payment – Late'));
-  const item={text:paymentConditionText(),cat:'Payment – Selected',enabled:true};
+  const generatedEn=generatedPaymentConditionText('en'),generatedAr=generatedPaymentConditionText('ar');
+  const item={
+    id:previous?.id||`payment_${Date.now()}`,
+    text:paymentConditionText('en'),textAr:paymentConditionText('ar'),cat:'Payment – Selected',enabled:previous?.enabled!==false,
+    modified:!!(paymentConditionOverrideEn||paymentConditionOverrideAr),defaultText:generatedEn,defaultTextAr:generatedAr
+  };
   if(insertAt>=0) conds.splice(insertAt,0,item); else conds.unshift(item);
+  normalizeConditionMetadata(conds,conditionType);
 }
 function updatePaymentTermControls(){
   const adv=document.getElementById('advance-pct-wrap');
   const basis=document.getElementById('payment-balance-basis-wrap');
   const days=document.getElementById('payment-days-wrap');
   const custom=document.getElementById('payment-custom-text');
-  if(adv) adv.style.display=paymentTermType==='advance_balance'?'block':'none';
-  if(basis) basis.style.display=paymentTermType==='advance_balance'?'block':'none';
-  if(days) days.style.display=['advance_balance','after_completion','monthly_progress'].includes(paymentTermType)?'block':'none';
-  if(custom) custom.style.display=paymentTermType==='custom'?'block':'none';
+  const customAr=document.getElementById('payment-custom-text-ar');
+  const paymentSelect=document.getElementById('payment-term-type');
+  if(paymentSelect)paymentSelect.disabled=lcApplicable;
+  if(adv) adv.style.display=!lcApplicable&&paymentTermType==='advance_balance'?'block':'none';
+  if(basis) basis.style.display=!lcApplicable&&paymentTermType==='advance_balance'?'block':'none';
+  if(days) days.style.display=!lcApplicable&&['advance_balance','after_completion','monthly_progress'].includes(paymentTermType)?'block':'none';
+  if(custom) custom.style.display=!lcApplicable&&paymentTermType==='custom'?'block':'none';
+  if(customAr) customAr.style.display=!lcApplicable&&paymentTermType==='custom'?'block':'none';
+  updateLcControls();
 }
 function setPaymentTermType(type){
   paymentTermType=['full_advance','advance_balance','after_completion','monthly_progress','custom'].includes(type)?type:'full_advance';
@@ -3308,36 +4025,44 @@ function updatePaymentTerms(){
   paymentDueDays=parseInt(document.getElementById('payment-due-days')?.value)||0;
   paymentBalanceBasis=document.getElementById('payment-balance-basis')?.value||'monthly_progress';
   paymentCustomText=document.getElementById('payment-custom-text')?.value||'';
+  paymentCustomTextAr=document.getElementById('payment-custom-text-ar')?.value||'';
+  paymentConditionOverrideEn='';paymentConditionOverrideAr='';
   refreshPaymentCondition();
-  buildConds();
+  buildConds();renderQuot();
 }
 function updateProjectDuration(val){
   projectDuration = val.trim();
-  buildConds();
+  buildConds();renderQuot();
 }
 function isConditionEmphasized(cat=''){
   return cat==='Payment – Selected' || cat==='General – Extension Rates' || cat==='General – Mobilization & Demobilization';
 }
-function durationConditionText(){
+function durationConditionText(lang='en'){
+  if(lang==='ar')return conditionType==='engineer_rental'
+    ? `مدة المهمة: مدة تأجير المهندس بموجب هذا العرض هي ${projectDuration||'[تُحدد لاحقًا]'}، وتبدأ من تاريخ التعبئة أو البدء المؤكد.`
+    : `مدة المشروع: المدة الإجمالية لتنفيذ نطاق العمل بموجب هذا العرض هي ${projectDuration||'[تُحدد لاحقًا]'}، وتبدأ من تاريخ التعبئة ما لم يتم تمديدها باتفاق كتابي متبادل.`;
   return conditionType==='engineer_rental'
     ? `Assignment Duration: the engineer rental period under this offer is ${projectDuration||'[TBD]'}, commencing from the confirmed mobilization/start date.`
     : `Project Duration: the total duration for execution of the Scope of Work under this offer is ${projectDuration||'[TBD]'}, commencing from the mobilization date, unless otherwise extended by mutual written agreement.`;
 }
 function buildConds(){
   const el=document.getElementById('cond-list'); el.innerHTML='';
+  normalizeConditionMetadata(conds,conditionType);
+  const numbers=conditionDisplayNumbers(conds);
   const groups={};
-  conds.forEach((c,i)=>{ const sec=condSection(c.cat); (groups[sec]=groups[sec]||[]).push(i); });
+  conds.forEach((c,i)=>{ const sec=condSection(c.cat,c); (groups[sec]=groups[sec]||[]).push(i); });
   COND_SECTION_ORDER.concat(Object.keys(groups).filter(s=>!COND_SECTION_ORDER.includes(s))).forEach(sec=>{
     const idxs=groups[sec]; if(!idxs||!idxs.length)return;
     const h=document.createElement('div');
     h.className='cond-sec-hdr';
-    h.textContent=sec;
+    h.innerHTML=`<span>${escHtml(conditionSectionLabel(sec))}</span><button type="button" class="cond-sec-add" onclick='openSectionConditionEditor(${JSON.stringify(sec)})'>+ Add Condition</button>`;
     el.appendChild(h);
     if((conditionType==='testing' && sec==='Scope & Responsibilities') || (conditionType==='engineer_rental' && sec==='Rental Basis')){
       const d=document.createElement('div');
       d.className='cond-item';
+      const durationCond={text:durationConditionText('en'),textAr:durationConditionText('ar'),cat:'Duration'};
       d.innerHTML=`<input type="checkbox" checked disabled>
-        <div><div class="cond-text"><strong>${durationConditionText()}</strong></div><div class="cond-cat">Auto-generated from Project Duration field above</div></div>
+        <div style="flex:1"><div class="cond-text"><strong>${conditionCopyHtml(durationCond,false)}</strong></div><div class="cond-cat">${conditionLanguage==='ar'?'يُنشأ تلقائيًا من حقل مدة المشروع أعلاه':conditionLanguage==='both'?'Auto-generated from Project Duration / يُنشأ تلقائيًا من مدة المشروع':'Auto-generated from Project Duration field above'}</div></div>
         <span></span>`;
       el.appendChild(d);
     }
@@ -3345,18 +4070,70 @@ function buildConds(){
       const c=conds[i];
       const d=document.createElement('div');
       d.className='cond-item';
-      d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked">
-        <div><div class="cond-text${isConditionEmphasized(c.cat)?' cond-emphasis':''}">${escHtml(conditionDisplayText(c.text,c.cat))}</div><div class="cond-cat">${escHtml(c.cat)}</div></div>
-        <button class="cond-rm" onclick="conds.splice(${i},1);buildConds()" title="Remove">×</button>`;
+      d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked;renderQuot()">
+        <div style="flex:1"><div class="cond-text${isConditionEmphasized(c.cat)?' cond-emphasis':''}">${conditionCopyHtml(c,false)}</div><div class="cond-cat">Condition ${escHtml(numbers[i])} · ${escHtml(conditionCategoryLabel(c.cat))}${c.modified?'<span class="cond-modified">Modified</span>':''}</div></div>
+        <div class="cond-actions"><button class="cond-edit" onclick="openConditionEditor(${i})" title="Edit">✎ Edit</button>${c.modified?`<button class="cond-reset" onclick="resetConditionAt(${i})" title="Reset">↺</button>`:''}${c.custom?`<button class="cond-rm" onclick="removeCustomCondition(${i})" title="Remove">×</button>`:''}</div>`;
       el.appendChild(d);
     });
   });
 }
-function addCond(){
-  const ta=document.getElementById('new-cond');
-  const t=ta.value.trim();if(!t)return;
-  conds.push({text:t,cat:'Custom',enabled:true});
-  ta.value='';buildConds();
+function fillConditionSectionSelect(selected,locked=false){
+  const select=document.getElementById('condition-edit-section');if(!select)return;
+  select.innerHTML=COND_SECTION_ORDER.map(sec=>`<option value="${escHtml(sec)}">${escHtml(conditionSectionLabel(sec))}</option>`).join('');
+  select.value=selected||'Liability & General';select.disabled=!!locked;
+}
+function openConditionEditor(index){
+  const c=conds[index];if(!c)return;
+  conditionEditorMode='edit';conditionEditorIndex=index;conditionEditorSection=condSection(c.cat,c);
+  document.getElementById('condition-modal-title').textContent=c.cat==='Payment – Selected'?'Customize Payment Condition':'Edit Condition';
+  document.getElementById('condition-edit-en').value=c.text||'';
+  document.getElementById('condition-edit-ar').value=c.textAr||'';
+  fillConditionSectionSelect(conditionEditorSection,!c.custom);
+  const number=conditionDisplayNumbers(conds)[index]||'Automatic';document.getElementById('condition-edit-number').innerHTML=`<option>${escHtml(number)}</option>`;
+  const saveDefault=document.getElementById('condition-save-default');if(saveDefault)saveDefault.style.display=sfIsAdmin()&&!c.custom&&c.cat!=='Payment – Selected'?'':'none';
+  document.getElementById('condition-modal-overlay').classList.add('show');
+}
+function openSectionConditionEditor(section){
+  conditionEditorMode='add';conditionEditorIndex=-1;conditionEditorSection=section||'Liability & General';
+  document.getElementById('condition-modal-title').textContent='Add Condition to '+conditionSectionLabel(conditionEditorSection);
+  document.getElementById('condition-edit-en').value='';document.getElementById('condition-edit-ar').value='';
+  fillConditionSectionSelect(conditionEditorSection,false);document.getElementById('condition-edit-number').innerHTML='<option>Automatic suffix</option>';
+  const saveDefault=document.getElementById('condition-save-default');if(saveDefault)saveDefault.style.display='none';
+  document.getElementById('condition-modal-overlay').classList.add('show');
+}
+function closeConditionEditor(){document.getElementById('condition-modal-overlay')?.classList.remove('show');conditionEditorIndex=-1}
+function saveConditionEditor(){
+  const en=document.getElementById('condition-edit-en')?.value.trim()||'';
+  const ar=document.getElementById('condition-edit-ar')?.value.trim()||'';
+  const section=document.getElementById('condition-edit-section')?.value||conditionEditorSection||'Liability & General';
+  if(!en&&!ar){alert('Enter the condition in English or Arabic.');return}
+  if(conditionEditorMode==='add'){
+    conds.push({id:`custom_${Date.now()}_${Math.floor(Math.random()*10000)}`,text:en||ar,textAr:ar,cat:'Custom',section,custom:true,enabled:true,modified:true,defaultText:en||ar,defaultTextAr:ar});
+  }else{
+    const c=conds[conditionEditorIndex];if(!c)return;
+    c.text=en||ar;c.textAr=ar;c.modified=true;if(c.custom)c.section=section;
+    if(c.cat==='Payment – Selected'){paymentConditionOverrideEn=c.text;paymentConditionOverrideAr=c.textAr}
+  }
+  normalizeConditionMetadata(conds,conditionType);closeConditionEditor();buildConds();renderQuot();
+}
+function resetConditionAt(index){
+  const c=conds[index];if(!c)return;
+  if(c.cat==='Payment – Selected'){paymentConditionOverrideEn='';paymentConditionOverrideAr='';refreshPaymentCondition()}
+  else{c.text=c.defaultText||c.text;c.textAr=c.defaultTextAr||'';c.modified=false}
+  buildConds();renderQuot();
+}
+function resetConditionEditor(){
+  if(conditionEditorMode==='add'){document.getElementById('condition-edit-en').value='';document.getElementById('condition-edit-ar').value='';return}
+  resetConditionAt(conditionEditorIndex);closeConditionEditor();
+}
+function removeCustomCondition(index){const c=conds[index];if(!c?.custom)return;if(confirm('Remove this custom condition?')){conds.splice(index,1);buildConds();renderQuot()}}
+function saveConditionAsCompanyDefault(){
+  if(!sfIsAdmin()){alert('Only an Administrator can change company defaults.');return}
+  const c=conds[conditionEditorIndex];if(!c||c.custom||c.cat==='Payment – Selected')return;
+  const en=document.getElementById('condition-edit-en')?.value.trim()||c.text,ar=document.getElementById('condition-edit-ar')?.value.trim()||'';
+  const defaults=sfCompanyConditionDefaults();defaults[conditionDefaultKey(conditionType,c.coreNumber)]={text:en,textAr:ar,updatedAt:new Date().toISOString()};
+  localStorage.setItem(SF_COMPANY_CONDITION_DEFAULTS_KEY,JSON.stringify(defaults));c.text=en;c.textAr=ar;c.defaultText=en;c.defaultTextAr=ar;c.modified=false;
+  closeConditionEditor();buildConds();renderQuot();alert('Company default updated for this condition.');
 }
 
 function recalc(){
@@ -3411,6 +4188,7 @@ function recalc(){
   } else {
     bCommRow.style.display='none';
   }
+  updateLcAmountSummary();
 }
 
 function renderQuot(){
@@ -3507,12 +4285,22 @@ function getExportOpts(){
   };
 }
 
+let activeExportDocType='quotation';
+function togglePreviewArabicTranslation(includeArabic){
+  setIncludeArabicTranslation(includeArabic);
+  showExport(activeExportDocType);
+}
 function showExport(docType='quotation'){
   const actKeys=Object.keys(selActs), eqKeys=Object.keys(selEq);
   if(!actKeys.length&&!eqKeys.length&&!customSOW.length){alert('No items selected.');return;}
+  activeExportDocType=docType;
   const isInvoice = docType === 'invoice';
-  const docTitle = isInvoice ? 'INVOICE QUOTATION' : 'TESTING AND COMMISSIONING QUOTATION';
-  const refLabel = isInvoice ? 'Invoice Quotation Reference' : 'Quotation Reference';
+  const docTitle = isInvoice
+    ? quotationLabel('INVOICE QUOTATION','عرض سعر للفاتورة')
+    : quotationLabel('TESTING AND COMMISSIONING QUOTATION','عرض سعر لأعمال الاختبارات والتشغيل');
+  const refLabel = isInvoice
+    ? quotationLabel('Invoice Quotation Reference','مرجع عرض سعر الفاتورة')
+    : quotationLabel('Quotation Reference','مرجع عرض السعر');
   const client=escHtml(document.getElementById('client').value||'[Client Name]');
   const clientAttn=escHtml(document.getElementById('client-attn').value.trim());
   const clientTel=escHtml(document.getElementById('client-tel').value.trim());
@@ -3526,6 +4314,9 @@ function showExport(docType='quotation'){
   const prepName=escHtml(document.getElementById('prep-name').value.trim());
   const prepEmail=escHtml(document.getElementById('prep-email').value.trim());
   const substation=escHtml(document.getElementById('substation').value.trim())||'132 / 33 / 13.8 kV Substation';
+  const headerCompanyName=conditionLanguage==='both'
+    ? '<span dir="ltr">Sky Field Company Limited</span> / <span dir="rtl">شركة سماء الميدان المحدودة</span>'
+    : '<span dir="ltr">Sky Field Company Limited</span>';
   const r=rate(),h=hpd(),v=vatPct();
   const opt=getExportOpts();
   let actH=0,eqC=0,customC=0;
@@ -3575,21 +4366,21 @@ function showExport(docType='quotation'){
   const remColCount  = hasCustomRows ? 1 : 0;
   const actColCount  = snColCount + 1 + specColCount + (opt.actCodeCol?1:0) + (opt.actQtyCol?2:0) + (opt.actHrsCol?1:0) + remColCount + (opt.actCostCol?1:0);
   let actHeadCells = '';
-  if(hasCustomRows) actHeadCells += '<th class="col-sn" style="text-align:center">SN.</th>';
-  actHeadCells += '<th class="col-item">Activity / Item</th>';
-  if(hasCustomRows) actHeadCells += '<th class="col-spec">Specification</th>';
-  if(opt.actCodeCol) actHeadCells += '<th>Code</th>';
-  if(opt.actQtyCol) actHeadCells += '<th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th>';
-  if(opt.actHrsCol) actHeadCells += '<th class="col-rate" style="text-align:right">Hours / Rate</th>';
-  if(hasCustomRows) actHeadCells += '<th class="col-remark">Remark</th>';
-  if(opt.actCostCol) actHeadCells += '<th class="col-total" style="text-align:right">Cost (SAR)</th>';
+  if(hasCustomRows) actHeadCells += `<th class="col-sn" style="text-align:center">${quotationLabel('SN.','م')}</th>`;
+  actHeadCells += `<th class="col-item">${quotationLabel('Activity / Item','النشاط / البند')}</th>`;
+  if(hasCustomRows) actHeadCells += `<th class="col-spec">${quotationLabel('Specification','المواصفات')}</th>`;
+  if(opt.actCodeCol) actHeadCells += `<th>${quotationLabel('Code','الكود')}</th>`;
+  if(opt.actQtyCol) actHeadCells += `<th class="col-qty" style="text-align:right">${quotationLabel('QTY','الكمية')}</th><th class="col-unit" style="text-align:right">${quotationLabel('Unit','الوحدة')}</th>`;
+  if(opt.actHrsCol) actHeadCells += `<th class="col-rate" style="text-align:right">${quotationLabel('Hours / Rate','الساعات / السعر')}</th>`;
+  if(hasCustomRows) actHeadCells += `<th class="col-remark">${quotationLabel('Remark','ملاحظات')}</th>`;
+  if(opt.actCostCol) actHeadCells += `<th class="col-total" style="text-align:right">${quotationLabel('Cost (SAR)','التكلفة (ريال)')}</th>`;
 
   let actTableRows='';
   for(const [cat,rows] of Object.entries(catGroups)){
     const isCustomCat = rows.length && rows[0].isCustom;
     const catLblColspan = actColCount - (opt.actHrsCol?1:0) - (remColCount) - (opt.actCostCol?1:0);
     let catCells = `<td colspan="${catLblColspan}">${cat.toUpperCase()}</td>`;
-    if(opt.actHrsCol) catCells += `<td style="text-align:right">${isCustomCat?'RATE':'HOURS'}</td>`;
+    if(opt.actHrsCol) catCells += `<td style="text-align:right">${isCustomCat?quotationLabel('RATE','السعر'):quotationLabel('HOURS','الساعات')}</td>`;
     if(remColCount) catCells += `<td></td>`;
     if(opt.actCostCol) catCells += `<td></td>`;
     actTableRows+=`<tr class="cat-row">${catCells}</tr>`;
@@ -3621,7 +4412,7 @@ function showExport(docType='quotation'){
   if(opt.actHrsCol || opt.actCostCol){
     // colspan covers: SN(opt) + Activity + Spec(opt) + Code(opt)
     const lblColspan = snColCount + 1 + specColCount + (opt.actCodeCol?1:0);
-    let totCells = `<td colspan="${lblColspan}">TOTAL ACTIVITIES</td>`;
+    let totCells = `<td colspan="${lblColspan}">${quotationLabel('TOTAL ACTIVITIES','إجمالي الأنشطة')}</td>`;
     if(opt.actQtyCol) totCells += `<td></td><td></td>`;
     if(opt.actHrsCol) totCells += `<td class="col-rate" style="text-align:right">${requiredCustomSOW.length?'':actH.toFixed(2)+'h'}</td>`;
     if(remColCount) totCells += `<td></td>`;
@@ -3631,59 +4422,60 @@ function showExport(docType='quotation'){
 
   // ── Equipment table: dynamic columns ──
   const eqColCount = 1 + (opt.eqMfrCol?1:0) + (opt.eqDailyCol?1:0) + (opt.eqDaysCol?1:0) + (opt.eqTotalCol?1:0);
-  let eqHeadCells = '<th>Equipment / Kit</th>';
-  if(opt.eqMfrCol) eqHeadCells += '<th>Manufacturer</th>';
-  if(opt.eqDailyCol) eqHeadCells += '<th style="text-align:right">Daily Rate (SAR)</th>';
-  if(opt.eqDaysCol) eqHeadCells += '<th style="text-align:center">Days</th>';
-  if(opt.eqTotalCol) eqHeadCells += '<th style="text-align:right">Total (SAR)</th>';
+  let eqHeadCells = `<th>${quotationLabel('Equipment / Kit','الجهاز / الطقم')}</th>`;
+  if(opt.eqMfrCol) eqHeadCells += `<th>${quotationLabel('Manufacturer','المُصنّع')}</th>`;
+  if(opt.eqDailyCol) eqHeadCells += `<th style="text-align:right">${quotationLabel('Daily Rate (SAR)','السعر اليومي (ريال)')}</th>`;
+  if(opt.eqDaysCol) eqHeadCells += `<th style="text-align:center">${quotationLabel('Days','الأيام')}</th>`;
+  if(opt.eqTotalCol) eqHeadCells += `<th style="text-align:right">${quotationLabel('Total (SAR)','الإجمالي (ريال)')}</th>`;
 
   let eqTableRows='';
   eqRows.forEach(({kit,mfr,daily,q,cost})=>{
     let cells = `<td>${kit}</td>`;
     if(opt.eqMfrCol) cells += `<td>${mfr}</td>`;
     if(opt.eqDailyCol) cells += `<td style="text-align:right">SAR ${daily.toLocaleString()}</td>`;
-    if(opt.eqDaysCol) cells += `<td style="text-align:center">${q} day${q>1?'s':''}</td>`;
+    if(opt.eqDaysCol) cells += `<td style="text-align:center">${quotationUnit(q,'day','days','يوم')}</td>`;
     if(opt.eqTotalCol) cells += `<td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>`;
     eqTableRows+=`<tr>${cells}</tr>`;
   });
   if(eqRows.length){
-    let totCells = `<td>TOTAL EQUIPMENT RENTAL</td>`;
+    let totCells = `<td>${quotationLabel('TOTAL EQUIPMENT RENTAL','إجمالي تأجير الأجهزة')}</td>`;
     for(let i=1;i<eqColCount-1;i++) totCells += `<td></td>`;
     if(opt.eqTotalCol) totCells += `<td style="text-align:right">SAR ${fmtN(eqC)}</td>`;
     eqTableRows+=`<tr class="total-row">${totCells}</tr>`;
   }
 
-  const condGroups={};
+  const condGroups={},conditionNumbers=conditionDisplayNumbers(conds);
   activeConds.forEach(c=>{
-    const sec=condSection(c.cat);
-    (condGroups[sec]=condGroups[sec]||[]).push({text:conditionDisplayText(c.text,c.cat),cat:c.cat});
+    const sec=condSection(c.cat,c),index=conds.indexOf(c);
+    (condGroups[sec]=condGroups[sec]||[]).push({condition:c,number:conditionNumbers[index]||''});
   });
   const condRows = COND_SECTION_ORDER
     .filter(sec=>condGroups[sec]&&condGroups[sec].length)
-    .map(sec=>`<div class="doc-cond-sec-hdr">${escHtml(sec)}</div>${condGroups[sec].map(c=>`<div class="doc-cond${isConditionEmphasized(c.cat)?' doc-cond-emphasis':''}">${escHtml(c.text)}</div>`).join('')}`)
+    .map(sec=>`<div class="doc-cond-sec-hdr">${escHtml(conditionSectionLabel(sec))}</div>${condGroups[sec].map(item=>`<div class="doc-cond${isConditionEmphasized(item.condition.cat)?' doc-cond-emphasis':''}" data-cond-no="${escHtml(item.number)}">${conditionCopyHtml(item.condition,true)}</div>`).join('')}`)
     .join('');
   // Duration remains customer-facing but deliberately does not increment the
   // T&C counter, so the canonical legacy clauses keep their original numbers.
+  const durationCond={text:durationConditionText('en'),textAr:durationConditionText('ar'),cat:'Duration'};
   const condLeadRows = projectDuration
-    ? `<div class="doc-cond-note doc-cond-emphasis"><strong>Project Duration:</strong> ${escHtml(durationConditionText().replace(/^Project Duration:\s*/i,''))}</div>`
+    ? `<div class="doc-cond-note doc-cond-emphasis">${conditionCopyHtml(durationCond,true)}</div>`
     : '';
 
   const LOGO_SRC=document.querySelector('.logo-wrap img').src;
 
   // ── Cost Summary: optional rows ──
   let summaryRows='';
-  if(opt.sumHrs) summaryRows+=`<div class="doc-summary-row"><span class="sk">Total Engineering Hours</span><span class="sv">${actH.toFixed(2)} hrs</span></div>`;
-  if(opt.sumDays) summaryRows+=`<div class="doc-summary-row"><span class="sk">Total Working Days</span><span class="sv">${(actH/h).toFixed(2)} days</span></div>`;
-  if(opt.sumEng) summaryRows+=`<div class="doc-summary-row"><span class="sk">Engineer Cost</span><span class="sv">SAR ${fmtN(engC)}</span></div>`;
-  if(opt.sumEqRental && eqC) summaryRows+=`<div class="doc-summary-row"><span class="sk">Equipment Rental</span><span class="sv">SAR ${fmtN(eqC)}</span></div>`;
+  if(opt.sumHrs) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel('Total Engineering Hours','إجمالي الساعات الهندسية')}</span><span class="sv">${quotationUnit(actH.toFixed(2),'hr','hrs','ساعة')}</span></div>`;
+  if(opt.sumDays) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel('Total Working Days','إجمالي أيام العمل')}</span><span class="sv">${quotationUnit((actH/h).toFixed(2),'day','days','يوم')}</span></div>`;
+  if(opt.sumEng) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel('Engineer Cost','تكلفة المهندس')}</span><span class="sv">SAR ${fmtN(engC)}</span></div>`;
+  if(opt.sumEqRental && eqC) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel('Equipment Rental','تأجير الأجهزة')}</span><span class="sv">SAR ${fmtN(eqC)}</span></div>`;
   if(discA>0){
-    summaryRows+=`<div class="doc-summary-row"><span class="sk">Subtotal Before Discount</span><span class="sv">SAR ${fmtN(subBeforeDiscount)}</span></div>`;
-    summaryRows+=`<div class="doc-summary-row"><span class="sk">Discount ${discountType()==='fixed'?'(Fixed)':'('+discountValue()+'%)'}</span><span class="sv">- SAR ${fmtN(discA)}</span></div>`;
+    summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel('Subtotal Before Discount','المجموع الفرعي قبل الخصم')}</span><span class="sv">SAR ${fmtN(subBeforeDiscount)}</span></div>`;
+    summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel(`Discount ${discountType()==='fixed'?'(Fixed)':'('+discountValue()+'%)'}`,`الخصم ${discountType()==='fixed'?'(ثابت)':'('+discountValue()+'%)'}`)}</span><span class="sv">- SAR ${fmtN(discA)}</span></div>`;
   }
-  if(opt.sumSub) summaryRows+=`<div class="doc-summary-row"><span class="sk">Sub-Total${discA>0?' (After Discount)':''}</span><span class="sv">SAR ${fmtN(sub)}</span></div>`;
-  if(opt.sumVat && v) summaryRows+=`<div class="doc-summary-row"><span class="sk">VAT (${v}%)</span><span class="sv">SAR ${fmtN(vatA)}</span></div>`;
-  if(opt.sumTot) summaryRows+=`<div class="doc-summary-row"><span class="sk">TOTAL PRICE (SAR)</span><span class="sv">SAR ${fmtN(tot)}</span></div>`;
-  if(commPct>0) summaryRows+=`<div class="doc-summary-row"><span class="sk">Commission (${commPct}%)</span><span class="sv">- SAR ${fmtN(commA)}</span></div><div class="doc-summary-row"><span class="sk"><strong>NET TOTAL AFTER COMMISSION (SAR)</strong></span><span class="sv"><strong>SAR ${fmtN(netTot)}</strong></span></div>`;
+  if(opt.sumSub) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel(`Sub-Total${discA>0?' (After Discount)':''}`,`المجموع الفرعي${discA>0?' (بعد الخصم)':''}`)}</span><span class="sv">SAR ${fmtN(sub)}</span></div>`;
+  if(opt.sumVat && v) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel(`VAT (${v}%)`,`ضريبة القيمة المضافة (${v}%)`)}</span><span class="sv">SAR ${fmtN(vatA)}</span></div>`;
+  if(opt.sumTot) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel('TOTAL PRICE (SAR)','السعر الإجمالي (ريال)')}</span><span class="sv">SAR ${fmtN(tot)}</span></div>`;
+  if(commPct>0) summaryRows+=`<div class="doc-summary-row"><span class="sk">${quotationLabel(`Commission (${commPct}%)`,`العمولة (${commPct}%)`)}</span><span class="sv">- SAR ${fmtN(commA)}</span></div><div class="doc-summary-row"><span class="sk"><strong>${quotationLabel('NET TOTAL AFTER COMMISSION (SAR)','الصافي بعد العمولة (ريال)')}</strong></span><span class="sv"><strong>SAR ${fmtN(netTot)}</strong></span></div>`;
   const summaryEmpty = !summaryRows;
 
   // ── Optional Offer block: quoted separately, added AFTER the Grand Total, excluded from all totals/VAT ──
@@ -3713,24 +4505,24 @@ function showExport(docType='quotation'){
   // ── Signature block: optional boxes ──
   const sigSkyfieldBox = opt.sigSkyfield ? `
         <div class="doc-sig-box">
-          <div class="doc-sig-hdr" style="background:var(--navy)">SKY FIELD COMPANY</div>
+          <div class="doc-sig-hdr" style="background:var(--navy)">${quotationLabel('SKY FIELD COMPANY','شركة سماء الميدان')}</div>
           <div class="doc-sig-body">
-            Authorized Signature: ______________________<br>
-            Name: ______________________________________<br>
-            Title: _______________________________________<br>
-            Date: _______________________________________<br>
-            Stamp:
+            ${quotationLabel('Authorized Signature','التوقيع المعتمد')}: ______________________<br>
+            ${quotationLabel('Name','الاسم')}: ______________________________________<br>
+            ${quotationLabel('Title','الصفة')}: _______________________________________<br>
+            ${quotationLabel('Date','التاريخ')}: _______________________________________<br>
+            ${quotationLabel('Stamp','الختم')}:
           </div>
         </div>` : '';
   const sigClientBox = opt.sigClient ? `
         <div class="doc-sig-box">
-          <div class="doc-sig-hdr" style="background:var(--orange)">CLIENT ACCEPTANCE</div>
+          <div class="doc-sig-hdr" style="background:var(--orange)">${quotationLabel('CLIENT ACCEPTANCE','اعتماد العميل')}</div>
           <div class="doc-sig-body">
-            Authorized Signature: ______________________<br>
-            Name: ______________________________________<br>
-            Title: _______________________________________<br>
-            Date: _______________________________________<br>
-            Stamp:
+            ${quotationLabel('Authorized Signature','التوقيع المعتمد')}: ______________________<br>
+            ${quotationLabel('Name','الاسم')}: ______________________________________<br>
+            ${quotationLabel('Title','الصفة')}: _______________________________________<br>
+            ${quotationLabel('Date','التاريخ')}: _______________________________________<br>
+            ${quotationLabel('Stamp','الختم')}:
           </div>
         </div>` : '';
   const sigBlock = (sigSkyfieldBox||sigClientBox) ? `
@@ -3744,60 +4536,58 @@ function showExport(docType='quotation'){
       <div class="doc-header-right">
         <h2>${docTitle}</h2>
         <p style="margin-top:4px;font-size:12px;opacity:.8">${substation}</p>
-        <p style="font-size:11px;opacity:.6;margin-top:2px">شركة سماء الميدان المحدودة</p>
+        <p style="font-size:11px;opacity:.7;margin-top:2px">${headerCompanyName}</p>
         <p style="font-size:10.5px;opacity:.75;margin-top:4px">ISO 9001 · ISO 45001 · ISO 14001 Certified</p>
       </div>
     </div>
     <div class="doc-stripe"></div>
     <div class="doc-body">
       <div class="memo-grid">
-        <div class="doc-info-item"><span class="dk">To</span><span class="dv">${client}</span></div>
-        <div class="doc-info-item"><span class="dk">From</span><span class="dv">Sky Field Company Limited</span></div>
-        <div class="doc-info-item"><span class="dk">Attention</span><span class="dv">${clientAttn||'-'}</span></div>
-        <div class="doc-info-item"><span class="dk">Project</span><span class="dv">${projName}</span></div>
-        <div class="doc-info-item"><span class="dk">Client Telephone</span><span class="dv">${clientTel||'-'}</span></div>
-        <div class="doc-info-item"><span class="dk">Prepared By</span><span class="dv">${prepName||'Mahmoud Awwad'}</span></div>
-        <div class="doc-info-item"><span class="dk">Client Email</span><span class="dv">${clientEmail?`<a href="mailto:${clientEmail}">${clientEmail}</a>`:'-'}</span></div>
-        <div class="doc-info-item"><span class="dk">Prepared By Email</span><span class="dv">${prepEmail?`<a href="mailto:${prepEmail}">${prepEmail}</a>`:'-'}</span></div>
-        <div class="doc-info-item"><span class="dk">Station / Section</span><span class="dv">${stationName||'-'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('To','إلى')}</span><span class="dv">${client}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('From','من')}</span><span class="dv">${conditionLanguage==='ar'?'شركة سماء الميدان المحدودة':conditionLanguage==='both'?'Sky Field Company Limited / شركة سماء الميدان المحدودة':'Sky Field Company Limited'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Attention','عناية')}</span><span class="dv">${clientAttn||'-'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Project','المشروع')}</span><span class="dv">${projName}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Client Telephone','هاتف العميل')}</span><span class="dv">${clientTel||'-'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Prepared By','إعداد')}</span><span class="dv">${prepName||'Mahmoud Awwad'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Client Email','بريد العميل')}</span><span class="dv">${clientEmail?`<a href="mailto:${clientEmail}">${clientEmail}</a>`:'-'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Prepared By Email','بريد معد العرض')}</span><span class="dv">${prepEmail?`<a href="mailto:${prepEmail}">${prepEmail}</a>`:'-'}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Station / Section','المحطة / القسم')}</span><span class="dv">${stationName||'-'}</span></div>
         <div class="doc-info-item"><span class="dk">${refLabel}</span><span class="dv">${qno}</span></div>
-        <div class="doc-info-item"><span class="dk">Date</span><span class="dv">${dt}</span></div>
+        <div class="doc-info-item"><span class="dk">${quotationLabel('Date','التاريخ')}</span><span class="dv">${dt}</span></div>
       </div>
-      <div class="doc-info-item" style="margin-bottom:16px"><span class="dk">Subject</span><span class="dv">${qoRef||'-'}</span></div>
+      <div class="doc-info-item" style="margin-bottom:16px"><span class="dk">${quotationLabel('Subject','الموضوع')}</span><span class="dv">${qoRef||'-'}</span></div>
 
-      ${showAct?`<div class="doc-section-hdr">${actSecNum}. Scope of Work</div>
+      ${showAct?`<div class="doc-section-hdr">${actSecNum}. ${quotationLabel('Scope of Work','نطاق العمل')}</div>
       <table class="doc-table scope-table">
         <thead><tr>${actHeadCells}</tr></thead>
-        <tbody>${actTableRows||`<tr><td colspan="${actColCount}" style="text-align:center;color:#999">No activities selected</td></tr>`}</tbody>
+        <tbody>${actTableRows||`<tr><td colspan="${actColCount}" style="text-align:center;color:#999">${quotationLabel('No activities selected','لم يتم اختيار أنشطة')}</td></tr>`}</tbody>
       </table>`:''}
 
-      ${eqRows.length?`<div class="doc-section-hdr">${eqSecNum}. Equipment Rental</div>
+      ${eqRows.length?`<div class="doc-section-hdr">${eqSecNum}. ${quotationLabel('Equipment Rental','تأجير الأجهزة')}</div>
       <table class="doc-table">
         <thead><tr>${eqHeadCells}</tr></thead>
         <tbody>${eqTableRows}</tbody>
       </table>`:''}
 
-      ${!summaryEmpty?`<div class="doc-section-hdr">${sumSecNum}. Cost Summary</div>
+      ${!summaryEmpty?`<div class="doc-section-hdr">${sumSecNum}. ${quotationLabel('Cost Summary','ملخص التكلفة')}</div>
       <div class="doc-summary">
         ${summaryRows}
       </div>`:''}
 
-      ${hasOptional?`<div class="doc-section-hdr" style="border-left-color:var(--orange);background:var(--orange-light)">${optSecNum}. Optional Offer <span style="font-weight:400;font-size:11px;color:var(--gray-700)">(quoted separately — not included in the Grand Total above)</span></div>
+      ${hasOptional?`<div class="doc-section-hdr" style="border-left-color:var(--orange);background:var(--orange-light)">${optSecNum}. ${quotationLabel('Optional Offer','العرض الاختياري')} <span style="font-weight:400;font-size:11px;color:var(--gray-700)">${quotationLabel('(quoted separately — not included in the Grand Total above)','(يُسعر بصورة منفصلة — غير مشمول في الإجمالي أعلاه)')}</span></div>
       <table class="doc-table optional-table">
-        <thead><tr><th class="col-sn" style="text-align:center">SN.</th><th class="col-item">Activity / Item</th><th class="col-spec">Specification</th><th class="col-qty" style="text-align:right">QTY</th><th class="col-unit" style="text-align:right">Unit</th><th class="col-price">Unit Price<br>(SAR)</th><th class="col-remark">Remark</th><th class="col-total">Total<br>(SAR)</th></tr></thead>
+        <thead><tr><th class="col-sn" style="text-align:center">${quotationLabel('SN.','م')}</th><th class="col-item">${quotationLabel('Activity / Item','النشاط / البند')}</th><th class="col-spec">${quotationLabel('Specification','المواصفات')}</th><th class="col-qty" style="text-align:right">${quotationLabel('QTY','الكمية')}</th><th class="col-unit" style="text-align:right">${quotationLabel('Unit','الوحدة')}</th><th class="col-price">${quotationLabel('Unit Price (SAR)','سعر الوحدة (ريال)')}</th><th class="col-remark">${quotationLabel('Remark','ملاحظات')}</th><th class="col-total">${quotationLabel('Total (SAR)','الإجمالي (ريال)')}</th></tr></thead>
         <tbody>
           ${optRowsHTML}
         </tbody>
       </table>
-      <p style="font-size:11px;color:var(--gray-600);margin:-10px 0 16px 2px">The item(s) above are offered at the Client's option and are <strong>excluded</strong> from the Grand Total and VAT calculated in the Cost Summary. If accepted, they will be invoiced additionally at the price(s) stated.</p>`:''}
+      <p style="font-size:11px;color:var(--gray-600);margin:-10px 0 16px 2px">${quotationLabel("The item(s) above are offered at the Client's option and are excluded from the Grand Total and VAT calculated in the Cost Summary. If accepted, they will be invoiced additionally at the stated price(s).",'البنود أعلاه اختيارية للعميل وغير مشمولة في الإجمالي أو ضريبة القيمة المضافة المحتسبة في ملخص التكلفة. وعند قبولها تُفوتر بصورة إضافية بالأسعار المبينة.')}</p>`:''}
 
-      <div class="doc-section-hdr">${condSecNum}. Terms &amp; Conditions</div>
+      <div class="doc-section-hdr">${condSecNum}. ${quotationLabel('Terms & Conditions','الشروط والأحكام')}</div>
       <div class="doc-conds">${condLeadRows}${condRows}</div>
 
       ${sigBlock}
-      <p style="text-align:center;margin-top:20px;font-size:12px;color:var(--orange);font-weight:600">
-        Thank you for the opportunity to serve you. &nbsp;|&nbsp; شكراً لمنحنا فرصة خدمتكم
-      </p>
+      <p style="text-align:center;margin-top:20px;font-size:12px;color:var(--orange);font-weight:600">${quotationLabel('Thank you for the opportunity to serve you.','شكرًا لمنحنا فرصة خدمتكم.')}</p>
     </div>
     <div class="doc-footer">
       <div class="doc-footer-line1">Sky Field Company Limited &nbsp;|&nbsp; شركة سماء الميدان المحدودة</div>
@@ -3809,9 +4599,15 @@ function showExport(docType='quotation'){
   const oldPi=document.getElementById('proforma-preview'); if(oldPi){oldPi.classList.remove('print-active');oldPi.style.display='none';}
   document.getElementById('export-preview').classList.add('print-active');
   document.getElementById('export-preview').style.display='block';
+  const previewArabic=document.getElementById('preview-include-arabic');if(previewArabic)previewArabic.checked=conditionLanguage==='both';
+  document.body.classList.add('preview-open');
+  requestAnimationFrame(()=>document.getElementById('export-preview-close')?.focus());
   sfApplyPreviewTitle('quotation');
 }
-function closeExport(){ const el=document.getElementById('export-preview'); el.style.display='none'; el.classList.remove('print-active'); sfRestoreAppTitle(); }
+function closeExport(){ const el=document.getElementById('export-preview'); el.style.display='none'; el.classList.remove('print-active'); document.body.classList.remove('preview-open'); sfRestoreAppTitle(); }
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&document.getElementById('export-preview')?.style.display==='block')closeExport();
+});
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3934,12 +4730,16 @@ function collectQuotationSnapshot(type){
     const el=document.getElementById(id); if(el) meta[id]=el.value;
   });
   return {
-    version: 3,
+    version: 6,
     type: type||'quotation',
     meta,
     selActs: deepClone(selActs), selEq: deepClone(selEq), actQty: deepClone(actQty), eqQty: deepClone(eqQty),
     customSOW: deepClone(customSOW), customSOWLabel, sowSeq,
-    conds: deepClone(conds), conditionType, projectDuration, paymentTermType, paymentAdvancePct, paymentDueDays, paymentBalanceBasis, paymentCustomText,
+    conds: deepClone(conds), conditionType, conditionLanguage,
+    paymentMethod, lcApplicable, lcAdvancePct, lcType, lcAdvanceDays, lcOpenDays, lcDocumentDays,
+    lcPaymentBasis, lcCurrency, lcCalculationBasis, lcBeneficiary, lcBankCharges, lcRules, lcAcceptableBank, lcValidityDays, lcDocuments:deepClone(lcDocuments),
+    paymentConditionOverrideEn, paymentConditionOverrideAr,
+    projectDuration, paymentTermType, paymentAdvancePct, paymentDueDays, paymentBalanceBasis, paymentCustomText, paymentCustomTextAr,
     exportOptions: getExportOptionSnapshot(),
     attachments: deepClone(quoteAttachments),
     totals: calcQuotationTotals()
@@ -3966,13 +4766,33 @@ function applyQuotationSnapshot(snap){
   customSOW=deepClone(snap.customSOW||[]); normalizeCustomSOWHierarchy(); customSOWLabel=snap.customSOWLabel||'';
   sowSeq=snap.sowSeq || (customSOW.length+1);
   conditionType=snap.conditionType||'testing';
-  paymentTermType=snap.paymentTermType||'full_advance';
-  paymentAdvancePct=snap.paymentAdvancePct ?? 10;
+  // v6 keeps English as the mandatory base language. Legacy Arabic-only
+  // quotations are migrated to bilingual output so no translation is lost.
+  conditionLanguage=(snap.conditionLanguage==='both'||snap.conditionLanguage==='ar')?'both':'en';
+  paymentMethod=snap.paymentMethod==='lc'||snap.lcApplicable?'lc':'bank_transfer';
+  lcApplicable=paymentMethod==='lc';
+  lcAdvancePct=Math.min(100,Math.max(0,parseFloat(snap.lcAdvancePct??30)||0));
+  lcType=['irrevocable_at_sight','confirmed_at_sight'].includes(snap.lcType)?snap.lcType:'irrevocable_at_sight';
+  lcAdvanceDays=Math.max(0,parseInt(snap.lcAdvanceDays??7)||0);
+  lcOpenDays=Math.max(0,parseInt(snap.lcOpenDays??10)||0);
+  lcDocumentDays=Math.max(1,parseInt(snap.lcDocumentDays??14)||14);
+  lcPaymentBasis=['monthly_progress','after_completion'].includes(snap.lcPaymentBasis)?snap.lcPaymentBasis:'monthly_progress';
+  lcCurrency=['SAR','USD','EUR'].includes(snap.lcCurrency)?snap.lcCurrency:'SAR';
+  lcCalculationBasis=snap.lcCalculationBasis==='including_vat'?'including_vat':'before_vat';
+  lcBeneficiary=String(snap.lcBeneficiary||'Sky Field Company Limited');
+  lcBankCharges=['client','shared','beneficiary'].includes(snap.lcBankCharges)?snap.lcBankCharges:'shared';
+  lcRules=String(snap.lcRules||'UCP 600');lcAcceptableBank=String(snap.lcAcceptableBank||'');
+  lcValidityDays=Math.max(0,parseInt(snap.lcValidityDays??30)||0);
+  lcDocuments={commercial_invoice:true,delivery_note:true,progress_certificate:true,timesheet:false,...deepClone(snap.lcDocuments||{})};
+  paymentConditionOverrideEn=String(snap.paymentConditionOverrideEn||'');paymentConditionOverrideAr=String(snap.paymentConditionOverrideAr||'');
+  paymentTermType=snap.paymentTermType||'advance_balance';
+  paymentAdvancePct=snap.paymentAdvancePct ?? 30;
   paymentDueDays=snap.paymentDueDays ?? 30;
   paymentBalanceBasis=snap.paymentBalanceBasis||'monthly_progress';
   paymentCustomText=snap.paymentCustomText||'';
+  paymentCustomTextAr=snap.paymentCustomTextAr||'';
   const savedConds=deepClone(snap.conds||[]);
-  if(conditionType==='testing' && (((snap.version||0)<3) || savedConds.filter(c=>c.cat!=='Custom').length<40)){
+  if(conditionType==='testing' && (((snap.version||0)<3) || savedConds.filter(c=>c.cat!=='Custom'&&!c.custom).length<46)){
     // v1/v2 quotations used the shortened 22-condition set. Upgrade them to
     // the restored canonical set while retaining any user-added conditions
     // and matching enabled/disabled choices where a legacy category matches.
@@ -3988,17 +4808,21 @@ function applyQuotationSnapshot(snap){
   }else{
     conds=savedConds.length?savedConds:conditionTemplate(conditionType);
   }
+  conds=hydrateConditionTranslations(conds,conditionType);
   refreshPaymentCondition();
   projectDuration=snap.projectDuration||'';
   quoteAttachments=deepClone(snap.attachments||[]);
   const lbl=document.getElementById('custom-sow-label'); if(lbl)lbl.value=customSOWLabel;
   const dur=document.getElementById('proj-duration'); if(dur)dur.value=projectDuration;
   const ct=document.getElementById('condition-type'); if(ct)ct.value=conditionType;
+  const arToggle=document.getElementById('include-arabic-translation'); if(arToggle)arToggle.checked=conditionLanguage==='both';
+  const pm=document.getElementById('payment-method'); if(pm)pm.value=paymentMethod;
   const pt=document.getElementById('payment-term-type'); if(pt)pt.value=paymentTermType;
   const ap=document.getElementById('payment-advance-pct'); if(ap)ap.value=paymentAdvancePct;
   const pd=document.getElementById('payment-due-days'); if(pd)pd.value=paymentDueDays;
   const pb=document.getElementById('payment-balance-basis'); if(pb)pb.value=paymentBalanceBasis;
   const pc=document.getElementById('payment-custom-text'); if(pc)pc.value=paymentCustomText;
+  const pca=document.getElementById('payment-custom-text-ar'); if(pca)pca.value=paymentCustomTextAr;
   updatePaymentTermControls();
   setExportOptionSnapshot(snap.exportOptions||getExportOptionSnapshot());
   buildCatList(); buildTasks(); buildEq(); buildCustomSOWList(); buildConds(); recalc(); renderQuot(); renderQuoteAttachments(); updateActiveQuoteNote();
@@ -5183,7 +6007,7 @@ if(sfCurrentPayroll?.rows)(sfCurrentPayroll.rows||[]).forEach(r=>{if(r.carAllowa
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('qdate').value=new Date().toISOString().slice(0,10);
 importSkyFieldEngineers(false);
-buildCatList();buildTasks();buildEq();buildConds();buildCustomSOWList();renderQuoteAttachments();renderEngineers();renderCostLibrary();renderCostPlan();
+updatePaymentTermControls();buildCatList();buildTasks();buildEq();buildConds();buildCustomSOWList();renderQuoteAttachments();renderEngineers();renderCostLibrary();renderCostPlan();
 generateNextQuoteNumber();
 updateQuoteBadge();
 
@@ -5617,6 +6441,7 @@ renderProformas();
 
 // ── UI initialization ──
 if(!sfCurrentPayroll) sfCurrentPayroll=payrollBlankSheet();
+sfInitInterfaceLanguage();
 setupQuotationFieldGroups();
 updateSidebarCounts();
 window.addEventListener('online',()=>{
