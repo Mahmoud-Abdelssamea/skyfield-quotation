@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v27</title>
+<title>SKY FIELD – Management System v28</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -2137,6 +2137,16 @@ const SF_TEAM_MEMBERS = Object.freeze({
   'rabieshaban900@gmail.com':{name:'Rabie Shaban',role:'Commercial Administrator',blocked:['engineers','payroll']}
 });
 const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);
+// Quotations are edited by several team members against the same shared
+// workspace record set. Syncing them as one whole-array blob (the historic
+// behaviour of every other sfXxx key) meant that whichever browser saved
+// last would silently push its own, possibly-stale copy of the list over
+// everyone else's — deleting quotations another user had just created.
+// This key is therefore excluded from the generic blob sync below and is
+// instead synced one quotation at a time via the revision-aware sf_quote_*
+// functions (see sfSyncQuoteRecord / sfHydrateQuotationsFromRemote).
+const SF_PER_RECORD_SYNCED_KEYS = new Set(['sfSavedQuotations']);
+let sfQuoteSyncSnapshots = new Map(); // quote id -> last cloud-synced payload signature
 let sfNormalizedTablesAvailable = true;
 let sfCurrentUser = null;
 let sfWorkspaceUserId = '';
@@ -2218,7 +2228,7 @@ async function sfResolveWorkspaceUserId(user){
 }
 
 function sfIsManagedDataKey(key){return typeof key === 'string' && key.startsWith('sf') && !SF_LOCAL_ONLY_KEYS.has(key)}
-function sfShouldSyncKey(key){return sfIsManagedDataKey(key)&&sfCanSyncKeyForRole(key)}
+function sfShouldSyncKey(key){return sfIsManagedDataKey(key)&&sfCanSyncKeyForRole(key)&&!SF_PER_RECORD_SYNCED_KEYS.has(key)}
 
 function sfCollectLocalUserData(){
   const result = {};
@@ -2522,6 +2532,126 @@ async function sfMirrorCollection(table,records){
     console.warn('Normalized mirror unavailable for '+table,error);
   }
 }
+// ── Per-record quotation sync ───────────────────────────────────────────────
+// Every team member writes into the same shared workspace, so quotations can
+// no longer be synced as one whole-array blob per browser (see
+// SF_PER_RECORD_SYNCED_KEYS above). Instead each quotation is pushed and
+// pulled individually through the revision-aware sf_quote_* RPC functions,
+// so two people saving at the same time can never wipe out each other's
+// records — a mismatched revision comes back as a 'conflict' instead of
+// silently overwriting.
+function sfQuoteRecordFromRow(row){
+  const payload=(row&&row.quote_payload&&typeof row.quote_payload==='object')?row.quote_payload:{};
+  return {...payload,id:row.quote_id,_syncRevision:row.quote_revision,_syncUpdatedAt:row.quote_updated_at,_syncDeletedAt:row.quote_deleted_at};
+}
+function sfQuoteSyncPayloadKey(rec){
+  const {_syncRevision,_syncUpdatedAt,_syncDeletedAt,_syncState,...rest}=rec||{};
+  try{return JSON.stringify(rest);}catch(e){return String(rec&&rec.id||'');}
+}
+// Replaces the in-memory/local list with the authoritative shared copy from
+// the server. Called after login, on manual pull, and after a conflict.
+async function sfHydrateQuotationsFromRemote(){
+  if(!sfDb||!sfCurrentUser)return false;
+  try{
+    const {data,error}=await sfDb.rpc('sf_quote_list',{p_include_deleted:false});
+    if(error)throw error;
+    savedQuotes=(data||[]).map(sfQuoteRecordFromRow);
+    sfQuoteSyncSnapshots=new Map(savedQuotes.map(r=>[r.id,sfQuoteSyncPayloadKey(r)]));
+    const wasPaused=sfSyncPaused;sfSyncPaused=true;
+    try{localStorage.setItem('sfSavedQuotations',JSON.stringify(savedQuotes));}
+    finally{sfSyncPaused=wasPaused;}
+    return true;
+  }catch(error){
+    console.warn('Quotation cloud list unavailable, keeping local cache.',error);
+    return false;
+  }
+}
+// One-time migration helper: imports quotations that only exist in this
+// browser's legacy local copy into the shared table. Existing shared rows
+// are never overwritten (server-side "on conflict do nothing").
+async function sfImportLegacyQuotations(records){
+  if(!sfDb||!sfCurrentUser||!Array.isArray(records)||!records.length)return 0;
+  try{
+    const {data,error}=await sfDb.rpc('sf_quote_import_legacy',{p_records:records});
+    if(error)throw error;
+    return data||0;
+  }catch(error){
+    console.warn('Legacy quotation import failed.',error);
+    return 0;
+  }
+}
+// Pushes exactly one quotation, using its last-known revision so a
+// concurrent edit by another team member is detected instead of overwritten.
+async function sfSyncQuoteRecord(rec){
+  if(!sfDb||!sfCurrentUser||!rec||!rec.id)return {ok:false};
+  try{
+    const {data,error}=await sfDb.rpc('sf_quote_upsert',{
+      p_id:String(rec.id),
+      p_payload:rec,
+      p_expected_revision:(rec._syncRevision===undefined||rec._syncRevision===null)?null:rec._syncRevision
+    });
+    if(error)throw error;
+    const row=(data&&data[0])||null;
+    if(!row)return {ok:false};
+    if(row.operation_status==='conflict'||row.operation_status==='deleted'){
+      return {ok:false,status:row.operation_status,remote:sfQuoteRecordFromRow(row)};
+    }
+    const updated=sfQuoteRecordFromRow(row);
+    const idx=savedQuotes.findIndex(q=>q.id===updated.id);
+    if(idx>=0)savedQuotes[idx]=updated; else savedQuotes.unshift(updated);
+    sfQuoteSyncSnapshots.set(updated.id,sfQuoteSyncPayloadKey(updated));
+    const wasPaused=sfSyncPaused;sfSyncPaused=true;
+    try{localStorage.setItem('sfSavedQuotations',JSON.stringify(savedQuotes));}
+    finally{sfSyncPaused=wasPaused;}
+    return {ok:true,remote:updated};
+  }catch(error){
+    console.error('Quotation cloud sync failed for '+rec.id,error);
+    return {ok:false,error};
+  }
+}
+async function sfSyncQuoteDelete(rec){
+  if(!sfDb||!sfCurrentUser||!rec||!rec.id)return {ok:false};
+  try{
+    const {data,error}=await sfDb.rpc('sf_quote_soft_delete',{
+      p_id:String(rec.id),
+      p_expected_revision:(rec._syncRevision===undefined||rec._syncRevision===null)?null:rec._syncRevision
+    });
+    if(error)throw error;
+    const row=(data&&data[0])||null;
+    if(!row)return {ok:false};
+    if(row.operation_status==='conflict'){
+      return {ok:false,status:'conflict',remote:sfQuoteRecordFromRow(row)};
+    }
+    sfQuoteSyncSnapshots.delete(String(rec.id));
+    return {ok:true};
+  }catch(error){
+    console.error('Quotation cloud delete failed for '+rec.id,error);
+    return {ok:false,error};
+  }
+}
+// Pushes every quotation whose content changed since it was last confirmed
+// synced. This is the safety net that fires from saveSavedQuotes() no matter
+// which screen triggered the save, so no call site can forget to sync.
+async function sfSyncDirtyQuotes(){
+  if(!sfDb||!sfCurrentUser||typeof savedQuotes==='undefined')return {conflicts:[]};
+  const conflicts=[];
+  for(const rec of savedQuotes.slice()){
+    if(!rec||!rec.id)continue;
+    const key=sfQuoteSyncPayloadKey(rec);
+    if(sfQuoteSyncSnapshots.get(rec.id)===key)continue;
+    const result=await sfSyncQuoteRecord(rec);
+    if(!result.ok&&(result.status==='conflict'||result.status==='deleted')){
+      conflicts.push({id:rec.id,status:result.status,remote:result.remote});
+    }
+  }
+  if(conflicts.length){
+    await sfHydrateQuotationsFromRemote();
+    renderSavedQuotations();
+    const names=conflicts.map(c=>{const r=savedQuotes.find(q=>q.id===c.id);return r?r.number:c.id;}).join(', ');
+    setCloudStatus('error','Updated by another user, reloaded: '+names);
+  }
+  return {conflicts};
+}
 function sfProjectChildRecords(kind){
   const out=[];
   (typeof projects!=='undefined'?projects:[]).forEach(p=>{
@@ -2539,7 +2669,10 @@ function sfMirrorProjects(){
 }
 function sfMirrorAllCollections(){
   try{sfMirrorProjects()}catch(e){}
-  try{if(typeof savedQuotes!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.quotations,savedQuotes)}catch(e){}
+  // Quotations are intentionally NOT mirrored here — sfMirrorCollection's
+  // "delete anything not in this browser's local list" pruning is exactly
+  // what was silently deleting quotations created by other team members.
+  // Quotations are synced per-record instead; see sfSyncQuoteRecord.
   try{if(typeof proformaInvoices!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.invoices,proformaInvoices)}catch(e){}
   try{if(typeof sfEngineers!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.engineers,sfEngineers)}catch(e){}
   try{if(typeof sfPayrollSheets!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.payroll,sfPayrollSheets)}catch(e){}
@@ -2552,6 +2685,8 @@ async function sfCloudPullAll(){
     const rows=await sfFetchUserCloudRows(sfDataUserId());
     sfWriteCloudRowsToLocal(rows,true);
     sfReloadApplicationStateFromLocal();
+    try{await sfHydrateQuotationsFromRemote(); renderSavedQuotations(); updateQuoteBadge();}
+    catch(hydrateError){console.warn('Quotation cloud hydrate failed during pull.',hydrateError);}
     setCloudStatus('','Secure cloud connected');
     return rows;
   }catch(error){
@@ -2630,6 +2765,19 @@ async function sfActivateUser(user){
     }
     sessionStorage.setItem(hydrationKey,localAfter);
     sfReloadApplicationStateFromLocal();
+    try{
+      const legacyQuotesSnapshot=Array.isArray(savedQuotes)?JSON.parse(JSON.stringify(savedQuotes)):[];
+      const hydrated=await sfHydrateQuotationsFromRemote();
+      if(hydrated&&!savedQuotes.length&&legacyQuotesSnapshot.length){
+        // This browser still has quotations from before the shared per-record
+        // table existed (or from a previous local-only session). Import them
+        // once; rows already present in the shared workspace are never
+        // overwritten by this call.
+        await sfImportLegacyQuotations(legacyQuotesSnapshot);
+        await sfHydrateQuotationsFromRemote();
+      }
+      renderSavedQuotations(); updateQuoteBadge();
+    }catch(hydrateError){console.warn('Quotation cloud hydrate failed, using local cache.',hydrateError);}
     sfUnlockApp(user);
   })().catch(error=>{
     console.error('Secure activation failed',error);
@@ -4685,7 +4833,7 @@ let proformaStamp = localStorage.getItem('sfProformaStamp')||'';
 
 function quoteFmtSAR(n){ return 'SAR '+fmtN(parseFloat(n)||0); }
 function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
-function saveSavedQuotes(){
+async function saveSavedQuotes(){
   try{
     localStorage.setItem('sfSavedQuotations', JSON.stringify(savedQuotes));
   }catch(e){
@@ -4693,7 +4841,10 @@ function saveSavedQuotes(){
   }
   updateQuoteBadge(); updateSidebarCounts();
   if(document.body.dataset.module==='dashboard') renderDashboard();
-  sfMirrorCollection(SF_NORMALIZED_TABLES.quotations,savedQuotes);
+  // Pushes only quotations whose content actually changed, each with its own
+  // revision check, instead of overwriting the whole shared list — this is
+  // what stops one person's save from deleting another person's new quote.
+  return sfSyncDirtyQuotes();
 }
 function updateQuoteBadge(){ const b=document.getElementById('tab-quote-badge'); if(b)b.textContent=savedQuotes.length; }
 function invoiceNumberFromQuote(qno){
@@ -4919,9 +5070,14 @@ async function saveCurrentQuotation(forceNew=false, forceType){
   if(isNew&&qnoEl&&/^SF-Q-\d{4}-\d+$/i.test(qnoEl.value.trim())&&!sfReservedDocumentNumbers.has(qnoEl.value.trim()))qnoEl.value=await sfGetDocumentNumber('quotation',true);
   const rec=buildQuoteRecordFromCurrent(forceNew, forceType);
   const idx=savedQuotes.findIndex(q=>q.id===rec.id);
-  if(idx>=0) savedQuotes[idx]=rec; else savedQuotes.unshift(rec);
+  if(idx>=0){rec._syncRevision=savedQuotes[idx]._syncRevision; savedQuotes[idx]=rec;} else savedQuotes.unshift(rec);
   activeQuoteId=rec.id;
-  saveSavedQuotes(); renderSavedQuotations(); updateActiveQuoteNote();
+  const {conflicts}=await saveSavedQuotes();
+  renderSavedQuotations(); updateActiveQuoteNote();
+  if(conflicts.some(c=>c.id===rec.id)){
+    alert('Another team member saved this quotation at the same time. The latest shared version has been loaded — please check it and save again if your changes are still needed.');
+    return;
+  }
   alert((rec.type==='invoice'?'Invoice Quotation':'Quotation')+' saved: '+rec.number);
 }
 function loadQuotation(id){
@@ -4940,6 +5096,7 @@ function duplicateQuotation(id){
   snap.meta['station-name'] = (snap.meta['station-name']||src.station||'') + ' Copy';
   const totals=snap.totals || src.snapshot.totals || {};
   const rec={...deepClone(src), id:'quote_'+Date.now(), number:snap.meta.qno, station:snap.meta['station-name'], projectId:'', snapshot:snap, total:totals.tot||src.total, updatedAt:new Date().toISOString()};
+  delete rec._syncRevision; delete rec._syncUpdatedAt; delete rec._syncDeletedAt;
   savedQuotes.unshift(rec); saveSavedQuotes(); renderSavedQuotations();
 }
 function createInvoiceFromQuotation(id){
@@ -4959,10 +5116,16 @@ function createInvoiceFromQuotation(id){
   if(rec.projectId) syncProjectFromQuotation(rec);
   saveSavedQuotes(); applyQuotationSnapshot(snap); renderSavedQuotations(); showExport('invoice');
 }
-function deleteSavedQuotation(id){
+async function deleteSavedQuotation(id){
   const rec=savedQuotes.find(q=>q.id===id); if(!rec)return;
   if(!confirm('Delete saved '+(rec.type==='invoice'?'invoice quotation':'quotation')+' '+rec.number+'?')) return;
-  savedQuotes=savedQuotes.filter(q=>q.id!==id); if(activeQuoteId===id)activeQuoteId=''; saveSavedQuotes(); renderSavedQuotations(); updateActiveQuoteNote();
+  savedQuotes=savedQuotes.filter(q=>q.id!==id); if(activeQuoteId===id)activeQuoteId='';
+  await saveSavedQuotes(); renderSavedQuotations(); updateActiveQuoteNote();
+  const result=await sfSyncQuoteDelete(rec);
+  if(result.status==='conflict'){
+    alert('This quotation was changed by another team member just now, so it was not deleted. The latest version has been reloaded.');
+    await sfHydrateQuotationsFromRemote(); renderSavedQuotations(); updateActiveQuoteNote();
+  }
 }
 function newSeparateQuotation(){
   if((Object.keys(selActs).length||Object.keys(selEq).length||customSOW.length) && confirm('Save the current quotation before creating a new separate one?')) saveCurrentQuotation(false);
