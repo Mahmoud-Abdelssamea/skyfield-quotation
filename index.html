@@ -244,13 +244,13 @@
 
   /* ── EQUIPMENT ── */
   .eq-hdr-row {
-    display: grid; grid-template-columns: 22px 1fr 100px 72px 50px 72px 28px;
+    display: grid; grid-template-columns: 22px 1fr 100px 72px 50px 72px 60px;
     align-items: center; gap: 8px; padding: 8px 14px;
     background: var(--gray-100); border-bottom: 1px solid var(--gray-200);
     font-size: 10px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em;
   }
   .eq-row {
-    display: grid; grid-template-columns: 22px 1fr 100px 72px 50px 72px 28px;
+    display: grid; grid-template-columns: 22px 1fr 100px 72px 50px 72px 60px;
     align-items: center; gap: 8px; padding: 8px 14px;
     border-bottom: 1px solid var(--gray-100); cursor: pointer; transition: background .1s;
   }
@@ -264,6 +264,30 @@
   .eq-price.bold { color: var(--navy-mid); font-weight: 600; }
   .eq-total { font-size: 11.5px; font-weight: 600; color: var(--navy-mid); text-align: right; }
   .eq-list { max-height: 520px; overflow-y: auto; }
+  .equipment-toolbar {
+    display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;
+    border-bottom:1px solid var(--gray-200);background:#fff;
+  }
+  .equipment-toolbar-copy { display:flex;flex-direction:column;gap:2px; }
+  .equipment-toolbar-copy strong { color:var(--navy);font-size:12px; }
+  .equipment-toolbar-copy span { color:var(--gray-500);font-size:10.5px; }
+  .equipment-add-panel { display:none;padding:13px 14px;background:#f8fafc;border-bottom:1px solid var(--gray-200); }
+  .equipment-add-panel.open { display:block; }
+  .equipment-form-title { display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;color:var(--navy);font-size:12px; }
+  .equipment-form-grid { display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(150px,1fr) minmax(135px,.65fr) auto;gap:10px;align-items:end; }
+  .equipment-form-grid label { display:flex;flex-direction:column;gap:5px;color:var(--gray-600);font-size:10.5px;font-weight:600; }
+  .equipment-form-grid input { width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:8px 9px;font:11.5px 'Inter',Tahoma,sans-serif;outline:none;background:#fff; }
+  .equipment-form-grid input:focus { border-color:var(--orange);box-shadow:0 0 0 2px rgba(234,102,34,.1); }
+  .equipment-form-actions { display:flex;gap:6px;white-space:nowrap; }
+  .eq-manage-actions { display:flex;align-items:center;justify-content:flex-end;gap:3px; }
+  .eq-manage-btn { width:26px;height:25px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;color:var(--navy-mid);cursor:pointer;font-size:12px;line-height:1; }
+  .eq-manage-btn:hover { border-color:var(--orange);color:var(--orange); }
+  .eq-manage-btn.delete:hover { border-color:var(--red);color:var(--red); }
+  .eq-custom-badge { display:inline-flex;margin-left:5px;padding:1px 5px;border-radius:999px;background:#fff1e8;color:#b45309;font-size:8.5px;font-weight:700;vertical-align:middle; }
+  @media (max-width:800px){
+    .equipment-form-grid { grid-template-columns:1fr 1fr; }
+    .equipment-form-actions { grid-column:1/-1; }
+  }
 
   /* ── CONDITIONS ── */
   .cond-panel { padding: 14px 16px; }
@@ -1389,6 +1413,28 @@
 
     <!-- EQUIPMENT TAB -->
     <div id="tab-equipment" style="display:none">
+      <div class="equipment-toolbar">
+        <div class="equipment-toolbar-copy">
+          <strong>Equipment Library</strong>
+          <span>Add and manage equipment available for quotation rental.</span>
+        </div>
+        <button class="btn-sm" type="button" onclick="openQuoteEquipmentForm()">+ Add Equipment</button>
+      </div>
+      <div class="equipment-add-panel" id="quote-equipment-form">
+        <div class="equipment-form-title">
+          <strong id="quote-equipment-form-title">Add Equipment</strong>
+          <button class="cond-rm" type="button" title="Close" onclick="closeQuoteEquipmentForm()">×</button>
+        </div>
+        <div class="equipment-form-grid">
+          <label>Equipment / Kit Name *<input id="quote-equipment-name" type="text" maxlength="160" placeholder="Enter equipment name…"></label>
+          <label>Manufacturer<input id="quote-equipment-manufacturer" type="text" maxlength="100" placeholder="Enter manufacturer…"></label>
+          <label>Daily Rate (SAR)<input id="quote-equipment-daily" type="number" min="0" step="0.01" placeholder="0.00"></label>
+          <div class="equipment-form-actions">
+            <button class="btn-sm" type="button" onclick="saveQuoteEquipment()">Save Equipment</button>
+            <button class="btn-sm" type="button" onclick="closeQuoteEquipmentForm()">Cancel</button>
+          </div>
+        </div>
+      </div>
       <div class="eq-hdr-row">
         <span></span><span>Equipment / Kit</span><span>Manufacturer</span>
         <span style="text-align:right">Daily (SAR)</span><span title="Enter the number of rental days for this specific item — not automatically linked to the overall Project Duration field.">Days ⓘ</span>
@@ -2502,6 +2548,7 @@ function sfReloadApplicationStateFromLocal(){
   try{renderProformas()}catch(e){}
   try{renderEngineers()}catch(e){}
   try{payrollRender()}catch(e){}
+  try{if(typeof buildEq==='function')buildEq()}catch(e){console.warn('Equipment list reload failed',e)}
 }
 
 async function sfMirrorCollection(table,records){
@@ -3053,6 +3100,8 @@ function condSection(cat,condition){ return condition?.section || CAT_SECTION[ca
 
 let activeCat = Object.keys(ACTS)[0];
 let selActs = {}, selEq = {}, actQty = {}, eqQty = {};
+const SF_QUOTE_EQUIPMENT_KEY_PREFIX='sfQuoteEquipmentItem_';
+let editingQuoteEquipmentId='';
 let conditionType = 'testing';
 // Customer quotation text is always English-first. Arabic is optional and,
 // when enabled, is added to the header, fixed labels, and every condition.
@@ -3379,6 +3428,7 @@ const SF_UI_AR = Object.freeze({
   "e.g. Additional Scope of Work":"مثال: نطاق عمل إضافي","Type the main heading or priced scope item here (multiple lines allowed)...":"اكتب العنوان الرئيسي أو بند نطاق العمل المسعّر هنا (يمكن استخدام عدة أسطر)...",
   "+ Main Item":"+ بند رئيسي","+ Priced Item":"+ بند مسعّر","Split each line into a separate priced item instead of one combined item":"تحويل كل سطر إلى بند مسعّر مستقل بدلًا من بند واحد مجمع",
   "Equipment / Kit":"الجهاز / الطقم","Manufacturer":"المُصنّع","Daily (SAR)":"اليومي (ريال)","Days ⓘ":"الأيام ⓘ","Total (SAR)":"الإجمالي (ريال)",
+  "Equipment Library":"قائمة الأجهزة","Add and manage equipment available for quotation rental.":"أضف وعدّل الأجهزة المتاحة للتأجير في عرض السعر.","Add Equipment":"إضافة جهاز","Edit Equipment":"تعديل الجهاز","Equipment / Kit Name *":"اسم الجهاز / الطقم *","Enter equipment name…":"أدخل اسم الجهاز…","Enter manufacturer…":"أدخل اسم المُصنّع…","Save Equipment":"حفظ الجهاز","Custom equipment":"جهاز مضاف","Edit equipment":"تعديل الجهاز","Delete equipment":"حذف الجهاز",
   "Private internal estimate.":"تقدير داخلي خاص.","Manpower":"القوى العاملة","+ Add Engineer / Role":"+ إضافة مهندس / وظيفة","Engineer / Role":"المهندس / الوظيفة",
   "Qty":"الكمية","Duration":"المدة","Basis":"الأساس","Rate":"السعر","Cost":"التكلفة","Equipment Cost":"تكلفة الأجهزة","+ Add Equipment":"+ إضافة جهاز",
   "Other Project Costs":"تكاليف المشروع الأخرى","+ Add Cost":"+ إضافة تكلفة","Description":"الوصف","Amount (SAR)":"المبلغ (ريال)","Manpower Cost":"تكلفة القوى العاملة",
@@ -3978,34 +4028,117 @@ function buildCustomSOWList(){
   });
 }
 
+function loadCustomQuoteEquipment(){
+  const items=[];
+  for(let index=0;index<localStorage.length;index++){
+    const storageKey=localStorage.key(index);
+    if(!storageKey||!storageKey.startsWith(SF_QUOTE_EQUIPMENT_KEY_PREFIX))continue;
+    try{
+      const item=JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(!item||item.deleted||!item.id||!String(item.kit||'').trim())continue;
+      items.push({
+        id:String(item.id),kit:String(item.kit).trim(),mfr:String(item.mfr||'').trim()||'—',
+        daily:Math.max(0,parseFloat(item.daily)||0),updatedAt:item.updatedAt||''
+      });
+    }catch(error){console.warn('Skipped invalid custom equipment record:',storageKey,error)}
+  }
+  return items.sort((a,b)=>a.kit.localeCompare(b.kit));
+}
+function quoteEquipmentRows(){
+  const rows=EQ.map(([kit,mfr,daily],index)=>({key:String(index),kit,mfr,daily,custom:false}));
+  const known=new Set();
+  loadCustomQuoteEquipment().forEach(item=>{
+    const key='custom:'+item.id;known.add(key);rows.push({...item,key,custom:true});
+  });
+  // Keep equipment embedded in an older saved quotation visible even if it
+  // was later removed from the shared equipment library.
+  Object.entries(selEq).forEach(([key,item])=>{
+    if(!key.startsWith('custom:')||known.has(key)||!item)return;
+    rows.push({key,kit:item.kit||'Equipment',mfr:item.mfr||'—',daily:Math.max(0,parseFloat(item.daily)||0),custom:false,archived:true});
+  });
+  return rows;
+}
+function openQuoteEquipmentForm(id=''){
+  editingQuoteEquipmentId=String(id||'');
+  const item=editingQuoteEquipmentId?loadCustomQuoteEquipment().find(x=>x.id===editingQuoteEquipmentId):null;
+  document.getElementById('quote-equipment-name').value=item?.kit||'';
+  document.getElementById('quote-equipment-manufacturer').value=item?.mfr==='—'?'':(item?.mfr||'');
+  document.getElementById('quote-equipment-daily').value=item?.daily??'';
+  document.getElementById('quote-equipment-form-title').textContent=item?'Edit Equipment':'Add Equipment';
+  document.getElementById('quote-equipment-form').classList.add('open');
+  document.getElementById('quote-equipment-name').focus();
+}
+function closeQuoteEquipmentForm(){
+  editingQuoteEquipmentId='';
+  const panel=document.getElementById('quote-equipment-form');if(panel)panel.classList.remove('open');
+  ['quote-equipment-name','quote-equipment-manufacturer','quote-equipment-daily'].forEach(id=>{const input=document.getElementById(id);if(input)input.value=''});
+  const title=document.getElementById('quote-equipment-form-title');if(title)title.textContent='Add Equipment';
+}
+function saveQuoteEquipment(){
+  const kit=document.getElementById('quote-equipment-name').value.trim();
+  const mfr=document.getElementById('quote-equipment-manufacturer').value.trim()||'—';
+  const daily=parseFloat(document.getElementById('quote-equipment-daily').value);
+  if(!kit){alert('Equipment name is required.');document.getElementById('quote-equipment-name').focus();return}
+  if(!Number.isFinite(daily)||daily<0){alert('Enter a valid daily rate.');document.getElementById('quote-equipment-daily').focus();return}
+  const id=editingQuoteEquipmentId||('eq_'+Date.now()+'_'+Math.floor(Math.random()*100000));
+  const item={id,kit,mfr,daily,updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''};
+  localStorage.setItem(SF_QUOTE_EQUIPMENT_KEY_PREFIX+id,JSON.stringify(item));
+  const key='custom:'+id;
+  if(!editingQuoteEquipmentId||selEq[key]){
+    selEq[key]={kit,mfr,daily,custom:true,id};
+    if(!eqQty[key])eqQty[key]=1;
+  }
+  closeQuoteEquipmentForm();buildEq();recalc();renderQuot();
+}
+function deleteQuoteEquipment(id){
+  const item=loadCustomQuoteEquipment().find(x=>x.id===String(id));
+  if(!item||!confirm('Delete this custom equipment from the equipment list?'))return;
+  localStorage.setItem(SF_QUOTE_EQUIPMENT_KEY_PREFIX+item.id,JSON.stringify({id:item.id,deleted:true,updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''}));
+  const key='custom:'+item.id;delete selEq[key];delete eqQty[key];
+  if(editingQuoteEquipmentId===item.id)closeQuoteEquipmentForm();
+  buildEq();recalc();renderQuot();
+}
 function buildEq(){
-  const el=document.getElementById('eq-list'); el.innerHTML='';
-  EQ.forEach(([kit,mfr,daily],i)=>{
-    const chk=!!selEq[i];
-    const qty=eqQty[i]||1;
+  const el=document.getElementById('eq-list');if(!el)return;el.innerHTML='';
+  quoteEquipmentRows().forEach(({key,kit,mfr,daily,custom,id})=>{
+    const chk=!!selEq[key];
+    const qty=eqQty[key]||1;
     const row=document.createElement('div');
     row.className='eq-row'+(chk?' checked':'');
-    row.innerHTML=`<input type="checkbox" ${chk?'checked':''} onclick="event.stopPropagation()">
-      <div><div class="eq-name">${kit}</div><div class="eq-mfr">${mfr}</div></div>
-      <div class="eq-price">${mfr}</div>
-      <div class="eq-price bold">SAR ${daily.toLocaleString()}</div>
-      <input class="qty-inp" type="number" min="1" value="${qty}" title="Days" onclick="event.stopPropagation()" oninput="setEqQty(${i},this.value,'${kit.replace(/'/g,"\\'")}','${mfr}',${daily})">
+    row.innerHTML=`<input type="checkbox" ${chk?'checked':''}>
+      <div><div class="eq-name">${escHtml(kit)}${custom?'<span class="eq-custom-badge">Custom</span>':''}</div><div class="eq-mfr">${escHtml(mfr)}</div></div>
+      <div class="eq-price">${escHtml(mfr)}</div>
+      <div class="eq-price bold">SAR ${Number(daily).toLocaleString()}</div>
+      <input class="qty-inp eq-days-input" type="number" min="1" value="${qty}" title="Days">
       <div class="eq-total" style="color:${chk?'var(--navy-mid)':'var(--gray-200)'}">${chk?'SAR '+(daily*qty).toLocaleString():'—'}</div>
-      <div></div>`;
-    row.querySelector('input[type=checkbox]').onchange=e=>toggleEq(i,kit,mfr,daily,e.target.checked);
-    row.onclick=()=>{const cb=row.querySelector('input[type=checkbox]');cb.checked=!cb.checked;toggleEq(i,kit,mfr,daily,cb.checked)};
+      <div class="eq-manage-actions">${custom?'<button class="eq-manage-btn edit" type="button" title="Edit equipment">✎</button><button class="eq-manage-btn delete" type="button" title="Delete equipment">×</button>':''}</div>`;
+    const checkbox=row.querySelector('input[type=checkbox]');
+    const daysInput=row.querySelector('.eq-days-input');
+    checkbox.onclick=event=>event.stopPropagation();
+    checkbox.onchange=event=>toggleEq(key,kit,mfr,daily,event.target.checked,{custom,id});
+    daysInput.onclick=event=>event.stopPropagation();
+    daysInput.oninput=event=>setEqQty(key,event.target.value,kit,mfr,daily);
+    row.onclick=()=>{checkbox.checked=!checkbox.checked;toggleEq(key,kit,mfr,daily,checkbox.checked,{custom,id})};
+    if(custom){
+      const edit=row.querySelector('.eq-manage-btn.edit'),del=row.querySelector('.eq-manage-btn.delete');
+      edit.onclick=event=>{event.stopPropagation();openQuoteEquipmentForm(id)};
+      del.onclick=event=>{event.stopPropagation();deleteQuoteEquipment(id)};
+    }
     el.appendChild(row);
   });
 }
-function toggleEq(i,kit,mfr,daily,on){
-  if(on){selEq[i]={kit,mfr,daily};if(!eqQty[i])eqQty[i]=1;}
+function toggleEq(i,kit,mfr,daily,on,extra={}){
+  if(on){selEq[i]={kit,mfr,daily,...extra};if(!eqQty[i])eqQty[i]=1;}
   else delete selEq[i];
   buildEq();recalc();renderQuot();
 }
 function setEqQty(i,val,kit,mfr,daily){
   eqQty[i]=Math.max(1,parseInt(val)||1);
-  if(selEq[i])selEq[i]={kit,mfr,daily};
+  if(selEq[i])selEq[i]={...selEq[i],kit,mfr,daily};
   buildEq();recalc();renderQuot();
+}
+function removeSelectedEquipment(i){
+  delete selEq[i];delete eqQty[i];buildEq();recalc();renderQuot();
 }
 
 const SF_COMPANY_CONDITION_DEFAULTS_KEY='sfCompanyConditionDefaultsV1';
@@ -4387,12 +4520,14 @@ function renderQuot(){
     eqKeys.forEach(i=>{
       const e=selEq[i];const q=eqQty[i]||1;const cost=e.daily*q;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">Equipment</td><td>${e.kit}</td>
-        <td style="font-size:10px;color:var(--gray-500)">${e.mfr}</td>
-        <td><input class="qty-inp" type="number" min="1" value="${q}" oninput="setEqQty(${i},this.value,'${e.kit.replace(/'/g,"\\'")}','${e.mfr}',${e.daily})"></td>
+      tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">Equipment</td><td>${escHtml(e.kit)}</td>
+        <td style="font-size:10px;color:var(--gray-500)">${escHtml(e.mfr)}</td>
+        <td><input class="qty-inp" type="number" min="1" value="${q}"></td>
         <td style="font-weight:600;color:var(--navy-mid)">${q} day${q>1?'s':''}</td>
         <td style="font-weight:600">SAR ${fmtN(cost)}</td>
-        <td><button class="rm-btn" onclick="delete selEq[${i}];buildEq();recalc();renderQuot()">×</button></td>`;
+        <td><button class="rm-btn" type="button">×</button></td>`;
+      tr.querySelector('input').oninput=event=>setEqQty(i,event.target.value,e.kit,e.mfr,e.daily);
+      tr.querySelector('button').onclick=()=>removeSelectedEquipment(i);
       tbody.appendChild(tr);
     });
   }
@@ -4578,8 +4713,8 @@ function showExport(docType='quotation'){
 
   let eqTableRows='';
   eqRows.forEach(({kit,mfr,daily,q,cost})=>{
-    let cells = `<td>${kit}</td>`;
-    if(opt.eqMfrCol) cells += `<td>${mfr}</td>`;
+    let cells = `<td>${escHtml(kit)}</td>`;
+    if(opt.eqMfrCol) cells += `<td>${escHtml(mfr)}</td>`;
     if(opt.eqDailyCol) cells += `<td style="text-align:right">SAR ${daily.toLocaleString()}</td>`;
     if(opt.eqDaysCol) cells += `<td style="text-align:center">${quotationUnit(q,'day','days','يوم')}</td>`;
     if(opt.eqTotalCol) cells += `<td style="text-align:right;font-weight:600">SAR ${fmtN(cost)}</td>`;
