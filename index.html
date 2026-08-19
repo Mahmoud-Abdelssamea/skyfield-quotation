@@ -152,7 +152,7 @@
   .btn-sm.active-toggle { background: var(--orange); color: var(--white); border-color: var(--orange); }
   .task-list { max-height: 480px; overflow-y: auto; }
   .task-row {
-    display: grid; grid-template-columns: 22px 1fr 70px 60px 70px;
+    display: grid; grid-template-columns: 22px 1fr 70px 60px 70px 60px;
     align-items: center; gap: 10px; padding: 9px 14px;
     border-bottom: 1px solid var(--gray-100); cursor: pointer; transition: background .1s;
   }
@@ -165,6 +165,23 @@
   .task-dur { font-size: 11px; color: var(--gray-500); text-align: right; }
   .task-unit { font-size: 9px; color: var(--gray-500); }
   .task-hrs { font-size: 11px; font-weight: 600; color: var(--navy-mid); text-align: right; }
+  .scope-manager-panel { display:none;padding:12px 14px;background:#f8fafc;border-bottom:1px solid var(--gray-200); }
+  .scope-manager-panel.open { display:block; }
+  .scope-manager-title { display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;color:var(--navy);font-size:12px; }
+  .scope-manager-grid { display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(210px,1.6fr) minmax(120px,.8fr) 85px minmax(105px,.8fr) auto;gap:8px;align-items:end; }
+  .scope-manager-grid label { display:flex;flex-direction:column;gap:4px;color:var(--gray-600);font-size:10px;font-weight:600; }
+  .scope-manager-grid input { width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 8px;background:#fff;color:var(--gray-900);font:11px 'Inter',Tahoma,sans-serif;outline:none; }
+  .scope-manager-grid input:focus { border-color:var(--orange);box-shadow:0 0 0 2px rgba(234,102,34,.1); }
+  .scope-manager-actions { display:flex;gap:5px;white-space:nowrap; }
+  .task-manage-actions { display:flex;justify-content:flex-end;align-items:center;gap:3px; }
+  .task-manage-btn { width:26px;height:25px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;color:var(--navy-mid);cursor:pointer;font-size:12px;line-height:1; }
+  .task-manage-btn:hover { border-color:var(--orange);color:var(--orange); }
+  .task-manage-btn.delete:hover { border-color:var(--red);color:var(--red); }
+  .task-library-badge { display:inline-flex;margin-left:5px;padding:1px 5px;border-radius:999px;background:#fff1e8;color:#b45309;font-size:8px;font-weight:700;vertical-align:middle; }
+  @media (max-width:1050px){
+    .scope-manager-grid { grid-template-columns:1fr 1fr 1fr; }
+    .scope-manager-actions { grid-column:1/-1; }
+  }
   .qty-inp {
     width: 48px; border: 1px solid var(--gray-200); border-radius: 5px;
     padding: 4px 6px; font-size: 12px; text-align: center;
@@ -1379,8 +1396,26 @@
           <div class="task-header">
             <h3 id="tp-title">Select a category</h3>
             <div class="task-actions">
+              <button class="btn-sm" type="button" onclick="openScopeActivityForm()">+ Add Activity</button>
               <button class="btn-sm" onclick="selAll()">Select all</button>
               <button class="btn-sm" onclick="clrCat()">Clear</button>
+            </div>
+          </div>
+          <div class="scope-manager-panel" id="scope-activity-form">
+            <div class="scope-manager-title">
+              <strong id="scope-activity-form-title">Add Activity</strong>
+              <button class="cond-rm" type="button" title="Close" onclick="closeScopeActivityForm()">×</button>
+            </div>
+            <div class="scope-manager-grid">
+              <label>Category *<input id="scope-activity-category" type="text" list="scope-category-options" maxlength="120" placeholder="Select or enter category…"><datalist id="scope-category-options"></datalist></label>
+              <label>Activity / Test Name *<input id="scope-activity-name" type="text" maxlength="180" placeholder="Enter activity name…"></label>
+              <label>Activity Code *<input id="scope-activity-code" type="text" maxlength="80" placeholder="e.g. HV.TEST.01"></label>
+              <label>Hours *<input id="scope-activity-duration" type="number" min="0" step="0.01" placeholder="0.00"></label>
+              <label>Unit *<input id="scope-activity-unit" type="text" maxlength="60" placeholder="e.g. Feeder"></label>
+              <div class="scope-manager-actions">
+                <button class="btn-sm" type="button" onclick="saveScopeActivity()">Save Activity</button>
+                <button class="btn-sm" type="button" onclick="closeScopeActivityForm()">Cancel</button>
+              </div>
             </div>
           </div>
           <div class="task-list" id="task-list"></div>
@@ -2548,6 +2583,7 @@ function sfReloadApplicationStateFromLocal(){
   try{renderProformas()}catch(e){}
   try{renderEngineers()}catch(e){}
   try{payrollRender()}catch(e){}
+  try{if(typeof buildCatList==='function'){buildCatList();buildTasks()}}catch(e){console.warn('Scope of Work list reload failed',e)}
   try{if(typeof buildEq==='function')buildEq()}catch(e){console.warn('Equipment list reload failed',e)}
 }
 
@@ -3100,6 +3136,8 @@ function condSection(cat,condition){ return condition?.section || CAT_SECTION[ca
 
 let activeCat = Object.keys(ACTS)[0];
 let selActs = {}, selEq = {}, actQty = {}, eqQty = {};
+const SF_SCOPE_ACTIVITY_KEY_PREFIX='sfScopeActivityItem_';
+let editingScopeActivityId='';
 const SF_QUOTE_EQUIPMENT_KEY_PREFIX='sfQuoteEquipmentItem_';
 let editingQuoteEquipmentId='';
 let conditionType = 'testing';
@@ -3424,6 +3462,7 @@ const SF_UI_AR = Object.freeze({
   "Scope of Work":"نطاق العمل","Equipment Rental":"تأجير الأجهزة","MAIN":"رئيسي","Main Item":"بند رئيسي","Priced Item":"بند مسعّر","Sub-item":"بند فرعي","Custom":"مخصص","Optional":"اختياري","Specification":"المواصفات","Remark":"ملاحظات","Unit":"الوحدة","Unit Price (SAR)":"سعر الوحدة (ريال)",
   "Scope of Work menu (browse categories & select test items)":"قائمة نطاق العمل (استعراض الفئات واختيار بنود الاختبار)","Hide Scope of Work Menu":"إخفاء قائمة نطاق العمل","Show Scope of Work Menu":"إظهار قائمة نطاق العمل",
   "Search categories…":"البحث في الفئات…","Select a category":"اختر فئة","Select all":"تحديد الكل","Clear":"مسح",
+  "+ Add Activity":"+ إضافة نشاط","Add Activity":"إضافة نشاط","Edit Activity":"تعديل النشاط","Category *":"التصنيف *","Select or enter category…":"اختر التصنيف أو أدخل تصنيفًا جديدًا…","Activity / Test Name *":"اسم النشاط / الاختبار *","Enter activity name…":"أدخل اسم النشاط…","Activity Code *":"كود النشاط *","Hours *":"الساعات *","Unit *":"الوحدة *","Save Activity":"حفظ النشاط","Custom activity":"نشاط مضاف","Modified":"مُعدّل","Edit activity":"تعديل النشاط","Delete activity":"حذف النشاط","Restore default":"استعادة الافتراضي",
   "+ Add Scope of Work manually":"+ إضافة نطاق العمل يدويًا","Section description (shown in report instead of \"Custom / Manual Entry\")":"وصف القسم (يظهر في التقرير بدلًا من \"إدخال مخصص / يدوي\")",
   "e.g. Additional Scope of Work":"مثال: نطاق عمل إضافي","Type the main heading or priced scope item here (multiple lines allowed)...":"اكتب العنوان الرئيسي أو بند نطاق العمل المسعّر هنا (يمكن استخدام عدة أسطر)...",
   "+ Main Item":"+ بند رئيسي","+ Priced Item":"+ بند مسعّر","Split each line into a separate priced item instead of one combined item":"تحويل كل سطر إلى بند مسعّر مستقل بدلًا من بند واحد مجمع",
@@ -3703,58 +3742,202 @@ function filterCats(){
   buildCatList(q);
 }
 
+function scopeActivityBaseId(cat,code){
+  const input=String(cat||'')+'\u241f'+String(code||'');let hash=2166136261;
+  for(let index=0;index<input.length;index++)hash=Math.imul(hash^input.charCodeAt(index),16777619);
+  return 'base_'+(hash>>>0).toString(36);
+}
+function baseScopeActivityById(id){
+  for(const [cat,items] of Object.entries(ACTS)){
+    for(const [task,code,dur,unit] of items){
+      if(scopeActivityBaseId(cat,code)===String(id))return {id:String(id),cat,task,code,dur,unit,custom:false,modified:false};
+    }
+  }
+  return null;
+}
+function loadScopeActivityRecords(){
+  const records=[];
+  for(let index=0;index<localStorage.length;index++){
+    const storageKey=localStorage.key(index);
+    if(!storageKey||!storageKey.startsWith(SF_SCOPE_ACTIVITY_KEY_PREFIX))continue;
+    try{
+      const item=JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(!item||item.deleted||!item.id||!String(item.cat||'').trim()||!String(item.task||'').trim()||!String(item.code||'').trim())continue;
+      records.push({
+        id:String(item.id),cat:String(item.cat).trim(),task:String(item.task).trim(),code:String(item.code).trim(),
+        dur:Math.max(0,parseFloat(item.dur)||0),unit:String(item.unit||'').trim()||'Unit',custom:!!item.custom,
+        createdAt:item.createdAt||'',updatedAt:item.updatedAt||''
+      });
+    }catch(error){console.warn('Skipped invalid Scope of Work activity record:',storageKey,error)}
+  }
+  return records.sort((a,b)=>(a.createdAt||a.updatedAt||a.task).localeCompare(b.createdAt||b.updatedAt||b.task));
+}
+function scopeActivityCatalog(){
+  const catalog={},baseIndex=new Map();
+  Object.entries(ACTS).forEach(([cat,items])=>{
+    catalog[cat]=items.map(([task,code,dur,unit])=>{
+      const item={id:scopeActivityBaseId(cat,code),cat,task,code,dur,unit,custom:false,modified:false};
+      baseIndex.set(item.id,item);return item;
+    });
+  });
+  loadScopeActivityRecords().forEach(record=>{
+    if(record.custom){
+      (catalog[record.cat]=catalog[record.cat]||[]).push({...record,modified:false});return;
+    }
+    const base=baseIndex.get(record.id);if(!base)return;
+    catalog[base.cat]=(catalog[base.cat]||[]).filter(item=>item.id!==record.id);
+    (catalog[record.cat]=catalog[record.cat]||[]).push({...record,custom:false,modified:true});
+  });
+  Object.keys(catalog).forEach(cat=>{if(!catalog[cat].length)delete catalog[cat]});
+  return catalog;
+}
+function scopeActivityItemById(id){
+  const target=String(id||'');
+  for(const items of Object.values(scopeActivityCatalog())){
+    const item=items.find(row=>row.id===target);if(item)return item;
+  }
+  return null;
+}
+function renderScopeCategoryOptions(){
+  const list=document.getElementById('scope-category-options');if(!list)return;list.innerHTML='';
+  Object.keys(scopeActivityCatalog()).forEach(cat=>{const option=document.createElement('option');option.value=cat;list.appendChild(option)});
+}
+function openScopeActivityForm(id=''){
+  editingScopeActivityId=String(id||'');
+  const item=editingScopeActivityId?scopeActivityItemById(editingScopeActivityId):null;
+  renderScopeCategoryOptions();
+  document.getElementById('scope-activity-category').value=item?.cat||activeCat||'';
+  document.getElementById('scope-activity-name').value=item?.task||'';
+  document.getElementById('scope-activity-code').value=item?.code||'';
+  document.getElementById('scope-activity-duration').value=item?.dur??'';
+  document.getElementById('scope-activity-unit').value=item?.unit||'';
+  document.getElementById('scope-activity-form-title').textContent=item?'Edit Activity':'Add Activity';
+  document.getElementById('scope-activity-form').classList.add('open');
+  document.getElementById(item?'scope-activity-name':'scope-activity-category').focus();
+}
+function closeScopeActivityForm(){
+  editingScopeActivityId='';
+  const panel=document.getElementById('scope-activity-form');if(panel)panel.classList.remove('open');
+  ['scope-activity-category','scope-activity-name','scope-activity-code','scope-activity-duration','scope-activity-unit'].forEach(id=>{const input=document.getElementById(id);if(input)input.value=''});
+  const title=document.getElementById('scope-activity-form-title');if(title)title.textContent='Add Activity';
+}
+function refreshScopeActivityUi(){
+  buildCatList((document.getElementById('csearch')?.value||'').toLowerCase());buildTasks();recalc();renderQuot();
+}
+function saveScopeActivity(){
+  let cat=document.getElementById('scope-activity-category').value.trim();
+  const task=document.getElementById('scope-activity-name').value.trim();
+  const code=document.getElementById('scope-activity-code').value.trim();
+  const dur=parseFloat(document.getElementById('scope-activity-duration').value);
+  const unit=document.getElementById('scope-activity-unit').value.trim();
+  if(!cat){alert('Category is required.');document.getElementById('scope-activity-category').focus();return}
+  if(!task){alert('Activity name is required.');document.getElementById('scope-activity-name').focus();return}
+  if(!code){alert('Activity code is required.');document.getElementById('scope-activity-code').focus();return}
+  if(!Number.isFinite(dur)||dur<0){alert('Enter valid activity hours.');document.getElementById('scope-activity-duration').focus();return}
+  if(!unit){alert('Activity unit is required.');document.getElementById('scope-activity-unit').focus();return}
+  const matchingCategory=Object.keys(scopeActivityCatalog()).find(name=>name.toLowerCase()===cat.toLowerCase());
+  if(matchingCategory)cat=matchingCategory;
+  const current=editingScopeActivityId?scopeActivityItemById(editingScopeActivityId):null;
+  const duplicate=Object.values(scopeActivityCatalog()).flat().find(item=>item.id!==editingScopeActivityId&&item.cat.toLowerCase()===cat.toLowerCase()&&item.code.toLowerCase()===code.toLowerCase());
+  if(duplicate){alert('This activity code already exists in the selected category.');document.getElementById('scope-activity-code').focus();return}
+  const id=editingScopeActivityId||('scope_'+Date.now()+'_'+Math.floor(Math.random()*100000));
+  const existingRecord=loadScopeActivityRecords().find(item=>item.id===id);
+  const record={id,cat,task,code,dur,unit,custom:current?current.custom:true,createdAt:existingRecord?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''};
+  localStorage.setItem(SF_SCOPE_ACTIVITY_KEY_PREFIX+id,JSON.stringify(record));
+  const newKey=k(cat,code);
+  if(current){
+    const oldKey=k(current.cat,current.code);
+    if(selActs[oldKey]){
+      const qty=actQty[oldKey]||1;delete selActs[oldKey];delete actQty[oldKey];
+      selActs[newKey]={cat,task,code,dur,unit,scopeActivityId:id};actQty[newKey]=qty;
+    }
+  }else{
+    selActs[newKey]={cat,task,code,dur,unit,scopeActivityId:id};actQty[newKey]=1;
+  }
+  activeCat=cat;closeScopeActivityForm();refreshScopeActivityUi();
+}
+function deleteScopeActivity(id){
+  const item=scopeActivityItemById(id);if(!item?.custom||!confirm('Delete this added activity from the Scope of Work list?'))return;
+  localStorage.setItem(SF_SCOPE_ACTIVITY_KEY_PREFIX+item.id,JSON.stringify({id:item.id,deleted:true,updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''}));
+  const key=k(item.cat,item.code);delete selActs[key];delete actQty[key];
+  if(editingScopeActivityId===item.id)closeScopeActivityForm();refreshScopeActivityUi();
+}
+function restoreDefaultScopeActivity(id){
+  const item=scopeActivityItemById(id),base=baseScopeActivityById(id);
+  if(!item||item.custom||!item.modified||!base||!confirm('Restore the original values for this activity?'))return;
+  localStorage.setItem(SF_SCOPE_ACTIVITY_KEY_PREFIX+item.id,JSON.stringify({id:item.id,deleted:true,updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''}));
+  const oldKey=k(item.cat,item.code),newKey=k(base.cat,base.code);
+  if(selActs[oldKey]){
+    const qty=actQty[oldKey]||1;delete selActs[oldKey];delete actQty[oldKey];
+    selActs[newKey]={cat:base.cat,task:base.task,code:base.code,dur:base.dur,unit:base.unit};actQty[newKey]=qty;
+  }
+  activeCat=base.cat;if(editingScopeActivityId===item.id)closeScopeActivityForm();refreshScopeActivityUi();
+}
+
 function buildCatList(q=''){
-  const el=document.getElementById('cat-list'); el.innerHTML='';
-  Object.keys(ACTS).filter(c=>c.toLowerCase().includes(q)).forEach(c=>{
-    const hasSel=ACTS[c].some(([,code])=>selActs[k(c,code)]);
+  const el=document.getElementById('cat-list');if(!el)return;el.innerHTML='';
+  const catalog=scopeActivityCatalog(),categories=Object.keys(catalog);
+  if(!catalog[activeCat])activeCat=categories[0]||'';
+  categories.filter(c=>c.toLowerCase().includes(q)).forEach(c=>{
+    const hasSel=catalog[c].some(item=>selActs[k(c,item.code)]);
     const d=document.createElement('div');
     d.className='cat-item'+(c===activeCat?' active':'')+(hasSel?' has-sel':'');
-    d.innerHTML=`<span class="cat-dot"></span><span class="cat-name">${c}</span><span class="cat-badge">${ACTS[c].length}</span>`;
+    d.innerHTML=`<span class="cat-dot"></span><span class="cat-name">${escHtml(c)}</span><span class="cat-badge">${catalog[c].length}</span>`;
     d.onclick=()=>{activeCat=c;buildCatList(q);buildTasks()};
     el.appendChild(d);
   });
 }
 
 function buildTasks(){
-  const tasks=ACTS[activeCat]||[];
-  document.getElementById('tp-title').textContent=activeCat;
-  const el=document.getElementById('task-list'); el.innerHTML='';
-  tasks.forEach(([task,code,dur,unit],i)=>{
+  const tasks=scopeActivityCatalog()[activeCat]||[];
+  document.getElementById('tp-title').textContent=activeCat||'Select a category';
+  const el=document.getElementById('task-list');if(!el)return;el.innerHTML='';
+  tasks.forEach(item=>{
+    const {id,task,code,dur,unit,custom,modified}=item;
     const ky=k(activeCat,code);
     const chk=!!selActs[ky];
     const qty=actQty[ky]||1;
     const row=document.createElement('div');
     row.className='task-row'+(chk?' checked':'');
-    row.innerHTML=`<input type="checkbox" ${chk?'checked':''} onclick="event.stopPropagation()">
-      <div><div class="task-name">${task}</div><div class="task-code">${code}</div></div>
-      <div class="task-dur">${dur}h<div class="task-unit">${unit}</div></div>
-      <input class="qty-inp" type="number" min="1" value="${qty}" title="Qty" onclick="event.stopPropagation()" oninput="setActQty('${ky}',this.value,'${activeCat}','${task.replace(/'/g,"\\'")}','${code}',${dur},'${unit}')">
-      <div class="task-hrs">${chk?(dur*qty).toFixed(2)+'h':'—'}</div>`;
-    row.querySelector('input[type=checkbox]').onchange=e=>toggleAct(ky,activeCat,task,code,dur,unit,e.target.checked);
-    row.onclick=()=>{const cb=row.querySelector('input[type=checkbox]');cb.checked=!cb.checked;toggleAct(ky,activeCat,task,code,dur,unit,cb.checked)};
+    row.innerHTML=`<input type="checkbox" ${chk?'checked':''}>
+      <div><div class="task-name">${escHtml(task)}${custom?'<span class="task-library-badge">Custom</span>':modified?'<span class="task-library-badge">Modified</span>':''}</div><div class="task-code">${escHtml(code)}</div></div>
+      <div class="task-dur">${dur}h<div class="task-unit">${escHtml(unit)}</div></div>
+      <input class="qty-inp task-qty-input" type="number" min="1" value="${qty}" title="Qty">
+      <div class="task-hrs">${chk?(dur*qty).toFixed(2)+'h':'—'}</div>
+      <div class="task-manage-actions"><button class="task-manage-btn edit" type="button" title="Edit activity">✎</button>${custom?'<button class="task-manage-btn delete" type="button" title="Delete activity">×</button>':modified?'<button class="task-manage-btn restore" type="button" title="Restore default">↺</button>':''}</div>`;
+    const checkbox=row.querySelector('input[type=checkbox]'),qtyInput=row.querySelector('.task-qty-input');
+    checkbox.onclick=event=>event.stopPropagation();
+    checkbox.onchange=event=>toggleAct(ky,activeCat,task,code,dur,unit,event.target.checked,{scopeActivityId:id});
+    qtyInput.onclick=event=>event.stopPropagation();
+    qtyInput.oninput=event=>setActQty(ky,event.target.value,activeCat,task,code,dur,unit);
+    row.onclick=()=>{checkbox.checked=!checkbox.checked;toggleAct(ky,activeCat,task,code,dur,unit,checkbox.checked,{scopeActivityId:id})};
+    row.querySelector('.task-manage-btn.edit').onclick=event=>{event.stopPropagation();openScopeActivityForm(id)};
+    const deleteBtn=row.querySelector('.task-manage-btn.delete');if(deleteBtn)deleteBtn.onclick=event=>{event.stopPropagation();deleteScopeActivity(id)};
+    const restoreBtn=row.querySelector('.task-manage-btn.restore');if(restoreBtn)restoreBtn.onclick=event=>{event.stopPropagation();restoreDefaultScopeActivity(id)};
     el.appendChild(row);
   });
 }
 
-function toggleAct(ky,cat,task,code,dur,unit,on){
-  if(on){selActs[ky]={cat,task,code,dur,unit};if(!actQty[ky])actQty[ky]=1;}
+function toggleAct(ky,cat,task,code,dur,unit,on,extra={}){
+  if(on){selActs[ky]={cat,task,code,dur,unit,...extra};if(!actQty[ky])actQty[ky]=1;}
   else delete selActs[ky];
   buildTasks();buildCatList();recalc();renderQuot();
 }
 function setActQty(ky,val,cat,task,code,dur,unit){
   actQty[ky]=Math.max(1,parseInt(val)||1);
-  if(selActs[ky])selActs[ky]={cat,task,code,dur,unit};
+  if(selActs[ky])selActs[ky]={...selActs[ky],cat,task,code,dur,unit};
   recalc();renderQuot();
 }
 function selAll(){
-  ACTS[activeCat].forEach(([task,code,dur,unit])=>{
+  (scopeActivityCatalog()[activeCat]||[]).forEach(({id,task,code,dur,unit})=>{
     const ky=k(activeCat,code);selActs[ky]={cat:activeCat,task,code,dur,unit};
+    selActs[ky].scopeActivityId=id;
     if(!actQty[ky])actQty[ky]=1;
   });
   buildTasks();buildCatList();recalc();renderQuot();
 }
 function clrCat(){
-  ACTS[activeCat].forEach(([,code])=>delete selActs[k(activeCat,code)]);
+  (scopeActivityCatalog()[activeCat]||[]).forEach(({code})=>delete selActs[k(activeCat,code)]);
   buildTasks();buildCatList();recalc();renderQuot();
 }
 function clearAll(){
@@ -4486,12 +4669,14 @@ function renderQuot(){
       const a=selActs[ky];const q=actQty[ky]||1;
       const hrs=(a.dur*q);const cost=hrs/hpd()*rate();
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">${a.cat}</td><td>${a.task}</td>
-        <td style="font-family:monospace;font-size:10px;color:var(--gray-500)">${a.code}</td>
-        <td><input class="qty-inp" type="number" min="1" value="${q}" oninput="setActQty('${ky}',this.value,'${a.cat}','${a.task.replace(/'/g,"\\'")}','${a.code}',${a.dur},'${a.unit}')"></td>
+      tr.innerHTML=`<td style="font-size:10px;color:var(--gray-500)">${escHtml(a.cat)}</td><td>${escHtml(a.task)}</td>
+        <td style="font-family:monospace;font-size:10px;color:var(--gray-500)">${escHtml(a.code)}</td>
+        <td><input class="qty-inp" type="number" min="1" value="${q}"></td>
         <td style="font-weight:600;color:var(--navy-mid)">${hrs.toFixed(2)}h</td>
         <td style="font-weight:600">SAR ${fmtN(cost)}</td>
-        <td><button class="rm-btn" onclick="delete selActs['${ky}'];buildCatList();buildTasks();recalc();renderQuot()">×</button></td>`;
+        <td><button class="rm-btn" type="button">×</button></td>`;
+      tr.querySelector('input').oninput=event=>setActQty(ky,event.target.value,a.cat,a.task,a.code,a.dur,a.unit);
+      tr.querySelector('button').onclick=()=>{delete selActs[ky];delete actQty[ky];buildCatList();buildTasks();recalc();renderQuot()};
       tbody.appendChild(tr);
     });
     customSOW.forEach(c=>{
@@ -4662,7 +4847,7 @@ function showExport(docType='quotation'){
   for(const [cat,rows] of Object.entries(catGroups)){
     const isCustomCat = rows.length && rows[0].isCustom;
     const catLblColspan = actColCount - (opt.actHrsCol?1:0) - (remColCount) - (opt.actCostCol?1:0);
-    let catCells = `<td colspan="${catLblColspan}">${cat.toUpperCase()}</td>`;
+    let catCells = `<td colspan="${catLblColspan}">${escHtml(cat.toUpperCase())}</td>`;
     if(opt.actHrsCol) catCells += `<td style="text-align:right">${isCustomCat?quotationLabel('RATE','السعر'):quotationLabel('HOURS','الساعات')}</td>`;
     if(remColCount) catCells += `<td></td>`;
     if(opt.actCostCol) catCells += `<td></td>`;
@@ -4680,10 +4865,10 @@ function showExport(docType='quotation'){
         if(opt.actCostCol)cells+=`<td class="col-total" style="text-align:right;font-weight:600">${hierarchyType==='main'?'':fmtN(cost)}</td>`;
       }else{
         if(hasCustomRows)cells+='<td class="col-sn"></td>';
-        cells+=`<td class="col-item">${task}</td>`;
+        cells+=`<td class="col-item">${escHtml(task)}</td>`;
         if(hasCustomRows)cells+='<td class="col-spec"></td>';
-        if(opt.actCodeCol)cells+=`<td style="font-family:monospace;font-size:10px">${code}</td>`;
-        if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${unit}</td>`;
+        if(opt.actCodeCol)cells+=`<td style="font-family:monospace;font-size:10px">${escHtml(code)}</td>`;
+        if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${escHtml(unit)}</td>`;
         if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hrs.toFixed(2)}h</td>`;
         if(hasCustomRows)cells+='<td class="col-remark"></td>';
         if(opt.actCostCol)cells+=`<td class="col-total" style="text-align:right;font-weight:600">${fmtN(cost)}</td>`;
