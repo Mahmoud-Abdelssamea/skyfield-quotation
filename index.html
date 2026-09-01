@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SKY FIELD – Management System v28</title>
+<title>SKY FIELD – Management System v29</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
@@ -467,16 +467,21 @@
   .doc-table th { background: var(--navy); color: var(--white); padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .025em; overflow-wrap: normal; word-break: normal; }
   .doc-table td { padding: 6px 8px; border-bottom: 1px solid var(--gray-200); overflow-wrap: anywhere; word-break: normal; }
   .doc-table:not(.scope-table):not(.optional-table) th:first-child, .doc-table:not(.scope-table):not(.optional-table) td:first-child { width: 55%; }
-  .doc-table .col-price, .doc-table .col-total, .doc-table .col-rate { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
+  .doc-table td.col-price, .doc-table td.col-total, .doc-table td.col-rate { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
+  .doc-table th.col-price, .doc-table th.col-total, .doc-table th.col-rate {
+    white-space: normal; overflow-wrap: normal; word-break: keep-all; line-height: 1.2;
+  }
 
-  /* Scope table: keep Specification large while reserving enough room for totals. */
-  .scope-table th.col-sn, .scope-table td.col-sn { width: 6%; min-width:48px; }
-  .scope-table th.col-item, .scope-table td.col-item { width: 21%; }
-  .scope-table th.col-spec, .scope-table td.col-spec { width: 32%; }
-  .scope-table th.col-qty, .scope-table td.col-qty { width: 6%; }
-  .scope-table th.col-unit, .scope-table td.col-unit { width: 7%; }
-  .scope-table th.col-remark, .scope-table td.col-remark { width: 14%; }
-  .scope-table th.col-total, .scope-table td.col-total { width: 14%; text-align:right; }
+  /* Scope table widths are supplied by a dynamic colgroup because its optional
+     columns can change. This prevents CODE / QTY / UNIT / RATE / REMARK from
+     competing with a static 100% layout and collapsing into vertical text. */
+  .scope-table th, .scope-table td { min-width: 0; }
+  .scope-table th.col-sn, .scope-table td.col-sn { text-align:center; }
+  .scope-table th.col-code, .scope-table td.col-code { text-align:left; }
+  .scope-table th.col-qty, .scope-table td.col-qty,
+  .scope-table th.col-unit, .scope-table td.col-unit,
+  .scope-table th.col-rate, .scope-table td.col-rate,
+  .scope-table th.col-total, .scope-table td.col-total { text-align:right; }
 
   /* Optional table uses eight balanced columns; price values always stay horizontal. */
   .optional-table th.col-sn, .optional-table td.col-sn { width: 5%; min-width:42px; }
@@ -2218,16 +2223,13 @@ const SF_TEAM_MEMBERS = Object.freeze({
   'rabieshaban900@gmail.com':{name:'Rabie Shaban',role:'Commercial Administrator',blocked:['engineers','payroll']}
 });
 const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);
-// Quotations are edited by several team members against the same shared
-// workspace record set. Syncing them as one whole-array blob (the historic
-// behaviour of every other sfXxx key) meant that whichever browser saved
-// last would silently push its own, possibly-stale copy of the list over
-// everyone else's — deleting quotations another user had just created.
-// This key is therefore excluded from the generic blob sync below and is
-// instead synced one quotation at a time via the revision-aware sf_quote_*
-// functions (see sfSyncQuoteRecord / sfHydrateQuotationsFromRemote).
-const SF_PER_RECORD_SYNCED_KEYS = new Set(['sfSavedQuotations']);
+// Shared commercial collections must never be uploaded as whole-array blobs:
+// one stale browser could otherwise replace records created by a teammate.
+// Each record is synchronized separately with an optimistic revision check.
+const SF_PER_RECORD_SYNCED_KEYS = new Set(['sfSavedQuotations','sfProjects','sfProformaInvoices']);
 let sfQuoteSyncSnapshots = new Map(); // quote id -> last cloud-synced payload signature
+let sfProjectSyncSnapshots = new Map(); // project id -> last cloud-synced payload signature
+let sfInvoiceSyncSnapshots = new Map(); // proforma id -> last cloud-synced payload signature
 let sfNormalizedTablesAvailable = true;
 let sfCurrentUser = null;
 let sfWorkspaceUserId = '';
@@ -2325,11 +2327,11 @@ function sfLocalSnapshot(){
   return JSON.stringify(Object.keys(data).sort().map(k=>[k,data[k]]));
 }
 
-function sfClearLocalUserData(){
+function sfClearLocalUserData(preservePerRecord=false){
   const keys=[];
   for(let i=0;i<localStorage.length;i++){
     const key=localStorage.key(i);
-    if(sfIsManagedDataKey(key)) keys.push(key);
+    if(sfIsManagedDataKey(key)&&!(preservePerRecord&&SF_PER_RECORD_SYNCED_KEYS.has(key)))keys.push(key);
   }
   const wasPaused=sfSyncPaused;
   sfSyncPaused=true;
@@ -2553,7 +2555,10 @@ function sfWriteCloudRowsToLocal(rows,replace=true){
   const wasPaused=sfSyncPaused;
   sfSyncPaused=true;
   try{
-    if(replace)sfClearLocalUserData();
+    // Record-synced commercial caches are hydrated immediately afterwards.
+    // Preserve them during the legacy blob pull so local-only records can be
+    // imported additively instead of disappearing before migration.
+    if(replace)sfClearLocalUserData(true);
     (rows||[]).forEach(row=>{
       const str=typeof row.value==='string'?row.value:JSON.stringify(row.value);
       localStorage.setItem(row.key,str);
@@ -2569,13 +2574,8 @@ function sfReloadApplicationStateFromLocal(){
   try{if(typeof sfEngineers!=='undefined')sfEngineers=JSON.parse(localStorage.getItem('sfEngineers')||'[]')}catch(e){console.warn('Engineer state reload failed',e)}
   try{if(typeof sfDeletedDefaultEngineerIds!=='undefined')sfDeletedDefaultEngineerIds=new Set(JSON.parse(localStorage.getItem('sfDeletedDefaultEngineerIds')||'[]'))}catch(e){console.warn('Deleted engineer state reload failed',e)}
   try{if(typeof sfPayrollSheets!=='undefined')sfPayrollSheets=JSON.parse(localStorage.getItem('sfPayrollSheets')||'[]')}catch(e){console.warn('Payroll state reload failed',e)}
-  try{
-    if(typeof projects!=='undefined')projects=JSON.parse(localStorage.getItem('sfProjects')||'[]').map(p=>({...p,
-      pos:Array.isArray(p.pos)?p.pos:[],payments:(Array.isArray(p.payments)?p.payments:[]).map(sfNormalizePaymentRecord),
-      docs:Array.isArray(p.docs)?p.docs:[],quotes:Array.isArray(p.quotes)?p.quotes:[],proformas:Array.isArray(p.proformas)?p.proformas:[],
-      commissions:Array.isArray(p.commissions)?p.commissions:[],assignedEngineers:Array.isArray(p.assignedEngineers)?p.assignedEngineers:[],
-      actualExpenses:Array.isArray(p.actualExpenses)?p.actualExpenses:[]}));
-  }catch(e){console.warn('Project state reload failed',e)}
+  try{if(typeof projects!=='undefined')projects=JSON.parse(localStorage.getItem('sfProjects')||'[]').map(sfNormalizeProjectRecord)}
+  catch(e){console.warn('Project state reload failed',e)}
   try{updateSidebarCounts()}catch(e){}
   try{renderDashboard()}catch(e){}
   try{renderProjects()}catch(e){}
@@ -2735,6 +2735,155 @@ async function sfSyncDirtyQuotes(){
   }
   return {conflicts};
 }
+
+// ── Per-record Projects and Proforma Invoices sync ─────────────────────────
+// Both collections use the same record result shape from their dedicated
+// Supabase RPCs. Project payloads are normalized after hydration so older
+// records keep all expected arrays and payment fields.
+function sfSharedRecordFromRow(row){
+  const payload=(row&&row.record_payload&&typeof row.record_payload==='object')?row.record_payload:{};
+  return {...payload,id:row.record_id,_syncRevision:row.record_revision,_syncUpdatedAt:row.record_updated_at,_syncDeletedAt:row.record_deleted_at};
+}
+function sfRecordSyncPayloadKey(rec){
+  const {_syncRevision,_syncUpdatedAt,_syncDeletedAt,_syncState,...rest}=rec||{};
+  try{return JSON.stringify(rest)}catch(error){return String(rec?.id||'')}
+}
+function sfCachePerRecordCollection(key,records){
+  const wasPaused=sfSyncPaused;sfSyncPaused=true;
+  try{localStorage.setItem(key,JSON.stringify(records||[]))}
+  finally{sfSyncPaused=wasPaused}
+}
+async function sfHydrateProjectsFromRemote(){
+  if(!sfDb||!sfCurrentUser)return false;
+  try{
+    const {data,error}=await sfDb.rpc('sf_project_list',{p_include_deleted:false});if(error)throw error;
+    projects=(data||[]).map(sfSharedRecordFromRow).map(sfNormalizeProjectRecord);
+    sfProjectSyncSnapshots=new Map(projects.map(record=>[record.id,sfRecordSyncPayloadKey(record)]));
+    sfCachePerRecordCollection('sfProjects',projects);return true;
+  }catch(error){console.warn('Project record sync is unavailable; keeping the local cache.',error);return false}
+}
+async function sfHydrateInvoicesFromRemote(){
+  if(!sfDb||!sfCurrentUser)return false;
+  try{
+    const {data,error}=await sfDb.rpc('sf_invoice_list',{p_include_deleted:false});if(error)throw error;
+    proformaInvoices=(data||[]).map(sfSharedRecordFromRow);
+    sfInvoiceSyncSnapshots=new Map(proformaInvoices.map(record=>[record.id,sfRecordSyncPayloadKey(record)]));
+    sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);return true;
+  }catch(error){console.warn('Proforma Invoice record sync is unavailable; keeping the local cache.',error);return false}
+}
+async function sfImportLegacyProjects(records){
+  if(!sfDb||!sfCurrentUser||!Array.isArray(records)||!records.length)return 0;
+  try{const {data,error}=await sfDb.rpc('sf_project_import_legacy',{p_records:records});if(error)throw error;return data||0}
+  catch(error){console.warn('Legacy project import failed.',error);return 0}
+}
+async function sfImportLegacyInvoices(records){
+  if(!sfDb||!sfCurrentUser||!Array.isArray(records)||!records.length)return 0;
+  try{const {data,error}=await sfDb.rpc('sf_invoice_import_legacy',{p_records:records});if(error)throw error;return data||0}
+  catch(error){console.warn('Legacy Proforma Invoice import failed.',error);return 0}
+}
+async function sfSyncProjectRecord(record){
+  if(!sfDb||!sfCurrentUser||!record?.id)return {ok:false};
+  try{
+    const {data,error}=await sfDb.rpc('sf_project_upsert',{
+      p_id:String(record.id),p_payload:record,
+      p_expected_revision:(record._syncRevision===undefined||record._syncRevision===null)?null:record._syncRevision
+    });if(error)throw error;
+    const row=(data&&data[0])||null;if(!row)return {ok:false};
+    if(row.operation_status==='conflict'||row.operation_status==='deleted')return {ok:false,status:row.operation_status,remote:sfNormalizeProjectRecord(sfSharedRecordFromRow(row))};
+    const updated=sfNormalizeProjectRecord(sfSharedRecordFromRow(row)),index=projects.findIndex(item=>item.id===updated.id);
+    if(index>=0)projects[index]=updated;else projects.unshift(updated);
+    sfProjectSyncSnapshots.set(updated.id,sfRecordSyncPayloadKey(updated));sfCachePerRecordCollection('sfProjects',projects);
+    return {ok:true,remote:updated};
+  }catch(error){console.error('Project cloud sync failed for '+record.id,error);return {ok:false,error}}
+}
+async function sfSyncInvoiceRecord(record){
+  if(!sfDb||!sfCurrentUser||!record?.id)return {ok:false};
+  try{
+    const {data,error}=await sfDb.rpc('sf_invoice_upsert',{
+      p_id:String(record.id),p_payload:record,
+      p_expected_revision:(record._syncRevision===undefined||record._syncRevision===null)?null:record._syncRevision
+    });if(error)throw error;
+    const row=(data&&data[0])||null;if(!row)return {ok:false};
+    if(row.operation_status==='conflict'||row.operation_status==='deleted')return {ok:false,status:row.operation_status,remote:sfSharedRecordFromRow(row)};
+    const updated=sfSharedRecordFromRow(row),index=proformaInvoices.findIndex(item=>item.id===updated.id);
+    if(index>=0)proformaInvoices[index]=updated;else proformaInvoices.unshift(updated);
+    sfInvoiceSyncSnapshots.set(updated.id,sfRecordSyncPayloadKey(updated));sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);
+    return {ok:true,remote:updated};
+  }catch(error){console.error('Proforma Invoice cloud sync failed for '+record.id,error);return {ok:false,error}}
+}
+async function sfSyncProjectDelete(record){
+  if(!sfDb||!sfCurrentUser||!record?.id)return {ok:false};
+  try{
+    const {data,error}=await sfDb.rpc('sf_project_soft_delete',{
+      p_id:String(record.id),p_expected_revision:(record._syncRevision===undefined||record._syncRevision===null)?null:record._syncRevision
+    });if(error)throw error;
+    const row=(data&&data[0])||null;if(!row)return {ok:false};
+    if(row.operation_status==='conflict')return {ok:false,status:'conflict',remote:sfNormalizeProjectRecord(sfSharedRecordFromRow(row))};
+    sfProjectSyncSnapshots.delete(String(record.id));return {ok:true,status:row.operation_status};
+  }catch(error){console.error('Project cloud delete failed for '+record.id,error);return {ok:false,error}}
+}
+async function sfSyncInvoiceDelete(record){
+  if(!sfDb||!sfCurrentUser||!record?.id)return {ok:false};
+  try{
+    const {data,error}=await sfDb.rpc('sf_invoice_soft_delete',{
+      p_id:String(record.id),p_expected_revision:(record._syncRevision===undefined||record._syncRevision===null)?null:record._syncRevision
+    });if(error)throw error;
+    const row=(data&&data[0])||null;if(!row)return {ok:false};
+    if(row.operation_status==='conflict')return {ok:false,status:'conflict',remote:sfSharedRecordFromRow(row)};
+    sfInvoiceSyncSnapshots.delete(String(record.id));return {ok:true,status:row.operation_status};
+  }catch(error){console.error('Proforma Invoice cloud delete failed for '+record.id,error);return {ok:false,error}}
+}
+function sfApplyProjectConflict(conflict){
+  const index=projects.findIndex(item=>item.id===conflict.id);
+  if(conflict.status==='deleted'){if(index>=0)projects.splice(index,1);sfProjectSyncSnapshots.delete(conflict.id);return}
+  if(!conflict.remote)return;
+  if(index>=0)projects[index]=conflict.remote;else projects.unshift(conflict.remote);
+  sfProjectSyncSnapshots.set(conflict.id,sfRecordSyncPayloadKey(conflict.remote));
+}
+function sfApplyInvoiceConflict(conflict){
+  const index=proformaInvoices.findIndex(item=>item.id===conflict.id);
+  if(conflict.status==='deleted'){if(index>=0)proformaInvoices.splice(index,1);sfInvoiceSyncSnapshots.delete(conflict.id);return}
+  if(!conflict.remote)return;
+  if(index>=0)proformaInvoices[index]=conflict.remote;else proformaInvoices.unshift(conflict.remote);
+  sfInvoiceSyncSnapshots.set(conflict.id,sfRecordSyncPayloadKey(conflict.remote));
+}
+async function sfSyncDirtyProjects(){
+  if(!sfDb||!sfCurrentUser||typeof projects==='undefined')return {conflicts:[],errors:[]};
+  const conflicts=[],errors=[];
+  for(const record of projects.slice()){
+    if(!record?.id||sfProjectSyncSnapshots.get(record.id)===sfRecordSyncPayloadKey(record))continue;
+    const result=await sfSyncProjectRecord(record);
+    if(!result.ok&&(result.status==='conflict'||result.status==='deleted'))conflicts.push({id:record.id,status:result.status,remote:result.remote});
+    else if(!result.ok&&result.error)errors.push({id:record.id,error:result.error});
+  }
+  conflicts.forEach(sfApplyProjectConflict);sfCachePerRecordCollection('sfProjects',projects);
+  if(conflicts.length){
+    renderProjects();if(typeof renderProjectDetails==='function')renderProjectDetails();renderProformas();
+    const names=conflicts.map(item=>item.remote?.name||item.id).join(', ');
+    setCloudStatus('error','Project updated by another user: '+names);
+    alert('Another team member updated the same Project. The latest shared version has been loaded; please review it before editing again.');
+  }else if(errors.length)setCloudStatus('error','Project sync failed — local changes retained');
+  return {conflicts,errors};
+}
+async function sfSyncDirtyInvoices(){
+  if(!sfDb||!sfCurrentUser||typeof proformaInvoices==='undefined')return {conflicts:[],errors:[]};
+  const conflicts=[],errors=[];
+  for(const record of proformaInvoices.slice()){
+    if(!record?.id||sfInvoiceSyncSnapshots.get(record.id)===sfRecordSyncPayloadKey(record))continue;
+    const result=await sfSyncInvoiceRecord(record);
+    if(!result.ok&&(result.status==='conflict'||result.status==='deleted'))conflicts.push({id:record.id,status:result.status,remote:result.remote});
+    else if(!result.ok&&result.error)errors.push({id:record.id,error:result.error});
+  }
+  conflicts.forEach(sfApplyInvoiceConflict);sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);
+  if(conflicts.length){
+    renderProformas();updateProformaBadge();
+    const numbers=conflicts.map(item=>item.remote?.number||item.id).join(', ');
+    setCloudStatus('error','Invoice updated by another user: '+numbers);
+    alert('Another team member updated the same Proforma Invoice. The latest shared version has been loaded; please review it before editing again.');
+  }else if(errors.length)setCloudStatus('error','Invoice sync failed — local changes retained');
+  return {conflicts,errors};
+}
+
 function sfProjectChildRecords(kind){
   const out=[];
   (typeof projects!=='undefined'?projects:[]).forEach(p=>{
@@ -2744,11 +2893,10 @@ function sfProjectChildRecords(kind){
   return out;
 }
 function sfMirrorProjects(){
-  if(typeof projects==='undefined')return;
-  sfMirrorCollection(SF_NORMALIZED_TABLES.projects,projects);
-  sfMirrorCollection(SF_NORMALIZED_TABLES.payments,sfProjectChildRecords('payments'));
-  sfMirrorCollection(SF_NORMALIZED_TABLES.expenses,sfProjectChildRecords('expenses'));
-  sfMirrorCollection(SF_NORMALIZED_TABLES.documents,sfProjectChildRecords('documents'));
+  // Projects (including their embedded payments, expenses and documents) are
+  // authoritative per record. Never prune a shared table from one browser's
+  // local list: that was the source of the concurrent-save data loss.
+  return sfSyncDirtyProjects();
 }
 function sfMirrorAllCollections(){
   try{sfMirrorProjects()}catch(e){}
@@ -2756,7 +2904,7 @@ function sfMirrorAllCollections(){
   // "delete anything not in this browser's local list" pruning is exactly
   // what was silently deleting quotations created by other team members.
   // Quotations are synced per-record instead; see sfSyncQuoteRecord.
-  try{if(typeof proformaInvoices!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.invoices,proformaInvoices)}catch(e){}
+  try{if(typeof proformaInvoices!=='undefined')sfSyncDirtyInvoices()}catch(e){}
   try{if(typeof sfEngineers!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.engineers,sfEngineers)}catch(e){}
   try{if(typeof sfPayrollSheets!=='undefined')sfMirrorCollection(SF_NORMALIZED_TABLES.payroll,sfPayrollSheets)}catch(e){}
 }
@@ -2765,11 +2913,18 @@ async function sfCloudPullAll(){
   if(!sfDb||!sfCurrentUser){setCloudStatus('error','Sign in required');return [];}
   setCloudStatus('saving','Syncing securely…');
   try{
+    // Flush edits made while temporarily offline before refreshing the local
+    // view. Revision mismatches become explicit conflicts, never overwrites.
+    await sfSyncDirtyQuotes();await sfSyncDirtyProjects();await sfSyncDirtyInvoices();
     const rows=await sfFetchUserCloudRows(sfDataUserId());
     sfWriteCloudRowsToLocal(rows,true);
     sfReloadApplicationStateFromLocal();
     try{await sfHydrateQuotationsFromRemote(); renderSavedQuotations(); updateQuoteBadge();}
     catch(hydrateError){console.warn('Quotation cloud hydrate failed during pull.',hydrateError);}
+    try{await sfHydrateProjectsFromRemote();renderProjects();}
+    catch(hydrateError){console.warn('Project cloud hydrate failed during pull.',hydrateError);}
+    try{await sfHydrateInvoicesFromRemote();renderProformas();updateProformaBadge();}
+    catch(hydrateError){console.warn('Proforma Invoice cloud hydrate failed during pull.',hydrateError);}
     setCloudStatus('','Secure cloud connected');
     return rows;
   }catch(error){
@@ -2803,6 +2958,18 @@ async function sfActivateUser(user){
     const localBefore=sfLocalSnapshot();
     const mayMigrateLegacy=!previousUserId||previousUserId===dataUserId;
     const legacyLocal=mayMigrateLegacy?sfCollectLocalUserData():{};
+    const readLegacyRecordCache=key=>{
+      if(!mayMigrateLegacy)return [];
+      try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[]}
+      catch(error){return []}
+    };
+    // Capture these before any account/cache cleanup. They are excluded from
+    // the old blob transport and are imported additively after authentication.
+    const legacyRecordCaches={
+      quotations:readLegacyRecordCache('sfSavedQuotations'),
+      projects:readLegacyRecordCache('sfProjects'),
+      invoices:readLegacyRecordCache('sfProformaInvoices')
+    };
 
     if(previousUserId&&previousUserId!==dataUserId)sfClearLocalUserData();
 
@@ -2849,18 +3016,20 @@ async function sfActivateUser(user){
     sessionStorage.setItem(hydrationKey,localAfter);
     sfReloadApplicationStateFromLocal();
     try{
-      const legacyQuotesSnapshot=Array.isArray(savedQuotes)?JSON.parse(JSON.stringify(savedQuotes)):[];
-      const hydrated=await sfHydrateQuotationsFromRemote();
-      if(hydrated&&!savedQuotes.length&&legacyQuotesSnapshot.length){
-        // This browser still has quotations from before the shared per-record
-        // table existed (or from a previous local-only session). Import them
-        // once; rows already present in the shared workspace are never
-        // overwritten by this call.
-        await sfImportLegacyQuotations(legacyQuotesSnapshot);
-        await sfHydrateQuotationsFromRemote();
-      }
-      renderSavedQuotations(); updateQuoteBadge();
-    }catch(hydrateError){console.warn('Quotation cloud hydrate failed, using local cache.',hydrateError);}
+      const legacyQuotesSnapshot=legacyRecordCaches.quotations.length?legacyRecordCaches.quotations:(Array.isArray(savedQuotes)?JSON.parse(JSON.stringify(savedQuotes)):[]);
+      const legacyProjectsSnapshot=legacyRecordCaches.projects.length?legacyRecordCaches.projects:(Array.isArray(projects)?JSON.parse(JSON.stringify(projects)):[]);
+      const legacyInvoicesSnapshot=legacyRecordCaches.invoices.length?legacyRecordCaches.invoices:(Array.isArray(proformaInvoices)?JSON.parse(JSON.stringify(proformaInvoices)):[]);
+      // These imports are additive only. Existing shared IDs are not changed,
+      // while a record found only in an older/local browser cache is rescued
+      // even when the shared table already contains other records.
+      await sfImportLegacyQuotations(legacyQuotesSnapshot);
+      await sfImportLegacyProjects(legacyProjectsSnapshot);
+      await sfImportLegacyInvoices(legacyInvoicesSnapshot);
+      await sfHydrateQuotationsFromRemote();
+      await sfHydrateProjectsFromRemote();
+      await sfHydrateInvoicesFromRemote();
+      renderSavedQuotations();updateQuoteBadge();renderProjects();renderProformas();updateProformaBadge();
+    }catch(hydrateError){console.warn('Commercial record hydration failed, using the local cache.',hydrateError);}
     sfUnlockApp(user);
   })().catch(error=>{
     console.error('Secure activation failed',error);
@@ -4833,11 +5002,32 @@ function showExport(docType='quotation'){
   const specColCount = hasCustomRows ? 1 : 0;
   const remColCount  = hasCustomRows ? 1 : 0;
   const actColCount  = snColCount + 1 + specColCount + (opt.actCodeCol?1:0) + (opt.actQtyCol?2:0) + (opt.actHrsCol?1:0) + remColCount + (opt.actCostCol?1:0);
+  // Build an exact width map for whichever optional columns are visible.
+  // The weights are normalized to 100%, so enabling Rate never squeezes it
+  // between Unit and Remark or forces its heading to render letter-by-letter.
+  const actColumnDefs = hasCustomRows
+    ? [
+        ['sn',5],['item',18],['spec',30],
+        ...(opt.actCodeCol?[['code',6]]:[]),
+        ...(opt.actQtyCol?[['qty',5],['unit',7]]:[]),
+        ...(opt.actHrsCol?[['rate',12]]:[]),
+        ['remark',7],
+        ...(opt.actCostCol?[['total',10]]:[])
+      ]
+    : [
+        ['item',45],
+        ...(opt.actCodeCol?[['code',12]]:[]),
+        ...(opt.actQtyCol?[['qty',8],['unit',10]]:[]),
+        ...(opt.actHrsCol?[['rate',12]]:[]),
+        ...(opt.actCostCol?[['total',13]]:[])
+      ];
+  const actColumnWeight = actColumnDefs.reduce((sum,col)=>sum+col[1],0) || 1;
+  const actColgroup = `<colgroup>${actColumnDefs.map(([name,weight])=>`<col class="col-${name}" style="width:${(weight/actColumnWeight*100).toFixed(3)}%">`).join('')}</colgroup>`;
   let actHeadCells = '';
   if(hasCustomRows) actHeadCells += `<th class="col-sn" style="text-align:center">${quotationLabel('SN.','م')}</th>`;
   actHeadCells += `<th class="col-item">${quotationLabel('Activity / Item','النشاط / البند')}</th>`;
   if(hasCustomRows) actHeadCells += `<th class="col-spec">${quotationLabel('Specification','المواصفات')}</th>`;
-  if(opt.actCodeCol) actHeadCells += `<th>${quotationLabel('Code','الكود')}</th>`;
+  if(opt.actCodeCol) actHeadCells += `<th class="col-code">${quotationLabel('Code','الكود')}</th>`;
   if(opt.actQtyCol) actHeadCells += `<th class="col-qty" style="text-align:right">${quotationLabel('QTY','الكمية')}</th><th class="col-unit" style="text-align:right">${quotationLabel('Unit','الوحدة')}</th>`;
   if(opt.actHrsCol) actHeadCells += `<th class="col-rate" style="text-align:right">${quotationLabel('Hours / Rate','الساعات / السعر')}</th>`;
   if(hasCustomRows) actHeadCells += `<th class="col-remark">${quotationLabel('Remark','ملاحظات')}</th>`;
@@ -4858,7 +5048,7 @@ function showExport(docType='quotation'){
         cells += `<td class="col-sn" style="text-align:center;font-weight:700;font-size:11px">${escHtml(sn||'')}</td>`;
         cells += `<td class="col-item" style="white-space:pre-line">${escHtml(task)}</td>`;
         cells += `<td class="col-spec" style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>`;
-        if(opt.actCodeCol)cells+='<td></td>';
+        if(opt.actCodeCol)cells+='<td class="col-code"></td>';
         if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${hierarchyType==='main'?'':q}</td><td class="col-unit" style="text-align:right">${hierarchyType==='main'?'':escHtml(unit||'')}</td>`;
         if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hierarchyType==='main'?'':`${fmtN(unitPrice)}/unit`}</td>`;
         cells += `<td class="col-remark" style="white-space:pre-line;font-size:10.5px">${escHtml(remark||'')}</td>`;
@@ -4867,7 +5057,7 @@ function showExport(docType='quotation'){
         if(hasCustomRows)cells+='<td class="col-sn"></td>';
         cells+=`<td class="col-item">${escHtml(task)}</td>`;
         if(hasCustomRows)cells+='<td class="col-spec"></td>';
-        if(opt.actCodeCol)cells+=`<td style="font-family:monospace;font-size:10px">${escHtml(code)}</td>`;
+        if(opt.actCodeCol)cells+=`<td class="col-code" style="font-family:monospace;font-size:10px">${escHtml(code)}</td>`;
         if(opt.actQtyCol)cells+=`<td class="col-qty" style="text-align:right">${q}</td><td class="col-unit" style="text-align:right">${escHtml(unit)}</td>`;
         if(opt.actHrsCol)cells+=`<td class="col-rate" style="text-align:right">${hrs.toFixed(2)}h</td>`;
         if(hasCustomRows)cells+='<td class="col-remark"></td>';
@@ -5027,6 +5217,7 @@ function showExport(docType='quotation'){
 
       ${showAct?`<div class="doc-section-hdr">${actSecNum}. ${quotationLabel('Scope of Work','نطاق العمل')}</div>
       <table class="doc-table scope-table">
+        ${actColgroup}
         <thead><tr>${actHeadCells}</tr></thead>
         <tbody>${actTableRows||`<tr><td colspan="${actColCount}" style="text-align:center;color:#999">${quotationLabel('No activities selected','لم يتم اختيار أنشطة')}</td></tr>`}</tbody>
       </table>`:''}
@@ -5509,11 +5700,11 @@ function roundMoney(n){ return Math.round((Number(n)||0)*100)/100; }
 function fmtMoney(n){ return (Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtPiSAR(n){ return 'SAR '+fmtMoney(n); }
 function saveProformaStore(){
-  try{ localStorage.setItem('sfProformaInvoices',JSON.stringify(proformaInvoices)); }
+  try{ sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices); }
   catch(e){ alert('Could not save the Proforma Invoice — browser storage is full. Remove large attachments or old records and try again.'); throw e; }
   updateSidebarCounts();
   if(document.body.dataset.module==='dashboard') renderDashboard();
-  sfMirrorCollection(SF_NORMALIZED_TABLES.invoices,proformaInvoices);
+  return sfSyncDirtyInvoices();
 }
 function updateProformaBadge(){ const b=document.getElementById('tab-pi-badge'); if(b)b.textContent=proformaInvoices.length; }
 async function nextProformaNumber(reserve=false){return sfGetDocumentNumber('invoice',reserve)}
@@ -6042,10 +6233,17 @@ async function saveProforma(openPreview){
     sourceQuoteId:src.id||old?.sourceQuoteId||'',sourceQuotation:src.number||old?.sourceQuotation||'',projectId:src.projectId||old?.projectId||'',quoteSnapshot:deepClone(src.snapshot||src.quoteSnapshot||{}),
     lineItems:calc.lineItems,totals:calc,
     itemsProgress:opts.basis==='progress'?calc.lineItems.map(li=>({itemId:li.itemId||'',key:progressItemKey(li),legacyKey:progressLegacyKey(li),description:li.description,priorPct:li.priorPct,currentPct:li.currentPct,deltaPct:li.deltaPct})):[],
-    createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
+    createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),
+    _syncRevision:old?._syncRevision,_syncUpdatedAt:old?._syncUpdatedAt,_syncDeletedAt:old?._syncDeletedAt
   };
   const idx=proformaInvoices.findIndex(p=>p.id===rec.id);if(idx>=0)proformaInvoices[idx]=rec;else proformaInvoices.unshift(rec);
-  commitProformaSequence(rec.number);activeProformaId=rec.id;saveProformaStore();updateProformaBadge();
+  commitProformaSequence(rec.number);activeProformaId=rec.id;
+  const syncResult=await saveProformaStore();updateProformaBadge();
+  if(syncResult.conflicts.some(item=>item.id===rec.id))return;
+  if(syncResult.errors.some(item=>item.id===rec.id)){
+    alert('The Proforma Invoice remains in the local cache, but it could not be saved to the shared database. Please keep this window open and retry after the connection is restored.');
+    return;
+  }
   if(rec.projectId)syncProformaToProject(rec);
   renderProformas();closeProformaModal();
   if(openPreview)previewProforma(rec.id);else alert('Proforma Invoice saved: '+rec.number);
@@ -6132,18 +6330,32 @@ function createNextProforma(id){
   document.getElementById('pi-payment-desc').value=autoPaymentDescription(src,'progress',0);
 }
 function removeProformaFromProjects(id){
+  let changed=false;
   projects.forEach(p=>{
-    p.proformas=(p.proformas||[]).filter(x=>x.id!==id);
-    p.payments=(p.payments||[]).filter(x=>x.sourceProformaId!==id);
-  });saveProjects();
+    const proformas=p.proformas||[],payments=p.payments||[];
+    const nextProformas=proformas.filter(x=>x.id!==id),nextPayments=payments.filter(x=>x.sourceProformaId!==id);
+    if(nextProformas.length!==proformas.length||nextPayments.length!==payments.length){
+      p.proformas=nextProformas;p.payments=nextPayments;p.updatedAt=new Date().toISOString();changed=true;
+    }
+  });
+  return changed?saveProjects():Promise.resolve({conflicts:[],errors:[]});
 }
-function deleteProforma(id){
+async function deleteProforma(id){
   const pi=proformaInvoices.find(p=>p.id===id);if(!pi)return;
   const linkedProject=projects.find(p=>p.id===pi.projectId);
   const linkedPayment=(linkedProject?.payments||[]).find(x=>x.sourceProformaId===id);
   if(linkedPayment?.status==='paid'&&!confirm('This invoice is marked as PAID. Deleting it will also remove the linked payment record. Continue?'))return;
   if(!confirm('Delete Proforma Invoice '+pi.number+'?'))return;
-  proformaInvoices=proformaInvoices.filter(p=>p.id!==id);removeProformaFromProjects(id);saveProformaStore();if(activeProformaId===id)activeProformaId='';renderProformas();
+  const deletion=await sfSyncInvoiceDelete(pi);
+  if(!deletion.ok&&deletion.status==='conflict'){
+    sfApplyInvoiceConflict({id,status:'conflict',remote:deletion.remote});sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);renderProformas();
+    alert('This Proforma Invoice was changed by another team member. The latest version has been loaded and was not deleted.');return;
+  }
+  if(!deletion.ok){alert('The Proforma Invoice was not deleted because the shared database could not confirm the operation. Please retry when the connection is available.');return;}
+  proformaInvoices=proformaInvoices.filter(p=>p.id!==id);sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);
+  const projectSync=await removeProformaFromProjects(id);
+  if(projectSync.conflicts.length||projectSync.errors.length)alert('The invoice was deleted, but its linked Project changed at the same time. Review the Project payment ledger before continuing.');
+  if(activeProformaId===id)activeProformaId='';updateProformaBadge();renderProformas();renderProjects();
 }
 function syncProformaToProject(pi){
   if(!pi.projectId)return null;const p=projects.find(x=>x.id===pi.projectId);if(!p)return null;
@@ -6162,7 +6374,7 @@ function syncProformaToProject(pi){
   if(payIdx>=0)p.payments[payIdx]=payEntry;else p.payments.push(payEntry);
   p.updatedAt=new Date().toISOString();saveProjects();if(document.getElementById('proj-grid'))renderProjects();return p;
 }
-function linkProformaToProject(id){
+async function linkProformaToProject(id){
   const pi=proformaInvoices.find(p=>p.id===id);if(!pi)return;
   if(pi.projectId&&projects.find(p=>p.id===pi.projectId)){
     const sourceQuote=savedQuotes.find(q=>q.id===pi.sourceQuoteId);
@@ -6173,10 +6385,12 @@ function linkProformaToProject(id){
   const list=projects.map((p,i)=>`${i+1}. ${p.name}`).join('\n');
   const ans=prompt('Select the project number:\n'+list);if(ans===null)return;
   const chosen=projects[(parseInt(ans,10)||0)-1];if(!chosen){alert('Invalid project selection.');return;}
-  pi.projectId=chosen.id;
+  pi.projectId=chosen.id;pi.updatedAt=new Date().toISOString();
   const sourceQuote=savedQuotes.find(q=>q.id===pi.sourceQuoteId);
   if(sourceQuote){sourceQuote.projectId=chosen.id;syncProjectFromQuotation(sourceQuote);saveSavedQuotes();}
-  saveProformaStore();syncProformaToProject(pi);renderSavedQuotations();renderProformas();updateProformaAvailabilityControls();alert('Proforma Invoice and its source quotation are linked to '+chosen.name+'.');
+  const syncResult=await saveProformaStore();
+  if(syncResult.conflicts.some(item=>item.id===pi.id)||syncResult.errors.some(item=>item.id===pi.id))return;
+  syncProformaToProject(pi);renderSavedQuotations();renderProformas();updateProformaAvailabilityControls();alert('Proforma Invoice and its source quotation are linked to '+chosen.name+'.');
 }
 function infoRow(label,value){return value?`<div class="pi-info-row"><div class="key">${escHtml(label)}</div><div class="value">${escHtml(String(value))}</div></div>`:'';}
 function multilineHtml(v){return escHtml(String(v||'')).replace(/\n/g,'<br>');}
@@ -6497,20 +6711,22 @@ updateQuoteBadge();
 // ══════════════════════════════════════════════════════════════════════════════
 // PROJECTS MODULE
 // ══════════════════════════════════════════════════════════════════════════════
-let projects = JSON.parse(localStorage.getItem('sfProjects')||'[]').map(p=>({
-  id:p.id, name:p.name||'', client:p.client||'', status:p.status||'active',
-  contract:p.contract||0, start:p.start||'', notes:p.notes||'',
-  pos:Array.isArray(p.pos)?p.pos:[], payments:(Array.isArray(p.payments)?p.payments:[]).map(sfNormalizePaymentRecord),
-  docs:Array.isArray(p.docs)?p.docs:[], quotes:Array.isArray(p.quotes)?p.quotes:[], proformas:Array.isArray(p.proformas)?p.proformas:[],
-  commissionPct:p.commissionPct||0, commissionAmount:p.commissionAmount||0, commissionNotes:p.commissionNotes||'',
-  commissions:Array.isArray(p.commissions)?p.commissions:[],
-  estimatedInternalCost:parseFloat(p.estimatedInternalCost)||0,
-  expectedProfit:parseFloat(p.expectedProfit)||0,
-  assignedEngineers:Array.isArray(p.assignedEngineers)?p.assignedEngineers:[],
-  costPlan:p.costPlan||null,
-  actualExpenses:Array.isArray(p.actualExpenses)?p.actualExpenses:[],
-  updatedAt:p.updatedAt||''
-}));
+function sfNormalizeProjectRecord(p={}){
+  return {...p,
+    id:p.id,name:p.name||'',client:p.client||'',status:p.status||'active',
+    contract:p.contract||0,start:p.start||'',notes:p.notes||'',
+    pos:Array.isArray(p.pos)?p.pos:[],payments:(Array.isArray(p.payments)?p.payments:[]).map(sfNormalizePaymentRecord),
+    docs:Array.isArray(p.docs)?p.docs:[],quotes:Array.isArray(p.quotes)?p.quotes:[],proformas:Array.isArray(p.proformas)?p.proformas:[],
+    commissionPct:p.commissionPct||0,commissionAmount:p.commissionAmount||0,commissionNotes:p.commissionNotes||'',
+    commissions:Array.isArray(p.commissions)?p.commissions:[],
+    estimatedInternalCost:parseFloat(p.estimatedInternalCost)||0,
+    expectedProfit:parseFloat(p.expectedProfit)||0,
+    assignedEngineers:Array.isArray(p.assignedEngineers)?p.assignedEngineers:[],
+    costPlan:p.costPlan||null,actualExpenses:Array.isArray(p.actualExpenses)?p.actualExpenses:[],
+    updatedAt:p.updatedAt||'',_syncRevision:p._syncRevision,_syncUpdatedAt:p._syncUpdatedAt,_syncDeletedAt:p._syncDeletedAt
+  };
+}
+let projects = JSON.parse(localStorage.getItem('sfProjects')||'[]').map(sfNormalizeProjectRecord);
 let pmTempPOs=[], pmTempPays=[], pmTempDocs=[], pmTempComms=[];
 // Total commission for a project = the auto-synced amount from its linked quotation (if any) + any manually added commission entries.
 function projTotalCommission(p){
@@ -6520,13 +6736,13 @@ function projTotalCommission(p){
 
 function saveProjects(){
   try{
-    localStorage.setItem('sfProjects', JSON.stringify(projects));
+    sfCachePerRecordCollection('sfProjects',projects);
   }catch(e){
     alert('Could not save project data in the local cache. New documents are stored in Supabase Storage; remove old legacy Base64 attachments if this continues.');
   }
   updateSidebarCounts();
   if(document.body.dataset.module==='dashboard') renderDashboard();
-  sfMirrorProjects();
+  return sfSyncDirtyProjects();
 }
 
 function fmtSAR(n){ return 'SAR '+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
@@ -6878,7 +7094,7 @@ async function handleDocFiles(input){
   finally{input.disabled=false;input.value=''}
 }
 
-function saveProjModal(){
+async function saveProjModal(){
   const name=document.getElementById('pm-name').value.trim();
   if(!name){alert('Project name is required.');return;}
   const id=document.getElementById('pm-id').value || 'proj_'+Date.now();
@@ -6903,15 +7119,30 @@ function saveProjModal(){
   };
   const idx=projects.findIndex(p=>p.id===id);
   if(idx>=0) projects[idx]=proj; else projects.unshift(proj);
-  saveProjects(); closeProjModal(); renderProjects();
+  const syncResult=await saveProjects();renderProjects();
+  if(syncResult.conflicts.some(item=>item.id===id))return;
+  if(syncResult.errors.some(item=>item.id===id)){
+    alert('The Project remains in the local cache, but it could not be saved to the shared database. Please keep this window open and retry after the connection is restored.');
+    return;
+  }
+  closeProjModal();
 }
 
-function deleteProject(id){
+async function deleteProject(id){
   if(!confirm('Delete this project? This cannot be undone.')) return;
-  projects=projects.filter(p=>p.id!==id);
-  savedQuotes.forEach(q=>{if(q.projectId===id)q.projectId='';});
-  proformaInvoices.forEach(pi=>{if(pi.projectId===id)pi.projectId='';});
-  saveProjects();saveSavedQuotes();saveProformaStore();renderProjects();renderSavedQuotations();renderProformas();updateProformaAvailabilityControls();
+  const project=projects.find(p=>p.id===id);if(!project)return;
+  const deletion=await sfSyncProjectDelete(project);
+  if(!deletion.ok&&deletion.status==='conflict'){
+    sfApplyProjectConflict({id,status:'conflict',remote:deletion.remote});sfCachePerRecordCollection('sfProjects',projects);renderProjects();
+    alert('This Project was changed by another team member. The latest version has been loaded and was not deleted.');return;
+  }
+  if(!deletion.ok){alert('The Project was not deleted because the shared database could not confirm the operation. Please retry when the connection is available.');return;}
+  projects=projects.filter(p=>p.id!==id);sfCachePerRecordCollection('sfProjects',projects);
+  savedQuotes.forEach(q=>{if(q.projectId===id){q.projectId='';q.updatedAt=new Date().toISOString();}});
+  proformaInvoices.forEach(pi=>{if(pi.projectId===id){pi.projectId='';pi.updatedAt=new Date().toISOString();}});
+  const [quoteSync,invoiceSync]=await Promise.all([saveSavedQuotes(),saveProformaStore()]);
+  if(quoteSync.conflicts.length||invoiceSync.conflicts.length||invoiceSync.errors.length)alert('The Project was deleted, but one linked quotation or invoice changed at the same time. Its latest shared version was retained for review.');
+  updateSidebarCounts();renderProjects();renderSavedQuotations();renderProformas();updateProformaAvailabilityControls();
 }
 
 // Proforma module initialization after quotations and projects have loaded.
