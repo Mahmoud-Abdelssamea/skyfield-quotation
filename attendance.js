@@ -15,21 +15,60 @@ function message(s){$('message').textContent=tr(s);$('message').hidden=!s;}
 async function checked(q){const r=await q;if(r.error)throw r.error;return r.data;}
 async function run(fn){try{await fn()}catch(e){const msg=e.code==='23505'&&String(e.message).includes('sf_daily_records_user_id_day_key')?tr('تم تسجيل حضورك لهذا اليوم بالفعل.'):(language==='en'?'Unable to complete: ':'لم تتم العملية: ')+e.message;message(msg)}}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
-async function load(){const {data:{session},error}=await db.auth.getSession();if(error)throw error;$('login').hidden=!!session;$('app').hidden=true;if(!session)return;me=await checked(db.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle());if(!me){message('الحساب غير مربوط بمهندس. اطلب من الإدارة إضافة حسابك.');$('login').hidden=false;return}members=await checked(db.from('sf_daily_members').select('*'));projects=await checked(db.from('sf_daily_projects').select('*').order('name'));$('who').textContent=me.name;$('app').hidden=false;$('admin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';await loadProjectVisibility();for(const form of [$('expenseForm')]){form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form)}$('month').value=today().slice(0,7);$('members').innerHTML=members.map(m=>`<button type="button" class="secondary" data-member="${esc(m.user_id)}">${esc(m.name)} · داخل ${m.inside_rate} / خارج ${m.outside_rate}</button>`).join('');renderProjectChoices();await loadAttendanceMonth();await refresh();}
+async function load(){const {data:{session},error}=await db.auth.getSession();if(error)throw error;$('login').hidden=!!session;$('app').hidden=true;if(!session)return;me=await checked(db.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle());if(!me){message('الحساب غير مربوط بمهندس. اطلب من الإدارة إضافة حسابك.');$('login').hidden=false;return}members=await checked(db.from('sf_daily_members').select('*'));projects=await checked(db.from('sf_daily_projects').select('*').order('name'));$('who').textContent=me.name;$('app').hidden=false;$('tabAdmin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';setAttendanceView(location.hash.slice(1)||'dailySection',false);await loadProjectVisibility();for(const form of [$('expenseForm')]){form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form)}$('month').value=today().slice(0,7);$('members').innerHTML=members.map(m=>`<button type="button" class="secondary" data-member="${esc(m.user_id)}">${esc(m.name)} · داخل ${m.inside_rate} / خارج ${m.outside_rate}</button>`).join('');renderProjectChoices();renderTimesheetControls();await loadAttendanceMonth();await refresh();}
 async function allRows(table,start,end){let result=[];for(let offset=0;;offset+=500){const batch=await checked(db.from(table).select('*').gte('day',start).lt('day',end).order('day').order('id').range(offset,offset+499));result.push(...batch);if(batch.length<500)return result}}
-async function refresh(){const m=$('month').value;if(!/^\d{4}-\d{2}$/.test(m))throw Error('اختر الشهر');const [y,n]=m.split('-').map(Number),end=`${n===12?y+1:y}-${String(n===12?1:n+1).padStart(2,'0')}-01`;const [days,expenses]=await Promise.all([allRows('sf_daily_records',m+'-01',end),allRows('sf_daily_expenses',m+'-01',end)]);records=[...days.map(r=>({...r,table:'sf_daily_records',amount:Number(r.allowance)+Number(r.overtime_amount),label:tr(labels[r.status])+' · '+r.overtime+' '+(language==='en'?'OT hours':'س إضافي')})),...expenses.map(r=>({...r,table:'sf_daily_expenses',label:tr(labels[r.category])}))];$('summary').textContent=language==='en'?`${days.length} attendance entries · ${expenses.length} expenses · Approved total: ${records.filter(r=>r.review==='approved').reduce((a,r)=>a+Number(r.amount),0).toFixed(2)} SAR (allowances, overtime and expenses; excluding base salary)`:`${days.length} سجل يومي · ${expenses.length} مصروف · إجمالي المبالغ المعتمدة: ${records.filter(r=>r.review==='approved').reduce((a,r)=>a+Number(r.amount),0).toFixed(2)} ريال (بدلات وإضافي ومصروفات فقط؛ بدون الراتب الأساسي)`;$('rows').innerHTML=records.map((r,i)=>`<tr><td>${esc(members.find(m=>m.user_id===r.user_id)?.name)}<br>${esc(r.day)}</td><td>${esc(r.label)}<br><small>${esc(r.description||r.notes||'')}</small></td><td>${esc(projects.find(p=>p.id===r.project_id)?.name||'عام')}</td><td>${Number(r.amount).toFixed(2)}</td><td>${tr(labels[r.review])}</td><td>${r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'—'}${me.role==='admin'&&r.table==='sf_daily_expenses'&&r.review==='approved'&&!r.settled_at?`<button data-settle="${i}">${tr('تصفية كاملة')}</button>`:''}</td><td>${r.receipt_path?`<button data-receipt="${i}">عرض الإيصال</button>`:''}${me.role==='admin'&&!r.settled_at?`<div class="actions"><button data-review="${i}" data-value="approved">اعتماد</button><button class="secondary" data-review="${i}" data-value="rejected">رفض</button></div>`:''}</td></tr>`).join('')||'<tr><td colspan="7">لا توجد سجلات لهذا الشهر</td></tr>';}
+let approvalType='attendance',approvalFiltersReady=false,reviewRequest=0;
+function renderApprovalFilters(){
+ const select=$('approvalEngineer'),old=select.value,list=me.role==='admin'?members:members.filter(m=>m.user_id===me.user_id);
+ select.innerHTML=(me.role==='admin'?`<option value="all">${esc(tr('كل المهندسين'))}</option>`:'')+list.map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');
+ select.value=list.some(m=>m.user_id===old)?old:me.role==='admin'?'all':me.user_id;
+ if(!approvalFiltersReady){$('approvalState').value=me.role==='admin'?'pending':'all';approvalFiltersReady=true;}
+ syncApprovalExportEngineer();
+}
+function filteredApprovalRecords(){
+ const table=approvalType==='expenses'?'sf_daily_expenses':'sf_daily_records',engineer=$('approvalEngineer').value,state=$('approvalState').value;
+ return records.map((r,i)=>({r,i})).filter(({r})=>r.table===table&&(engineer==='all'||r.user_id===engineer)&&(state==='all'||r.review===state));
+}
+function syncApprovalExportEngineer(){const engineer=$('approvalEngineer').value;if(engineer&&engineer!=='all')$('timesheetEngineer').value=engineer;}
+function setApprovalType(type){
+ approvalType=type==='expenses'?'expenses':'attendance';
+ for(const button of document.querySelectorAll('[data-approval-type]'))button.setAttribute('aria-pressed',String(button.dataset.approvalType===approvalType));
+ $('timesheetExportPanel').hidden=approvalType==='expenses';renderApprovalTable();
+}
+function renderApprovalTable(){
+ const expenses=approvalType==='expenses',list=filteredApprovalRecords(),total=list.reduce((sum,{r})=>sum+Number(r.amount),0);
+ $('approvalTableHead').innerHTML=[tr('المهندس / التاريخ'),tr(expenses?'البند':'حالة اليوم'),tr('المشروع'),tr(expenses?'قيمة المصروف':'بدلات + إضافي'),tr('الحالة'),...(expenses?[tr('التصفية')]:[]),tr('إجراءات')].map(title=>`<th>${esc(title)}</th>`).join('');
+ $('summary').textContent=language==='en'?`${list.length} matching ${expenses?'expenses':'attendance entries'} · Displayed total: ${total.toFixed(2)} SAR${expenses?'':' (allowances + overtime only; no base salary)'}`:`${list.length} ${expenses?'مصروف':'سجل حضور'} مطابق · إجمالي المعروض: ${total.toFixed(2)} ريال${expenses?'':' (بدلات وإضافي فقط؛ بدون الراتب الأساسي)'}`;
+ $('rows').innerHTML=list.map(({r,i})=>`<tr><td><b>${esc(members.find(m=>m.user_id===r.user_id)?.name)}</b><br>${esc(r.day)}</td><td>${esc(r.label)}<br><small>${esc(r.description||r.notes||'')}</small></td><td>${esc(projects.find(p=>p.id===r.project_id)?.name||tr('عام'))}</td><td>${Number(r.amount).toFixed(2)}</td><td>${esc(tr(labels[r.review]))}</td>${expenses?`<td>${esc(tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'))}${me.role==='admin'&&r.review==='approved'&&!r.settled_at?`<button data-settle="${i}">${esc(tr('تصفية كاملة'))}</button>`:''}</td>`:''}<td>${r.receipt_path?`<button data-receipt="${i}">${esc(tr('عرض الإيصال'))}</button>`:''}${me.role==='admin'&&!r.settled_at?`<div class="actions"><button data-review="${i}" data-value="approved">${esc(tr('اعتماد'))}</button><button class="secondary" data-review="${i}" data-value="rejected">${esc(tr('رفض'))}</button></div>`:''}</td></tr>`).join('')||`<tr><td colspan="${expenses?7:6}">${esc(tr('لا توجد سجلات مطابقة للاختيارات.'))}</td></tr>`;
+ $('export').disabled=!list.length;
+}
+async function refresh(){
+ const m=$('month').value;if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(m))throw Error(tr('اختر الشهر'));
+ const request=++reviewRequest,[y,n]=m.split('-').map(Number),end=`${n===12?y+1:y}-${String(n===12?1:n+1).padStart(2,'0')}-01`;
+ records=[];renderApprovalTable();$('summary').textContent=language==='en'?'Loading records…':'جاري تحميل السجلات…';
+ let days,expenses;try{[days,expenses]=await Promise.all([allRows('sf_daily_records',m+'-01',end),allRows('sf_daily_expenses',m+'-01',end)])}catch(error){if(request===reviewRequest)$('summary').textContent=language==='en'?'Unable to load records. Click Refresh to retry.':'تعذر تحميل السجلات. اضغط تحديث للمحاولة مجددًا.';throw error}
+ if(request!==reviewRequest)return;
+ records=[...days.map(r=>({...r,table:'sf_daily_records',amount:Number(r.allowance)+Number(r.overtime_amount),label:tr(labels[r.status])+' · '+r.overtime+' '+(language==='en'?'OT hours':'س إضافي')})),...expenses.map(r=>({...r,table:'sf_daily_expenses',label:tr(labels[r.category])}))];
+ renderApprovalFilters();renderApprovalTable();
+}
+function setupApprovalFilters(){
+ Object.assign(translations,{'اعتماد التايم شيت':'Timesheet approvals','اعتماد المصروفات':'Expense approvals','كل المهندسين':'All engineers','كل الحالات':'All statuses','حالة الاعتماد':'Approval status','قيمة المصروف':'Expense amount','بدلات + إضافي':'Allowances + overtime','لا توجد سجلات مطابقة للاختيارات.':'No records match your filters.','تصدير المعروض CSV':'Export displayed CSV','اختر المهندس ونوع الطلب، ثم راجع واعتمد السجلات الظاهرة.':'Choose an engineer and request type, then review and approve the displayed records.'});
+ $('approvalEngineer').onchange=()=>{syncApprovalExportEngineer();renderApprovalTable()};$('approvalState').onchange=renderApprovalTable;
+ for(const button of document.querySelectorAll('[data-approval-type]'))button.onclick=()=>setApprovalType(button.dataset.approvalType);
+ translateUI();
+}
 $('loginForm').onsubmit=e=>{e.preventDefault();run(async()=>{await checked(db.auth.signInWithPassword({email:$('email').value.includes('@')?$('email').value.trim():$('email').value.trim().toLowerCase()+'@engineers.skyfield.invalid',password:$('password').value}));$('password').value='';message('');await load()})};
 $('logout').onclick=()=>run(async()=>{await checked(db.auth.signOut());location.reload()});
 
 function submit(form,fn){form.onsubmit=e=>{e.preventDefault();run(async()=>{const b=form.querySelector('button');b.disabled=true;try{await fn(form);message('تم الحفظ وإرسال الطلب للاعتماد.');await refresh()}finally{b.disabled=false}})}}
-submit($('expenseForm'),async f=>{const v=Object.fromEntries(new FormData(f)),file=v.receipt;delete v.receipt;v.project_id=v.project_id||null;v.amount=Number(v.amount);assertProjectAllowed(v.project_id);if(!file?.size)throw Error(tr('الفاتورة مطلوبة'));if(file?.size){if(file.size>5242880||!['image/jpeg','image/png','application/pdf'].includes(file.type))throw Error('نوع أو حجم الإيصال غير مسموح');v.receipt_path=me.user_id+'/'+crypto.randomUUID();await checked(db.storage.from('sf-receipts').upload(v.receipt_path,file,{contentType:file.type}));}await checked(db.from('sf_daily_expenses').insert(v));f.elements.amount.value='';f.elements.description.value='';f.elements.receipt.value='';$('hasExpense').checked=false;toggleExpense();});
+submit($('expenseForm'),async f=>{const v=Object.fromEntries(new FormData(f)),file=v.receipt;delete v.receipt;v.project_id=v.project_id||null;v.amount=Number(v.amount);assertProjectAllowed(v.project_id);if(!file?.size)throw Error(tr('الفاتورة مطلوبة'));if(file?.size){if(file.size>5242880||!['image/jpeg','image/png','application/pdf'].includes(file.type))throw Error('نوع أو حجم الإيصال غير مسموح');v.receipt_path=me.user_id+'/'+crypto.randomUUID();await checked(db.storage.from('sf-receipts').upload(v.receipt_path,file,{contentType:file.type}));}await checked(db.from('sf_daily_expenses').insert(v));f.elements.amount.value='';f.elements.description.value='';f.elements.receipt.value='';});
 submit($('memberForm'),async f=>{const v=Object.fromEntries(new FormData(f));if(!members.some(m=>m.user_id===v.user_id))throw Error('اختر مهندسًا من القائمة أولًا');const updates={name:v.name.trim()};if(!updates.name)throw Error('اسم المهندس مطلوب');for(const k of ['inside_rate','outside_rate','overtime_rate'])updates[k]=Number(v[k]);await checked(db.from('sf_daily_members').update(updates).eq('user_id',v.user_id));await load();});
 $('members').onclick=e=>{const b=e.target.closest('[data-member]');if(b){const m=members.find(x=>x.user_id===b.dataset.member);for(const k of ['user_id','engineer_id','name','inside_rate','outside_rate','overtime_rate'])$('memberForm').elements[k].value=m[k]}};
 $('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!confirm('تأكد من عدم تعويض نفس السكن ببدل وفاتورة لنفس الفترة. هل تعتمد؟'))return;await checked(db.from(r.table).update({review:b.dataset.value}).eq('id',r.id));await refresh();}});
 $('refresh').onclick=()=>run(refresh);$('month').onchange=()=>run(refresh);
-$('export').onclick=()=>{const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=[['المهندس','التاريخ','البند','المشروع','المبلغ','الحالة','ساعات إضافية','التصفية','تاريخ التصفية'],...records.map(r=>[members.find(m=>m.user_id===r.user_id)?.name,r.day,r.label,projects.find(p=>p.id===r.project_id)?.name||'عام',r.amount,labels[r.review],r.overtime||0,r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'',r.settled_at||''])];const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='skyfield-'+$('month').value+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('export').onclick=()=>{const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=[['المهندس','التاريخ','البند','المشروع','المبلغ','الحالة','ساعات إضافية','التصفية','تاريخ التصفية'],...filteredApprovalRecords().map(({r})=>[members.find(m=>m.user_id===r.user_id)?.name,r.day,r.label,projects.find(p=>p.id===r.project_id)?.name||'عام',r.amount,labels[r.review],r.overtime||0,r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'',r.settled_at||''])];const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='skyfield-'+approvalType+'-'+$('month').value+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 $('createAccountForm').onsubmit=e=>{e.preventDefault();run(async()=>{const form=e.target,b=form.querySelector('button');b.disabled=true;try{const result=await db.functions.invoke('rapid-task',{body:Object.fromEntries(new FormData(form))});if(result.error){let detail;try{detail=await result.error.context.json()}catch{}throw Error(detail?.error||result.error.message)}form.reset();message(tr('تم إنشاء حساب المهندس'));await load();}finally{b.disabled=false}})};
-$('language').value=language;$('language').onchange=()=>{language=$('language').value;localStorage.setItem('sf-language',language);translateUI();if(me)run(async()=>{renderMonthEntries();updateRangeControls();populateProjectSelect($('expenseForm'));renderProjectChoices();await refresh()})};new MutationObserver(()=>translateUI()).observe(document.body,{childList:true,subtree:true});translateUI();
+$('language').value=language;$('language').onchange=()=>{language=$('language').value;localStorage.setItem('sf-language',language);translateUI();if(me)run(async()=>{renderMonthEntries();updateRangeControls();populateProjectSelect($('expenseForm'));renderProjectChoices();renderTimesheetControls();await refresh()})};new MutationObserver(()=>translateUI()).observe(document.body,{childList:true,subtree:true});translateUI();
 function availableProjects(){return projects.filter(p=>selectedProjectIds.has(String(p.id)))}
 function populateProjectSelect(form){const select=form.elements.project_id,previous=select.value;select.innerHTML=`<option value="">${esc(tr('بدون مشروع / مصروف عام'))}</option>`+availableProjects().map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selectedProjectIds.has(previous)?previous:'';}
 function assertProjectAllowed(id){if(id&&(!projectVisibilityReady||!selectedProjectIds.has(String(id))))throw Error(tr('حدد مشروعًا متاحًا من القائمة.'));}
@@ -37,8 +76,6 @@ async function loadProjectVisibility(){projectVisibilityReady=false;try{const ro
 function updateProjectCount(){const count=$('projectChoices').querySelectorAll('input:checked').length;$('projectCount').textContent=language==='en'?`${count} of ${projects.length} selected`:`تم اختيار ${count} من ${projects.length}`;}
 function filterProjectChoices(){const term=$('projectSearch').value.trim().toLocaleLowerCase();for(const label of $('projectChoices').querySelectorAll('label'))label.hidden=!label.textContent.toLocaleLowerCase().includes(term);}
 function renderProjectChoices(){if(me?.role!=='admin')return;$('projectChoices').innerHTML=projects.map(p=>`<label><input type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span>${esc(p.name)}</span></label>`).join('')||`<p>${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;filterProjectChoices();updateProjectCount();}
-function toggleExpense(){const expanded=$('hasExpense').checked;$('expenseDetails').hidden=!expanded;$('hasExpense').setAttribute('aria-expanded',String(expanded));for(const field of $('expenseForm').elements)field.disabled=!expanded;}
-$('hasExpense').onchange=toggleExpense;toggleExpense();
 $('projectSearch').oninput=filterProjectChoices;
 $('projectChoices').onchange=updateProjectCount;
 $('selectAllProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('input'))field.checked=true;updateProjectCount();};
@@ -188,4 +225,31 @@ $('monthlyAttendanceForm').onsubmit=event=>{event.preventDefault();run(async()=>
 })};
 window.addEventListener('beforeunload',event=>{if(monthlyDirty()){event.preventDefault();event.returnValue=''}});
 translateUI();
+setupApprovalFilters();
+setupAttendanceTabs();
+setupTimesheetExports();
 run(load);
+
+function setAttendanceView(view,updateHash=true){
+ const panels=['dailySection','expenseSection','monthlySection','admin'];
+ if(!panels.includes(view)||(view==='admin'&&me?.role!=='admin'))view='dailySection';
+ for(const id of panels)$(id).hidden=id!==view;
+ for(const control of document.querySelectorAll('[data-attendance-view]')){
+  const selected=control.dataset.attendanceView===view;
+  if(control.getAttribute('role')==='tab'){control.setAttribute('aria-selected',String(selected));control.tabIndex=selected?0:-1}else{control.classList.toggle('active',selected);if(selected)control.setAttribute('aria-current','page');else control.removeAttribute('aria-current')}
+ }
+ if(updateHash&&location.hash!=='#'+view)history.replaceState(null,'','#'+view);
+}
+function setupAttendanceTabs(){
+ Object.assign(translations,{'الحضور':'Attendance','المصروفات':'Expenses','السجل والتصدير':'Records & export'});
+ for(const control of document.querySelectorAll('[data-attendance-view]'))control.addEventListener('click',event=>{event.preventDefault();setAttendanceView(control.dataset.attendanceView)});
+ $('attendanceTabs').addEventListener('keydown',event=>{
+  if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;
+  const tabs=Array.from($('attendanceTabs').querySelectorAll('[role="tab"]')).filter(tab=>!tab.hidden),index=tabs.indexOf(document.activeElement);if(index<0)return;
+  event.preventDefault();const forward=(event.key==='ArrowRight')===(document.documentElement.dir!=='rtl');
+  const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(forward?1:-1)+tabs.length)%tabs.length;
+  tabs[next].focus();setAttendanceView(tabs[next].dataset.attendanceView);
+ });
+ window.addEventListener('hashchange',()=>{if(me)setAttendanceView(location.hash.slice(1),false)});
+ translateUI();
+}
