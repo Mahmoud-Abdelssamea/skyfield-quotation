@@ -50,56 +50,16 @@ async function sfRefreshAttendanceRoster(){
  try{await task}finally{if(sfAttendanceFetch===task){sfAttendanceFetch=null;sfAttendanceFetchUser=''}}
 }
 const sfAttendanceRenderBase=renderEngineers;
-renderEngineers=function(){
- sfApplyAttendanceRoster();sfAttendanceRenderBase();
- document.querySelectorAll('#engineer-table-body button').forEach(button=>{
-  if((button.getAttribute('onclick')||'').includes('deleteEngineerRecord'))button.remove();
- });
-};
-const sfAttendanceResetBase=resetEngineerForm;
-resetEngineerForm=function(){
- sfAttendanceResetBase();
- const form=document.getElementById('eng-save-btn')?.closest('.resource-form');if(form)form.hidden=true;
-};
-const sfAttendanceEditBase=editEngineerRecord;
-editEngineerRecord=function(id){
- if(!sfAttendanceRosterReady||!sfAttendanceRoster.some(e=>e.id===id))return;
- sfAttendanceEditBase(id);
- const form=document.getElementById('eng-save-btn')?.closest('.resource-form');if(form)form.hidden=false;
- document.getElementById('eng-name').readOnly=true;document.getElementById('eng-employee-no').readOnly=true;
- document.getElementById('engineer-form-title').textContent='بيانات الوظيفة والراتب / Employment & salary';
-};
-const sfAttendanceSaveBase=saveEngineerRecord;
-saveEngineerRecord=function(){
- const id=document.getElementById('eng-id').value;
- const identity=sfAttendanceRoster.find(e=>e.id===id);
- if(!sfHasAccess('engineers')||!sfAttendanceRosterReady||!identity){alert('أضف المهندس من إدارة الحضور أولًا / Add the engineer in attendance administration first.');return;}
- document.getElementById('eng-name').value=identity.name;
- document.getElementById('eng-employee-no').value=identity.employee_no;
- sfAttendanceSaveBase();
-};
-// Retire independent creation, import and deletion on the main page.
-importSkyFieldEngineers=function(showMessage=false){if(showMessage)location.href='attendance.html#admin';return{added:0,updated:0}};
-deleteEngineerRecord=function(){alert('قائمة المهندسين مصدرها صفحة الحضور / Engineers are managed through attendance.')};
+renderEngineers=function(){sfApplyAttendanceRoster();sfAttendanceRenderBase()};
 const sfAttendanceReloadBase=sfReloadApplicationStateFromLocal;
 sfReloadApplicationStateFromLocal=function(){sfAttendanceReloadBase();void sfRefreshAttendanceRoster()};
-const sfAttendanceUnlockBase=sfUnlockApp;
-sfUnlockApp=function(user){sfAttendanceUnlockBase(user);void sfRefreshAttendanceRoster()};
 const sfAttendanceLockBase=sfLockApp;
-sfLockApp=function(clear){sfAttendanceRoster=[];sfAttendanceRosterReady=false;sfAttendanceRosterUser='';sfAttendanceSupplemental.clear();sfAttendanceLockBase(clear);sfEngineers=[];renderEngineers();resetEngineerForm()};
-(function(){
- const tab=document.getElementById('tab-engineers');if(!tab)return;
- const toolbar=tab.querySelector('.resource-toolbar');
- const old=toolbar.querySelector('button[onclick*="importSkyFieldEngineers"]');if(old)old.remove();
- const add=document.createElement('a');add.href='attendance.html#admin';add.className='btn-outline';add.textContent='إضافة مهندس من الحضور / Add via attendance';toolbar.appendChild(add);
- const refresh=document.createElement('button');refresh.type='button';refresh.className='btn-outline';refresh.textContent='تحديث / Refresh';refresh.onclick=()=>sfRefreshAttendanceRoster();toolbar.appendChild(refresh);
- const status=document.createElement('p');status.id='sf-attendance-roster-status';status.setAttribute('role','status');status.textContent='قائمة المهندسين من إدارة الحضور / Engineers from attendance administration';toolbar.after(status);
- tab.querySelector('.resource-card h4').textContent='مهندسو الحضور / Attendance engineers';
- resetEngineerForm();renderEngineers();
-})();
+sfLockApp=function(clear){sfAttendanceRoster=[];sfAttendanceRosterReady=false;sfAttendanceRosterUser='';sfAttendanceSupplemental.clear();sfAttendanceLockBase(clear);sfEngineers=[];renderEngineers()};
+importSkyFieldEngineers=function(){showTab('engineers');return{added:0,updated:0}};
+// Standalone identity writes are retired; the unified directory owns account changes.
+saveEngineerRecord=function(){showTab('engineers')};
+deleteEngineerRecord=function(){showTab('engineers')};
 window.addEventListener('focus',()=>{void sfRefreshAttendanceRoster()});
-if(sfAuthReady)void sfRefreshAttendanceRoster();
-
 // Do not prune legacy reporting rows while the new roster is loading.
 const sfAttendanceMirrorBase=sfMirrorCollection;
 sfMirrorCollection=async function(table,records){

@@ -1135,7 +1135,9 @@
     : null;
   if (!sfDb) console.warn('Supabase not configured — running in local-only mode (data stays on this device/browser).');
 </script>
-</head>
+<style>
+#sf-unified-panel{width:100%;min-width:0}#sf-unified-frame{background:transparent}#sf-unified-notice{font:13px Tahoma,Arial;color:#66738b;padding:12px}#sf-unified-notice:empty{display:none}#tab-engineers{display:none!important}body.sf-attendance-only .side-data-btn,body.sf-attendance-only .side-nav-label,body.sf-attendance-only #command-primary-action,body.sf-attendance-only [onclick="toggleBackupTools()"]{display:none!important}body.sf-attendance-only .tab-bar{display:none!important}[hidden]{display:none!important}
+</style></head>
 <body data-module="dashboard" class="sf-auth-locked">
 
 <div class="sf-language-switcher" aria-label="Interface language">
@@ -1178,7 +1180,7 @@
 
       <form class="sf-auth-form active" data-auth-panel="login" id="sf-login-form" onsubmit="sfLogin(event)">
         <div class="sf-auth-grid">
-          <div class="sf-auth-field"><label for="sf-login-email">Email Address</label><input id="sf-login-email" type="email" autocomplete="email" required placeholder="name@company.com"></div>
+          <div class="sf-auth-field"><label for="sf-login-email">Email / Employee Code</label><input id="sf-login-email" type="text" autocomplete="username" required placeholder="Email or employee code / البريد أو كود الموظف"></div>
           <div class="sf-auth-field"><label for="sf-login-password">Password</label><input id="sf-login-password" type="password" autocomplete="current-password" required placeholder="Enter your password"></div>
           <button class="sf-auth-primary" type="submit">Login Securely</button>
         </div>
@@ -1233,9 +1235,12 @@
     <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Invoices <span class="side-nav-count" id="side-pi-count">0</span></button>
     <div class="side-nav-label">Resources &amp; Costing</div>
     <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon">♙</span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
-    <a class="side-nav-btn" href="attendance.html"><span class="side-nav-icon">◷</span>الحضور والمصروفات</a>
-    <button class="side-nav-btn" onclick="sfSyncDailyModule()">مزامنة مصروفات الحضور والمشاريع</button>
-    <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon">▦</span>Monthly Timesheets <span class="side-nav-count" id="side-payroll-count">0</span></button>
+    <button class="side-nav-btn" data-module="attendance" onclick="showTab('attendance',this)"><span class="side-nav-icon">◷</span>Attendance / الحضور</button>
+<button class="side-nav-btn" data-module="expenses" onclick="showTab('expenses',this)"><span class="side-nav-icon">▧</span>Expenses / المصروفات</button>
+<button class="side-nav-btn" data-module="timesheets" onclick="showTab('timesheets',this)"><span class="side-nav-icon">▦</span>Timesheets / التايم شيت</button>
+<button class="side-nav-btn" data-module="attendancesettings" onclick="showTab('attendancesettings',this)"><span class="side-nav-icon">⚙</span>Attendance settings / إعدادات الحضور</button>
+    <button class="side-nav-btn" data-unified-sync onclick="sfSyncDailyModule()">مزامنة مصروفات الحضور والمشاريع</button>
+    <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon">▦</span>Payroll / الرواتب <span class="side-nav-count" id="side-payroll-count">0</span></button>
     <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">⚙</span>Cost Library</button>
   </nav>
   <div class="side-footer">
@@ -1654,6 +1659,7 @@
       </div>
     </div>
 
+<div id="sf-unified-panel" hidden><p id="sf-unified-notice" role="status"></p><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
     <!-- ENGINEERS TAB -->
     <div id="tab-engineers" style="display:none">
       <div class="resource-toolbar">
@@ -2419,9 +2425,10 @@ async function sfLogin(event){
   event.preventDefault();
   if(!sfDb){sfSetAuthMessage('Supabase is not configured.','error');return;}
   const form=event.currentTarget;
-  const email=document.getElementById('sf-login-email').value.trim();
+  const loginId=document.getElementById('sf-login-email').value.trim();
+  const email=loginId.includes('@')?loginId:loginId.toLowerCase()+'@engineers.skyfield.invalid';
   const password=document.getElementById('sf-login-password').value;
-  if(!sfTeamMember(email)){sfSetAuthMessage('This email is not approved for the Sky Field company workspace.','error');return;}
+  
   sfSetFormBusy(form,true,'Signing in…'); sfSetAuthMessage('Checking your account…','info');
   try{
     const {error}=await sfDb.auth.signInWithPassword({email,password});
@@ -7188,9 +7195,9 @@ setTimeout(()=>{
 
 // Authentication is the final gate. The application remains hidden until a
 // valid Supabase session is verified and the user's private data is hydrated.
-sfInitAuth();
+// Auth starts after the unified modules have registered.
 </script>
 
-<script src="attendance-integration.js"></script>
+<script src="attendance-integration.js?v=20261013-unified-1"></script><script src="unified-shell.js?v=20261013-1"></script><script>sfInitAuth();</script>
 </body>
 </html>

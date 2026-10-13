@@ -25,11 +25,11 @@ async function load(){
  if(!member||member.is_active===false){message('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.');return;}
  me=member;members=await checked(db.from('sf_daily_members').select('*'));projects=await checked(db.from('sf_daily_projects').select('*').order('name'));
  $('who').textContent=me.name;$('tabAdmin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';
- await loadProjectVisibility();showPortal(true);setAttendanceView(location.hash.slice(1)||'dailySection',false);
+ await loadProjectVisibility();showPortal(true);setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
  const form=$('expenseForm');form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form);
  $('month').value=today().slice(0,7);
  renderEngineerList();
- renderProjectChoices();renderTimesheetControls();await loadAttendanceMonth();await refresh();
+ renderProjectChoices();renderTimesheetControls();await loadAttendanceMonth();await refresh();if(window.sfEmbeddedLoaded)window.sfEmbeddedLoaded();
 }
 async function allRows(table,start,end){let result=[];for(let offset=0;;offset+=500){const batch=await checked(db.from(table).select('*').gte('day',start).lt('day',end).order('day').order('id').range(offset,offset+499));result.push(...batch);if(batch.length<500)return result}}
 let approvalType='attendance',approvalFiltersReady=false,reviewRequest=0;
@@ -64,7 +64,7 @@ async function refresh(){
  let days,expenses;try{[days,expenses]=await Promise.all([allRows('sf_daily_records',m+'-01',end),allRows('sf_daily_expenses',m+'-01',end)])}catch(error){if(request===reviewRequest)$('summary').textContent=language==='en'?'Unable to load records. Click Refresh to retry.':'تعذر تحميل السجلات. اضغط تحديث للمحاولة مجددًا.';throw error}
  if(request!==reviewRequest)return;
  records=[...days.map(r=>({...r,table:'sf_daily_records',amount:Number(r.allowance)+Number(r.overtime_amount),label:tr(labels[r.status])+' · '+r.overtime+' '+(language==='en'?'OT hours':'س إضافي')})),...expenses.map(r=>({...r,table:'sf_daily_expenses',label:tr(labels[r.category])}))];
- renderApprovalFilters();renderApprovalTable();
+ renderApprovalFilters();renderApprovalTable();if(window.sfEmbeddedRosterChanged)window.sfEmbeddedRosterChanged();
 }
 function setupApprovalFilters(){
  Object.assign(translations,{'اعتماد التايم شيت':'Timesheet approvals','اعتماد المصروفات':'Expense approvals','كل المهندسين':'All engineers','كل الحالات':'All statuses','حالة الاعتماد':'Approval status','قيمة المصروف':'Expense amount','بدلات + إضافي':'Allowances + overtime','لا توجد سجلات مطابقة للاختيارات.':'No records match your filters.','تصدير المعروض CSV':'Export displayed CSV','اختر المهندس ونوع الطلب، ثم راجع واعتمد السجلات الظاهرة.':'Choose an engineer and request type, then review and approve the displayed records.'});
@@ -88,6 +88,7 @@ submit($('memberForm'),async f=>{
  for(const k of ['inside_rate','outside_rate','overtime_rate']){updates[k]=Number(v[k]);if(!Number.isFinite(updates[k])||updates[k]<0)throw Error(tr('أدخل قيمًا صحيحة للبدلات.'));}
  const updated=await checked(db.from('sf_daily_members').update(updates).eq('user_id',v.user_id).eq('role','engineer').eq('is_active',true).select('user_id'));
  if(!updated?.length)throw Error(tr('المهندس غير متاح للتعديل. حدّث القائمة.'));
+ if(window.sfSaveSupplemental)await window.sfSaveSupplemental(v.user_id,updates);
  await reloadEngineerDirectory();$('editEngineerPanel').hidden=true;
 });
 $('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!confirm('تأكد من عدم تعويض نفس السكن ببدل وفاتورة لنفس الفترة. هل تعتمد؟'))return;await checked(db.from(r.table).update({review:b.dataset.value}).eq('id',r.id));await refresh();}});
@@ -311,6 +312,7 @@ $('members').onclick=e=>{
  if(edit){const member=activeEngineer(edit.dataset.editMember);if(!member)return;
   for(const k of ['user_id','engineer_id','name','inside_rate','outside_rate','overtime_rate'])$('memberForm').elements[k].value=member[k];
   $('engineerPasswordForm').reset();$('engineerPasswordPanel').open=false;$('editEngineerTitle').textContent=tr('تعديل بيانات المهندس والبدلات')+' — '+member.name;
+  if(window.sfLoadSupplemental)run(()=>window.sfLoadSupplemental(member));
   $('editEngineerPanel').hidden=false;$('editEngineerPanel').scrollIntoView({behavior:'smooth',block:'start'});$('memberForm').elements.name.focus({preventScroll:true});
  }
  if(remove){const member=activeEngineer(remove.dataset.removeMember);if(!member||!confirm(member.name+' ('+member.engineer_id+')\n'+tr('سيتم إيقاف حساب المهندس وحذفه من القائمة النشطة مع الاحتفاظ بسجلاته السابقة. هل تريد المتابعة؟')))return;
@@ -332,14 +334,14 @@ setupTimesheetExports();
 run(load);
 
 function setAttendanceView(view,updateHash=true){
- const panels=['dailySection','expenseSection','monthlySection','admin'];
- if(!panels.includes(view)||(view==='admin'&&me?.role!=='admin'))view='dailySection';
+ const panels=['dailySection','expenseSection','monthlySection','admin','engineersSection'];
+ if(!panels.includes(view)||(['admin','engineersSection'].includes(view)&&me?.role!=='admin'))view='dailySection';
  for(const id of panels)$(id).hidden=id!==view;
  for(const control of document.querySelectorAll('[data-attendance-view]')){
   const selected=control.dataset.attendanceView===view;
   if(control.getAttribute('role')==='tab'){control.setAttribute('aria-selected',String(selected));control.tabIndex=selected?0:-1}else{control.classList.toggle('active',selected);if(selected)control.setAttribute('aria-current','page');else control.removeAttribute('aria-current')}
  }
- if(updateHash&&location.hash!=='#'+view)history.replaceState(null,'','#'+view);
+ if(updateHash&&window.sfEmbeddedNavigate)window.sfEmbeddedNavigate(view);else if(updateHash&&location.hash!=='#'+view)history.replaceState(null,'','#'+view);
 }
 function setupAttendanceTabs(){
  Object.assign(translations,{'الحضور':'Attendance','المصروفات':'Expenses','السجل والتصدير':'Records & export'});
