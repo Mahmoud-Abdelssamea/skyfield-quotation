@@ -58,7 +58,7 @@ body{background:transparent;font-size:13px}body>aside,.workspace>header,.intro,#
    <label id="rangeOvertimeLabel" hidden>ساعات إضافية لكل يوم<input id="rangeOvertime" type="number" min="0" max="16" step="0.25" value="0"></label>
    <label>ملاحظات<input id="rangeNotes" maxlength="2000"></label>
   </div>
-  <label class="weekend-option"><input id="skipWeekend" type="checkbox"> استثناء الجمعة والسبت</label>
+  <label class="weekend-option"><input id="includeFriday" type="checkbox"> تضمين يوم الجمعة</label>
   <div class="period-form-actions"><button id="applyRange" type="submit">إضافة الفترة</button><button id="cancelPeriodEdit" type="button" class="secondary" hidden>إلغاء التعديل</button></div>
   <small>الإضافة تحفظ الفترة وترسلها للاعتماد. لا يمكن تكرار نفس اليوم أو تسجيل أيام مستقبلية.</small>
  </form>
@@ -82,4 +82,4 @@ body{background:transparent;font-size:13px}body>aside,.workspace>header,.intro,#
 <label>رقم أمر الشراء / الملف<input id="timesheetPO"></label><label>إعداد بواسطة<input id="timesheetPrepared"></label><label>ساعات العمل العادية / يوم<input id="timesheetHours" type="number" min="0.25" max="24" step="0.25" value="8"></label><label>معامل الإضافي العادي<input id="timesheetNormalFactor" type="number" min="0" max="10" step="0.25" value="1.5"></label><label>معامل إضافي الجمعة<input id="timesheetFridayFactor" type="number" min="0" max="10" step="0.25" value="2"></label>
 <label>مهندس سكاي فيلد — التوقيع<input id="timesheetSignature"></label><label>مهندس العميل — التوقيع<input id="timesheetClientSignature"></label><label>مدير المشروع — التوقيع<input id="timesheetManagerSignature"></label>
 </div><div class="toolbar"><button type="button" id="timesheetOne">تنزيل Excel للمهندس</button><button type="button" id="timesheetAll" class="secondary" hidden>تنزيل الجميع ZIP</button></div></details>
-<p id="summary"></p><div class="scroll"><table><thead><tr id="approvalTableHead"></tr></thead><tbody id="rows"></tbody></table></div></section></div></main></div><script src="fflate-0.8.3.js"></script><script src="timesheet-export.js?v=20261012-periods-1"></script><script src="attendance.js?v=20261013-minsix"></script><script src="unified-module.js?v=20261013-1"></script></body></html>
+<p id="summary"></p><div class="scroll"><table><thead><tr id="approvalTableHead"></tr></thead><tbody id="rows"></tbody></table></div></section></div></main></div><script src="fflate-0.8.3.js"></script><script src="timesheet-export.js?v=20261012-periods-1"></script><script src="attendance.js?v=20261014-friday"></script><script src="unified-module.js?v=20261013-1"></script></body></html>
