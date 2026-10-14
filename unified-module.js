@@ -4,6 +4,7 @@ function sfEmbeddedLoaded(){
  if(window===window.top)return;
  // The host supplies the actual route through sfSetEmbeddedView after identity verification.
  sfHost.sfUnifiedModuleReady(window,me.user_id);sfMeasureModule();
+ if(window.sfApprovalSalaryReady)void window.sfApprovalSalaryReady();
 }
 window.sfSetEmbeddedView=function(panel,lang,userId){
  if(window===window.top||!me||userId!==me.user_id)return;
@@ -15,6 +16,8 @@ window.sfSetEmbeddedView=function(panel,lang,userId){
 };
 function sfEmbeddedNavigate(panel){sfHost.sfUnifiedNavigateFromModule(window,panel)}
 function sfEmbeddedRosterChanged(){sfHost.sfUnifiedRosterChanged(window)}
+async function sfEmbeddedSalaryInfo(){try{return await sfHost.sfUnifiedSalaryPackages(window)}catch(error){console.warn('Salary data unavailable for approvals',error);return null}}
+function sfEmbeddedReviewChanged(){try{sfHost.sfUnifiedReviewChanged(window)}catch(error){console.warn('Project cost refresh skipped',error)}}
 function sfMeasureModule(){requestAnimationFrame(()=>{const h=document.querySelector('main')?.getBoundingClientRect().height||300;sfHost.sfUnifiedResize(window,h)})}
 new ResizeObserver(sfMeasureModule).observe(document.querySelector('main'));
 window.addEventListener('error',()=>sfMeasureModule());

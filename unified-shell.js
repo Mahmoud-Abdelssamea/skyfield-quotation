@@ -1,6 +1,6 @@
 'use strict';
 // One navigation and authentication shell; attendance modules share this verified session.
-let sfUnifiedProfile=null,sfAttendanceOnly=false,sfUnifiedRoute='',sfUnifiedFrameReady=false;
+let sfUnifiedProfile=null,sfAttendanceOnly=false,sfUnifiedRoute='',sfUnifiedFrameReady=false,sfUnifiedReviewTimer=0;
 let sfUnifiedDesired=location.hash.slice(1)||localStorage.getItem('sfLastModule')||'dashboard';
 const sfUnifiedRoutes={engineers:['Engineers','إدارة المهندسين','engineersSection'],attendance:['Attendance','الحضور بالفترات','dailySection'],expenses:['Expenses','المصروفات','expenseSection'],timesheets:['Timesheets','السجل والاعتمادات والتصدير','monthlySection'],attendancesettings:['Attendance settings','إعدادات مشاريع الحضور','admin']};
 const sfUnifiedNativeTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','engineers','payroll','costsettings'];
@@ -41,7 +41,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261014-friday';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261014-periods';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }
@@ -60,7 +60,7 @@ function sfUnifiedResize(frameWindow,height){
  if(frameWindow!==document.getElementById('sf-unified-frame').contentWindow)return;
  if(Number.isFinite(height))document.getElementById('sf-unified-frame').style.height=Math.max(300,Math.min(12000,Math.ceil(height)+4))+'px';
 }
-function sfUnifiedClearFrame(){const frame=document.getElementById('sf-unified-frame');frame.removeAttribute('src');frame.hidden=true;sfUnifiedFrameReady=false;document.getElementById('sf-unified-panel').hidden=true;}
+function sfUnifiedClearFrame(){clearTimeout(sfUnifiedReviewTimer);const frame=document.getElementById('sf-unified-frame');frame.removeAttribute('src');frame.hidden=true;sfUnifiedFrameReady=false;document.getElementById('sf-unified-panel').hidden=true;}
 sfLockApp=function(clear){sfUnifiedClearFrame();sfUnifiedProfile=null;sfAttendanceOnly=false;sfUnifiedBaseLock(clear)};
 sfHandleAuthState=async function(event,session){
  if(event==='PASSWORD_RECOVERY')return sfUnifiedBaseAuth(event,session);
@@ -115,5 +115,21 @@ async function sfUnifiedSaveDetails(frameWindow,userId,values,identity){
  const {error}=await sfDb.rpc('sf_workspace_save_key',{p_key:'sfEngineers',p_value:rows});if(error)throw error;
  sfAttendanceSupplemental=retained;sfEngineers=sfEngineers.map(e=>e.id===id?entry:e);const paused=sfSyncPaused;sfSyncPaused=true;try{localStorage.setItem('sfEngineers',JSON.stringify(rows))}finally{sfSyncPaused=paused}
  sfApplyAttendanceRoster();renderEngineers();renderCostPlan();if(typeof payrollRender==='function')payrollRender();void sfMirrorCollection(SF_NORMALIZED_TABLES.engineers,sfEngineers);
+}
+// An approval or rejection changes project cost; refresh it shortly after the last click (burst-safe).
+function sfUnifiedReviewChanged(frameWindow){
+ if(frameWindow!==document.getElementById('sf-unified-frame').contentWindow||sfAttendanceOnly||!sfAuthReady)return;
+ clearTimeout(sfUnifiedReviewTimer);sfUnifiedReviewTimer=setTimeout(()=>{void sfAutoSyncProjectExpenses()},1200);
+}
+// Salary packages for the period approval screen, keyed by attendance user id. Payroll administrators only.
+async function sfUnifiedSalaryPackages(frameWindow){
+ if(frameWindow!==document.getElementById('sf-unified-frame').contentWindow||sfAttendanceOnly||sfUnifiedProfile?.role!=='admin'||!sfHasAccess('payroll'))return null;
+ if(typeof sfAttendancePackage!=='function')return null;
+ if(!sfAttendanceRosterReady)await sfRefreshAttendanceRoster();
+ if(!sfAttendanceRosterReady)return null;
+ const packages={};
+ // Same priority as the project-cost sync: current roster first, archived engineers from the supplemental store.
+ for(const e of [...sfAttendanceSupplemental.values(),...sfEngineers])if(String(e.id).startsWith('attendance_'))packages[String(e.id).slice(11)]=sfAttendancePackage(e);
+ return {standardDays:SF_ATTENDANCE_STANDARD_DAYS,costingFrom:SF_ATTENDANCE_COSTING_FROM,packages};
 }
 function sfUnifiedRosterChanged(frameWindow){if(frameWindow===document.getElementById('sf-unified-frame').contentWindow&&!sfAttendanceOnly)void sfRefreshAttendanceRoster()}

@@ -50,7 +50,137 @@ function setApprovalType(type){
  for(const button of document.querySelectorAll('[data-approval-type]'))button.setAttribute('aria-pressed',String(button.dataset.approvalType===approvalType));
  $('timesheetExportPanel').hidden=approvalType==='expenses';renderApprovalTable();
 }
+// ── Timesheet approval by period ───────────────────────────────────────────
+// Administrators review the periods engineers submitted, not individual days. Each period shows the money it
+// adds to its project: site allowance + overtime as recorded, and the salary share computed with the same
+// formula as the project-cost sync (package ÷ standard days × site days, capped per engineer and month).
+let salaryInfo=null,reviewHistory=[],approvalGroups=[],rejectingPeriod='';
+const money=n=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const round2=n=>Math.round((Number(n)||0)*100)/100;
+const isSiteRow=r=>['inside','outside'].includes(r.status)&&!!r.project_id;
+function groupReview(rows){const set=[...new Set(rows.map(r=>r.review))];return set.length===1?set[0]:'mixed'}
+function buildApprovalGroups(){
+ const engineer=$('approvalEngineer').value,state=$('approvalState').value,days=records.filter(r=>r.table==='sf_daily_records');
+ const approvedSite=new Map();
+ for(const r of days)if(r.review==='approved'&&isSiteRow(r)){const k=r.user_id+'|'+r.day.slice(0,7);approvedSite.set(k,(approvedSite.get(k)||0)+1)}
+ const byUser=new Map();for(const r of days){if(engineer!=='all'&&r.user_id!==engineer)continue;if(!byUser.has(r.user_id))byUser.set(r.user_id,[]);byUser.get(r.user_id).push(r)}
+ const groups=[];
+ for(const [userId,rows] of byUser)for(const g of groupAttendancePeriods(rows)){
+  const first=g.rows[0],review=groupReview(g.rows),month=g.from.slice(0,7),site=isSiteRow(first);
+  if(state!=='all'&&review!==state&&!(review==='mixed'&&state==='pending'))continue;
+  const allowance=round2(g.rows.reduce((s,r)=>s+Number(r.allowance||0),0)),otHours=g.rows.reduce((s,r)=>s+Number(r.overtime||0),0),otAmount=round2(g.rows.reduce((s,r)=>s+Number(r.overtime_amount||0),0));
+  const rates=[...new Set(g.rows.map(r=>Number(r.allowance||0)))];
+  const group={...g,userId,first,review,month,site,allowance,rate:rates.length===1?rates[0]:null,otHours,otAmount,salary:null,salaryNote:'',factor:1,pkg:null,total:null,costed:false,
+   note:g.rows.find(r=>r.review==='rejected'&&r.review_note)?.review_note||'',previous:null};
+  if(salaryInfo){
+   if(!site)group.salaryNote='لا يُحمّل على مشروع';
+   else if(!salaryInfo.costingFrom)group.salaryNote='ترحيل الحضور للمشاريع متوقف';
+   else if(month<salaryInfo.costingFrom)group.salaryNote='قبل شهر بدء الترحيل '+salaryInfo.costingFrom;
+   else{
+    group.costed=true;const std=Number(salaryInfo.standardDays)||30,pkg=salaryInfo.packages?.[userId];
+    // Days of this period not yet approved are added, so a pending period shows its cost as if approved now.
+    const total=(approvedSite.get(userId+'|'+month)||0)+g.rows.filter(r=>r.review!=='approved').length;
+    group.factor=Math.min(1,std/Math.max(total,1));group.std=std;
+    if(!(pkg>0))group.salaryNote='لا يوجد راتب مسجل لهذا المهندس';
+    else{group.pkg=pkg;group.salary=round2(pkg*(g.rows.length*group.factor)/std)}
+    group.total=round2((group.salary||0)+allowance+otAmount);
+   }
+  }
+  if(review!=='approved'){
+   const earlier=reviewHistory.filter(h=>h.user_id===userId&&h.action==='rejected'&&h.period_from<=g.to&&h.period_to>=g.from&&!g.rows.some(r=>r.review==='rejected'));
+   group.previous=earlier.sort((a,b)=>String(b.reviewed_at).localeCompare(String(a.reviewed_at)))[0]||null;
+  }
+  groups.push(group);
+ }
+ const name=g=>members.find(m=>m.user_id===g.userId)?.name||'';
+ return groups.sort((a,b)=>name(a).localeCompare(name(b))||a.from.localeCompare(b.from));
+}
+function periodStatusLabel(row){return tr(labels[row.status])+(row.status==='leave'&&row.leave_type?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة'}[row.leave_type]):'')}
+function renderPeriodApprovalTable(){
+ const admin=me.role==='admin',cost=!!salaryInfo;approvalGroups=buildApprovalGroups();
+ $('rows').closest('table').className='period-table approval-periods';
+ const heads=['المهندس / الفترة','المشروع / الحالة','الأيام','البدل','الإضافي',...(cost?['حصة الراتب','الإجمالي على المشروع']:[]),'الاعتماد','إجراءات'];
+ $('approvalTableHead').innerHTML=heads.map(h=>`<th>${esc(tr(h))}</th>`).join('');
+ const sum=(list,f)=>round2(list.reduce((s,g)=>s+(f(g)||0),0));
+ const approved=approvalGroups.filter(g=>g.review==='approved'),open=approvalGroups.filter(g=>g.review==='pending'||g.review==='mixed');
+ const count=language==='en'?`${approvalGroups.length} periods`:`${approvalGroups.length} فترة`;
+ $('summary').textContent=cost
+  ?`${count} · ${tr('تكلفة معتمدة على المشاريع')}: ${money(sum(approved,g=>g.total))} · ${tr('بانتظار الاعتماد')}: ${money(sum(open,g=>g.total))} ${tr('ريال')}`
+  :`${count} · ${tr('البدلات')}: ${money(sum(approvalGroups,g=>g.allowance))} · ${tr('الإضافي')}: ${money(sum(approvalGroups,g=>g.otAmount))} ${tr('ريال')}`+(admin?' · '+tr('الرواتب تظهر لحساب الإدارة الذي لديه صلاحية الرواتب داخل الموقع الموحد.'):'');
+ const L=t=>` data-label="${esc(tr(t))}"`;
+ $('rows').innerHTML=approvalGroups.map((g,i)=>{
+  const project=projects.find(p=>String(p.id)===String(g.first.project_id))?.name,status=periodStatusLabel(g.first);
+  const daysList=g.rows.map(r=>`<li><span class="period-dates">${esc(r.day)}</span> · ${esc(tr(labels[r.status]))} · ${money(r.allowance)}${Number(r.overtime)?` · ${Number(r.overtime)} ${esc(tr('س'))}`:''} · ${esc(tr(labels[r.review]))}</li>`).join('');
+  const salaryCell=g.salary!==null
+   ?`<b>${money(g.salary)}</b><small class="calc">${money(g.pkg)} ÷ ${g.std} × ${g.rows.length}${g.factor<1?` × ${g.factor.toFixed(4)}`:''}</small>${g.factor<1?`<small>${esc(tr('سقف الشهر: لا يتجاوز الراتب الشهري'))}</small>`:''}`
+   :`—${g.salaryNote?`<small>${esc(tr(g.salaryNote))}</small>`:''}`;
+  const totalCell=g.costed?`<b>${money(g.total)}</b>${g.review==='rejected'?`<small>${esc(tr('مرفوضة — لا تُحمّل'))}</small>`:''}`:`—`;
+  let actions='';
+  if(admin&&rejectingPeriod===g.key)actions=`<div class="reject-box"><textarea id="rejectReason" maxlength="500" rows="3" placeholder="${esc(tr('اكتب سبب الرفض ليراه المهندس ويعدّل الفترة'))}"></textarea><div class="actions"><button type="button" class="delete-period" data-period-reject-confirm="${i}">${esc(tr('تأكيد الرفض'))}</button><button type="button" class="secondary" data-period-reject-cancel>${esc(tr('إلغاء'))}</button></div></div>`;
+  else if(admin)actions=`<div class="actions">${g.review!=='approved'?`<button type="button" data-period-approve="${i}">${esc(tr('اعتماد الفترة'))}</button>`:''}${g.review!=='rejected'?`<button type="button" class="secondary" data-period-reject="${i}">${esc(tr('رفض'))}</button>`:''}</div>`;
+  else actions=`<small>${esc(tr(g.review==='rejected'?'عدّل الفترة من شاشة الحضور ثم احفظها لإعادة إرسالها':'—'))}</small>`;
+  return `<tr class="${rejectingPeriod===g.key?'editing':''}"><td${L('المهندس / الفترة')}><b>${esc(members.find(m=>m.user_id===g.userId)?.name||'')}</b><span class="period-dates">${esc(g.from)} → ${esc(g.to)}</span>${g.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${g.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}<details class="period-days"><summary>${esc(tr('عرض الأيام'))} (${g.rows.length})</summary><ul>${daysList}</ul></details></td>`
+   +`<td${L('المشروع / الحالة')}><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${g.first.notes?`<small>${esc(g.first.notes)}</small>`:''}</td>`
+   +`<td${L('الأيام')}>${g.rows.length}</td>`
+   +`<td${L('البدل')}><b>${money(g.allowance)}</b>${g.rate!==null&&g.rate>0?`<small class="calc">${money(g.rate)} × ${g.rows.length}</small>`:''}</td>`
+   +`<td${L('الإضافي')}><b>${money(g.otAmount)}</b><small>${g.otHours} ${esc(tr('ساعة'))}</small></td>`
+   +(cost?`<td${L('حصة الراتب')}>${salaryCell}</td><td${L('الإجمالي على المشروع')}>${totalCell}</td>`:'')
+   +`<td${L('الاعتماد')}><span class="status-badge ${g.review}">${esc(tr(labels[g.review]||'حالات اعتماد مختلفة'))}</span>${g.review==='rejected'&&g.note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(g.note)}</small>`:''}${g.previous?`<small class="review-note previous">${esc(tr('أُعيد إرسالها بعد رفض'))}: ${esc(g.previous.note||'')}</small>`:''}</td>`
+   +`<td${L('إجراءات')}>${actions}</td></tr>`;
+ }).join('')||`<tr><td colspan="${heads.length}" class="empty-state">${esc(tr('لا توجد فترات مطابقة للاختيارات.'))}</td></tr>`;
+ $('export').disabled=!approvalGroups.length;
+ if(rejectingPeriod&&$('rejectReason'))$('rejectReason').focus({preventScroll:false});
+}
+function periodReviewError(error){
+ const text=String(error?.message||'');
+ if(error?.code==='PGRST202'||/sf_review_attendance_period/.test(text))return Error(tr('شغّل ملف 09-attendance-period-review-v10.sql في Supabase لتفعيل اعتماد الفترات وسبب الرفض.'));
+ if(text.includes('PERIOD_STALE'))return Error(tr('عدّل المهندس هذه الفترة بعد تحميل الصفحة، فلم يتغير شيء. تم التحديث؛ راجع الفترة من جديد.'));
+ if(text.includes('REVIEW_NOTE_REQUIRED'))return Error(tr('اكتب سبب الرفض.'));
+ return error;
+}
+async function reviewPeriod(group,review,note){
+ if(!group)return;
+ try{await checked(db.rpc('sf_review_attendance_period',{p_rows:group.rows.map(r=>({id:r.id,revision:r.period_revision})),p_review:review,p_note:note||null}))}
+ catch(error){const mapped=periodReviewError(error);if(String(error?.message||'').includes('PERIOD_STALE')){rejectingPeriod='';await refresh()}throw mapped}
+ rejectingPeriod='';message('');await refresh();
+ if(window.sfEmbeddedReviewChanged)window.sfEmbeddedReviewChanged();
+}
+async function handlePeriodAction(b){
+ if(b.dataset.periodApprove!==undefined){
+  const g=approvalGroups[Number(b.dataset.periodApprove)];
+  if(g&&!confirm(tr('اعتماد الفترة')+` ${g.from} → ${g.to} (${g.rows.length} ${tr('يوم')})`+(g.costed?` — ${tr('الإجمالي على المشروع')}: ${money(g.total)} ${tr('ريال')}`:'')+'؟'))return true;
+  b.disabled=true;await reviewPeriod(g,'approved');return true;
+ }
+ if(b.dataset.periodReject!==undefined){rejectingPeriod=approvalGroups[Number(b.dataset.periodReject)]?.key||'';renderApprovalTable();return true}
+ if(b.dataset.periodRejectCancel!==undefined){rejectingPeriod='';renderApprovalTable();return true}
+ if(b.dataset.periodRejectConfirm!==undefined){
+  const note=($('rejectReason')?.value||'').trim();
+  if(!note){message('اكتب سبب الرفض.');$('rejectReason')?.focus();return true}
+  b.disabled=true;await reviewPeriod(approvalGroups[Number(b.dataset.periodRejectConfirm)],'rejected',note);return true;
+ }
+ return false;
+}
+async function loadApprovalExtras(month,end){
+ salaryInfo=null;reviewHistory=[];
+ if(me.role!=='admin')return;
+ if(window.sfEmbeddedSalaryInfo)salaryInfo=await window.sfEmbeddedSalaryInfo();
+ try{reviewHistory=await checked(db.from('sf_daily_review_log').select('user_id,period_from,period_to,action,note,reviewed_at').eq('action','rejected').lt('period_from',end).gte('period_to',month+'-01').order('reviewed_at'))}
+ catch(error){reviewHistory=[]} // history is optional until 09 is installed
+}
+// unified-module.js may arrive after the first refresh; it calls this once ready so salaries still appear.
+async function sfApprovalSalaryReady(){
+ if(me?.role!=='admin'||salaryInfo||!window.sfEmbeddedSalaryInfo)return;
+ const info=await window.sfEmbeddedSalaryInfo();
+ if(info&&!salaryInfo){salaryInfo=info;renderApprovalTable()}
+}
+function exportPeriodRows(){
+ const cost=!!salaryInfo;
+ return [['المهندس','من','إلى','المشروع / الحالة','الأيام','البدل','ساعات الإضافي','مبلغ الإضافي',...(cost?['حصة الراتب','الإجمالي على المشروع']:[]),'الاعتماد','سبب الرفض'],
+  ...approvalGroups.map(g=>[members.find(m=>m.user_id===g.userId)?.name,g.from,g.to,projects.find(p=>String(p.id)===String(g.first.project_id))?.name||periodStatusLabel(g.first),g.rows.length,g.allowance,g.otHours,g.otAmount,...(cost?[g.salary??'',g.costed?g.total:'']:[]),labels[g.review]||'حالات اعتماد مختلفة',g.note||''])];
+}
 function renderApprovalTable(){
+ if(approvalType!=='expenses')return renderPeriodApprovalTable();
+ $('rows').closest('table').className='';
  const expenses=approvalType==='expenses',list=filteredApprovalRecords(),total=list.reduce((sum,{r})=>sum+Number(r.amount),0);
  $('approvalTableHead').innerHTML=[tr('المهندس / التاريخ'),tr(expenses?'البند':'حالة اليوم'),tr('المشروع'),tr(expenses?'قيمة المصروف':'بدلات + إضافي'),tr('الحالة'),...(expenses?[tr('التصفية')]:[]),tr('إجراءات')].map(title=>`<th>${esc(title)}</th>`).join('');
  $('summary').textContent=language==='en'?`${list.length} matching ${expenses?'expenses':'attendance entries'} · Displayed total: ${total.toFixed(2)} SAR${expenses?'':' (allowances + overtime only; no base salary)'}`:`${list.length} ${expenses?'مصروف':'سجل حضور'} مطابق · إجمالي المعروض: ${total.toFixed(2)} ريال${expenses?'':' (بدلات وإضافي فقط؛ بدون الراتب الأساسي)'}`;
@@ -61,13 +191,22 @@ async function refresh(){
  const m=$('month').value;if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(m))throw Error(tr('اختر الشهر'));
  const request=++reviewRequest,[y,n]=m.split('-').map(Number),end=`${n===12?y+1:y}-${String(n===12?1:n+1).padStart(2,'0')}-01`;
  records=[];renderApprovalTable();$('summary').textContent=language==='en'?'Loading records…':'جاري تحميل السجلات…';
- let days,expenses;try{[days,expenses]=await Promise.all([allRows('sf_daily_records',m+'-01',end),allRows('sf_daily_expenses',m+'-01',end)])}catch(error){if(request===reviewRequest)$('summary').textContent=language==='en'?'Unable to load records. Click Refresh to retry.':'تعذر تحميل السجلات. اضغط تحديث للمحاولة مجددًا.';throw error}
+ let days,expenses;try{[days,expenses]=await Promise.all([allRows('sf_daily_records',m+'-01',end),allRows('sf_daily_expenses',m+'-01',end),loadApprovalExtras(m,end)])}catch(error){if(request===reviewRequest)$('summary').textContent=language==='en'?'Unable to load records. Click Refresh to retry.':'تعذر تحميل السجلات. اضغط تحديث للمحاولة مجددًا.';throw error}
  if(request!==reviewRequest)return;
  records=[...days.map(r=>({...r,table:'sf_daily_records',amount:Number(r.allowance)+Number(r.overtime_amount),label:tr(labels[r.status])+' · '+r.overtime+' '+(language==='en'?'OT hours':'س إضافي')})),...expenses.map(r=>({...r,table:'sf_daily_expenses',label:tr(labels[r.category])}))];
  renderApprovalFilters();renderApprovalTable();if(window.sfEmbeddedRosterChanged)window.sfEmbeddedRosterChanged();
 }
 function setupApprovalFilters(){
- Object.assign(translations,{'اعتماد التايم شيت':'Timesheet approvals','اعتماد المصروفات':'Expense approvals','كل المهندسين':'All engineers','كل الحالات':'All statuses','حالة الاعتماد':'Approval status','قيمة المصروف':'Expense amount','بدلات + إضافي':'Allowances + overtime','لا توجد سجلات مطابقة للاختيارات.':'No records match your filters.','تصدير المعروض CSV':'Export displayed CSV','اختر المهندس ونوع الطلب، ثم راجع واعتمد السجلات الظاهرة.':'Choose an engineer and request type, then review and approve the displayed records.'});
+ Object.assign(translations,{'المهندس / الفترة':'Engineer / period','الأيام':'Days','البدل':'Allowance','الإضافي':'Overtime','حصة الراتب':'Salary share','الإجمالي على المشروع':'Total to project','الاعتماد':'Approval','عرض الأيام':'Show days','س':'h','ساعة':'h',
+  'اعتماد الفترة':'Approve period','تأكيد الرفض':'Confirm rejection','إلغاء':'Cancel','سبب الرفض':'Rejection reason','أُعيد إرسالها بعد رفض':'Resubmitted after rejection','اكتب سبب الرفض ليراه المهندس ويعدّل الفترة':'Write the reason; the engineer will see it and edit the period','اكتب سبب الرفض.':'Write the rejection reason.',
+  'تكلفة معتمدة على المشاريع':'Approved project cost','البدلات':'Allowances','ريال':'SAR','يوم':'days','لا توجد فترات مطابقة للاختيارات.':'No periods match your filters.','مرفوضة — لا تُحمّل':'Rejected — not charged',
+  'لا يُحمّل على مشروع':'Not charged to a project','ترحيل الحضور للمشاريع متوقف':'Attendance costing is switched off','لا يوجد راتب مسجل لهذا المهندس':'No salary recorded for this engineer','سقف الشهر: لا يتجاوز الراتب الشهري':'Monthly cap: never above the monthly salary',
+  'الرواتب تظهر لحساب الإدارة الذي لديه صلاحية الرواتب داخل الموقع الموحد.':'Salaries appear for payroll administrators inside the unified site.','عدّل الفترة من شاشة الحضور ثم احفظها لإعادة إرسالها':'Edit the period in Attendance and save it to resubmit',
+  'شغّل ملف 09-attendance-period-review-v10.sql في Supabase لتفعيل اعتماد الفترات وسبب الرفض.':'Run 09-attendance-period-review-v10.sql in Supabase to enable period approval and rejection reasons.',
+  'عدّل المهندس هذه الفترة بعد تحميل الصفحة، فلم يتغير شيء. تم التحديث؛ راجع الفترة من جديد.':'The engineer changed this period after the page loaded, so nothing was changed. The list was refreshed; review the period again.',
+  'السكن خارج الرياض الذي توفره الشركة منفصل عن بدل السكن في الراتب، ويُحمّل على المشروع. تأكد فقط أن نفس السكن ونفس الفترة لم يُعتمدا من قبل. هل تعتمد؟':'Housing the company provides outside Riyadh is separate from the housing allowance in the salary and is charged to the project. Just make sure the same housing for the same period was not approved before. Approve?',
+  'الفترة المرفوضة: عدّلها حسب سبب الرفض ثم احفظها لتُرسل للاعتماد من جديد.':'A rejected period: edit it according to the reason, then save it to resubmit.',
+  'اعتماد التايم شيت':'Timesheet approvals','اعتماد المصروفات':'Expense approvals','كل المهندسين':'All engineers','كل الحالات':'All statuses','حالة الاعتماد':'Approval status','قيمة المصروف':'Expense amount','بدلات + إضافي':'Allowances + overtime','لا توجد سجلات مطابقة للاختيارات.':'No records match your filters.','تصدير المعروض CSV':'Export displayed CSV','اختر المهندس ونوع الطلب، ثم راجع واعتمد السجلات الظاهرة.':'Choose an engineer and request type, then review and approve the displayed records.'});
  $('approvalEngineer').onchange=()=>{syncApprovalExportEngineer();renderApprovalTable()};$('approvalState').onchange=renderApprovalTable;
  for(const button of document.querySelectorAll('[data-approval-type]'))button.onclick=()=>setApprovalType(button.dataset.approvalType);
  translateUI();
@@ -91,9 +230,9 @@ submit($('memberForm'),async f=>{
  if(window.sfSaveSupplemental)await window.sfSaveSupplemental(v.user_id,updates);
  await reloadEngineerDirectory();$('editEngineerPanel').hidden=true;
 });
-$('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!confirm('تأكد من عدم تعويض نفس السكن ببدل وفاتورة لنفس الفترة. هل تعتمد؟'))return;await checked(db.from(r.table).update({review:b.dataset.value}).eq('id',r.id));await refresh();}});
+$('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(await handlePeriodAction(b))return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!confirm(tr('السكن خارج الرياض الذي توفره الشركة منفصل عن بدل السكن في الراتب، ويُحمّل على المشروع. تأكد فقط أن نفس السكن ونفس الفترة لم يُعتمدا من قبل. هل تعتمد؟')))return;await checked(db.from(r.table).update({review:b.dataset.value}).eq('id',r.id));await refresh();if(window.sfEmbeddedReviewChanged)window.sfEmbeddedReviewChanged();}});
 $('refresh').onclick=()=>run(refresh);$('month').onchange=()=>run(refresh);
-$('export').onclick=()=>{const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=[['المهندس','التاريخ','البند','المشروع','المبلغ','الحالة','ساعات إضافية','التصفية','تاريخ التصفية'],...filteredApprovalRecords().map(({r})=>[members.find(m=>m.user_id===r.user_id)?.name,r.day,r.label,projects.find(p=>p.id===r.project_id)?.name||'عام',r.amount,labels[r.review],r.overtime||0,r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'',r.settled_at||''])];const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='skyfield-'+approvalType+'-'+$('month').value+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('export').onclick=()=>{const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=approvalType!=='expenses'?exportPeriodRows():[['المهندس','التاريخ','البند','المشروع','المبلغ','الحالة','ساعات إضافية','التصفية','تاريخ التصفية'],...filteredApprovalRecords().map(({r})=>[members.find(m=>m.user_id===r.user_id)?.name,r.day,r.label,projects.find(p=>p.id===r.project_id)?.name||'عام',r.amount,labels[r.review],r.overtime||0,r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'',r.settled_at||''])];const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='skyfield-'+approvalType+'-'+$('month').value+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 $('createAccountForm').onsubmit=e=>{e.preventDefault();run(async()=>{
  const form=e.target,b=form.querySelector('button');b.disabled=true;
  try{const body=Object.fromEntries(new FormData(form));if(!/^[0-9]{6,40}$/.test(body.engineer_id))throw Error(tr('كود الموظف يجب أن يكون من 6 إلى 40 رقمًا.'));if(!validEngineerPassword(body.password))throw Error(tr('كلمة المرور يجب أن تكون 6 أرقام على الأقل (0–9).'));
@@ -209,7 +348,7 @@ function renderMonthEntries(){
  $('monthEntryRows').innerHTML=periodGroups.map((group,i)=>{
   const row=group.rows[0],reviews=[...new Set(group.rows.map(r=>r.review))],locked=group.rows.some(r=>r.review==='approved'),review=reviews.length===1?reviews[0]:'mixed';
   const status=tr(labels[row.status])+(row.status==='leave'?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة'}[row.leave_type]):''),project=projects.find(p=>String(p.id)===String(row.project_id))?.name;
-  return `<tr class="${editingPeriod?.key===group.key?'editing':''}"><td data-label="${esc(tr('الفترة'))}"><span class="period-dates">${group.from} → ${group.to}</span>${group.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${group.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}</td><td data-label="${esc(tr('المشروع / الحالة'))}"><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${row.notes?`<small>${esc(row.notes)}</small>`:''}</td><td data-label="${esc(tr('عدد الأيام'))}">${group.rows.length}</td><td data-label="${esc(tr('إضافي / يوم'))}">${Number(row.overtime)||0}</td><td data-label="${esc(tr('الاعتماد'))}"><span class="status-badge ${review}">${esc(tr(labels[review]||'حالات اعتماد مختلفة'))}</span></td><td data-label="${esc(tr('إجراءات'))}">${locked?`<small>${esc(tr('مقفولة — بها أيام معتمدة'))}</small>`:`<div class="actions"><button type="button" class="secondary" data-edit-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('تعديل'))}</button><button type="button" class="delete-period" data-delete-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('مسح'))}</button></div>`}</td></tr>`;
+  return `<tr class="${editingPeriod?.key===group.key?'editing':''}"><td data-label="${esc(tr('الفترة'))}"><span class="period-dates">${group.from} → ${group.to}</span>${group.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${group.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}</td><td data-label="${esc(tr('المشروع / الحالة'))}"><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${row.notes?`<small>${esc(row.notes)}</small>`:''}</td><td data-label="${esc(tr('عدد الأيام'))}">${group.rows.length}</td><td data-label="${esc(tr('إضافي / يوم'))}">${Number(row.overtime)||0}</td><td data-label="${esc(tr('الاعتماد'))}"><span class="status-badge ${review}">${esc(tr(labels[review]||'حالات اعتماد مختلفة'))}</span>${(()=>{const note=group.rows.find(r=>r.review==='rejected'&&r.review_note)?.review_note;return note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(note)}</small>`:''})()}</td><td data-label="${esc(tr('إجراءات'))}">${locked?`<small>${esc(tr('مقفولة — بها أيام معتمدة'))}</small>`:`<div class="actions"><button type="button" class="secondary" data-edit-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('تعديل'))}</button><button type="button" class="delete-period" data-delete-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('مسح'))}</button></div>`}</td></tr>`;
  }).join('')||`<tr><td colspan="6" class="empty-state">${esc(tr(monthReady?'لا توجد فترات مسجلة. أضف أول فترة من النموذج أعلاه.':'جاري تحميل الفترات…'))}</td></tr>`;
  renderMonthSummary();updateRangeControls();
 }
