@@ -1705,7 +1705,7 @@
     <div id="tab-payroll" style="display:none">
       <div class="resource-toolbar">
         <h3>Monthly Timesheets &amp; Payroll <span style="font-family:Tajawal,sans-serif;font-weight:500">— كشف الحضور والرواتب</span></h3>
-        <span style="font-size:10.5px;color:var(--gray-500)">Payroll totals can be posted to the selected project's actual cost.</span>
+        <span style="font-size:10.5px;color:var(--gray-500)">Days, overtime and site allowance can be filled from approved attendance.</span>
       </div>
       <div class="payroll-page">
         <div class="payroll-controls">
@@ -1719,7 +1719,7 @@
             <button class="btn-primary" type="button" onclick="payrollSaveSheet()">Save Month</button>
           </div>
         </div>
-        <div class="payroll-note">Net Total is calculated as <strong>Attendance Days ÷ 30 × (Basic Salary + Housing &amp; Transport + Car Allowance) + Site Allowance + Other Allowance + Overtime Amount + Other Earnings − Deductions</strong>. This means Basic Salary, Housing &amp; Transport, and Car Allowance are prorated with attendance, while Site Allowance is added separately in full. Saving the sheet posts one consolidated payroll expense to the selected project's <strong>Actual Expenses</strong>; saving again updates that same expense instead of duplicating it.</div>
+        <div class="payroll-note">Net Total is calculated as <strong>Attendance Days ÷ 30 × (Basic Salary + Housing &amp; Transport + Car Allowance) + Site Allowance + Other Allowance + Overtime Amount + Other Earnings − Deductions</strong>. This means Basic Salary, Housing &amp; Transport, and Car Allowance are prorated with attendance, while Site Allowance is added separately in full. For months before 2026-10, saving the sheet posts one consolidated payroll expense to the selected project's <strong>Actual Expenses</strong> (saving again updates it). From 2026-10, project cost comes from approved attendance, so saving keeps the sheet without posting a lump sum. <span style="font-family:Tajawal,sans-serif">من أكتوبر 2026 تكلفة المشروع تأتي من الحضور المعتمد، والكشف لا يرحّل مبلغًا إجماليًا.</span></div>
         <div class="payroll-table-wrap">
           <table class="payroll-table">
             <thead><tr>
@@ -7198,6 +7198,6 @@ setTimeout(()=>{
 // Auth starts after the unified modules have registered.
 </script>
 
-<script src="attendance-integration.js?v=20261014-periods"></script><script src="unified-shell.js?v=20261014-periods"></script><script>sfInitAuth();</script>
+<script src="attendance-integration.js?v=20261015-monthend2"></script><script src="unified-shell.js?v=20261015-monthend2"></script><script>sfInitAuth();</script>
 </body>
 </html>
