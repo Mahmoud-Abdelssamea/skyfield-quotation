@@ -1116,6 +1116,12 @@
   @media(max-width:820px){html[dir="rtl"] body{padding-right:0}html[dir="rtl"] .app-sidebar{transform:translateX(105%);box-shadow:-10px 0 35px rgba(0,0,0,.25)}html[dir="rtl"] body.nav-open .app-sidebar{transform:translateX(0)}html[dir="rtl"] .header-title{margin-left:0;margin-right:10px;text-align:right}.sf-language-switcher{top:auto;right:10px;bottom:10px}html[dir="rtl"] .sf-language-switcher{right:auto;left:10px}.condition-language-grid,.lc-controls-grid,.condition-edit-grid,.lc-amount-summary{grid-template-columns:1fr}.lc-documents{grid-template-columns:1fr 1fr}}
   @media print{.sf-language-switcher{display:none!important}}
 
+.list-filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 14px;padding:10px 12px;background:#fff;border:1px solid var(--gray-200,#e3e8f0);border-radius:10px;font-size:11.5px}
+.list-filters label{display:flex;flex-direction:column;gap:4px;font-weight:600;color:var(--gray-600,#4b5563)}
+.list-filters select,.list-filters input{padding:6px 8px;border:1px solid var(--gray-300,#d1d5db);border-radius:6px;font:inherit;font-weight:400;min-width:150px;background:#fff}
+.list-filters .lf-count{margin-inline-start:auto;color:var(--gray-500,#6b7280);font-weight:600}
+.pi-summary{margin:0 0 14px}
+@media(max-width:700px){.list-filters label{flex:1 1 140px}.list-filters select,.list-filters input{min-width:0;width:100%}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1788,7 +1794,16 @@
         <button class="btn-primary" style="font-size:12px;padding:6px 14px" onclick="openProjModal()">+ New Project</button>
       </div>
       <!-- Grid -->
-      <div class="proj-grid" id="proj-grid"></div>
+      <div class="list-filters" id="proj-filters">
+      <label>Status / الحالة<select id="pf-status" onchange="renderProjects()"><option value="">All / الكل</option><option value="active">Active / نشط</option><option value="completed">Completed / مكتمل</option><option value="hold">On Hold / متوقف</option></select></label>
+      <label>Client / العميل<select id="pf-client" onchange="renderProjects()"><option value="">All clients / كل العملاء</option></select></label>
+      <label>Start from / البداية من<input type="date" id="pf-from" onchange="renderProjects()"></label>
+      <label>to / إلى<input type="date" id="pf-to" onchange="renderProjects()"></label>
+      <label>Collection / التحصيل<select id="pf-collect" onchange="renderProjects()"><option value="">All / الكل</option><option value="outstanding">Outstanding / عليه مستحقات</option><option value="paid">Fully paid / مسدد</option><option value="none">Not invoiced / لم يُفوتر</option></select></label>
+      <button type="button" class="btn-outline" onclick="clearListFilters('proj')">Clear / مسح</button>
+      <span class="lf-count" id="pf-count"></span>
+    </div>
+    <div class="proj-grid" id="proj-grid"></div>
     </div>
 
 
@@ -1827,7 +1842,15 @@
         <input class="pi-search" id="pi-search" placeholder="Search number / client / project…" oninput="renderProformas()">
         <button class="btn-primary" id="pi-from-current-btn" style="font-size:12px;padding:6px 14px;display:none" onclick="createProformaFromCurrent()">+ From Current Project Quotation</button>
       </div>
-      <div class="pi-hint">
+      <div class="list-filters" id="pi-filters">
+      <label>Payment / حالة الدفع<select id="if-status" onchange="renderProformas()"><option value="">All / الكل</option><option value="pending">Pending / معلّق</option><option value="partial">Partially paid / مدفوع جزئيًا</option><option value="unpaid">Not fully paid / غير مسدد</option><option value="paid">Paid / مدفوع</option></select></label>
+      <label>Client / العميل<select id="if-client" onchange="renderProformas()"><option value="">All clients / كل العملاء</option></select></label>
+      <label>Project / المشروع<select id="if-project" onchange="renderProformas()"><option value="">All projects / كل المشاريع</option></select></label>
+      <button type="button" class="btn-outline" onclick="clearListFilters('pi')">Clear / مسح</button>
+      <span class="lf-count" id="if-count"></span>
+    </div>
+    <div class="proj-fin-summary pi-summary" id="pi-summary"></div>
+    <div class="pi-hint">
         A Proforma Invoice is a payment-request document and is <strong>not a Tax Invoice</strong>. It can only be created after the quotation has been converted and linked to a <strong>Project</strong>. Choose Full, Percentage, or Fixed Amount, then preview and print it as an A4 PDF. Every saved Proforma Invoice is linked to its Project and automatically creates or updates a pending payment entry. Mark that entry as paid inside the Project when payment is received.
       </div>
       <div class="pi-grid" id="pi-grid"></div>
@@ -6293,8 +6316,28 @@ function invoiceStatusActionHtml(projectId,sourceProformaId,status){
 function renderProformas(){
   updateProformaBadge();const grid=document.getElementById('pi-grid');if(!grid)return;
   const q=(document.getElementById('pi-search')||{value:''}).value.toLowerCase();
-  const rows=proformaInvoices.filter(p=>[p.number,p.clientName,p.projectName,p.sourceQuotation,p.poRef,p.subject].join(' ').toLowerCase().includes(q));
-  if(!rows.length){grid.innerHTML='<div class="proj-empty" style="grid-column:1/-1"><div class="pe-icon">📄</div><p>No Proforma Invoices saved yet. Convert a saved quotation to a Project first, then use Create Proforma.</p></div>';return;}
+  const projectLabel=id=>id==='__none'?'Not linked / غير مرتبط':((projects.find(x=>x.id===id)||{}).name||(proformaInvoices.find(x=>x.projectId===id)||{}).projectName||id);
+  sfFillFilterOptions('if-client',proformaInvoices.map(p=>p.clientName),'All clients / كل العملاء');
+  sfFillFilterOptions('if-project',proformaInvoices.map(p=>p.projectId||'__none'),'All projects / كل المشاريع',projectLabel);
+  const fv=id=>(document.getElementById(id)||{value:''}).value,fs=fv('if-status'),fc=fv('if-client'),fp=fv('if-project');
+  const pay=new Map(proformaInvoices.map(p=>[p,sfInvoicePayment(p)]));
+  const rows=proformaInvoices.filter(p=>{
+    if(![p.number,p.clientName,p.projectName,p.sourceQuotation,p.poRef,p.subject].join(' ').toLowerCase().includes(q))return false;
+    const st=pay.get(p).status;
+    if(fs&&!(fs==='unpaid'?st!=='paid':st===fs))return false;
+    if(fc&&String(p.clientName||'').trim()!==fc)return false;
+    if(fp&&(p.projectId||'__none')!==fp)return false;
+    return true;
+  });
+  sfListCount('if-count',rows.length,proformaInvoices.length,'invoice(s)');
+  const sum=k=>rows.reduce((s,p)=>s+(pay.get(p)[k]||0),0),filteredNote=rows.length===proformaInvoices.length?'All invoices':'Filtered · المعروض';
+  const summary=document.getElementById('pi-summary');
+  if(summary)summary.innerHTML=proformaInvoices.length?`
+    <div class="pfs-card"><div class="pfs-lbl">Invoices / الفواتير</div><div class="pfs-val">${rows.length}</div><div class="pfs-sub">${filteredNote}</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Total incl. VAT</div><div class="pfs-val" style="color:#bfdbfe">${fmtPiSAR(sum('total'))}</div><div class="pfs-sub">${filteredNote}</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Received / المستلم</div><div class="pfs-val" style="color:#4ade80">${fmtPiSAR(sum('received'))}</div><div class="pfs-sub">Recorded receipts</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Outstanding / المتبقي</div><div class="pfs-val" style="color:#fb923c">${fmtPiSAR(sum('remaining'))}</div><div class="pfs-sub">Not yet received</div></div>`:'';
+  if(!rows.length){grid.innerHTML=`<div class="proj-empty" style="grid-column:1/-1"><div class="pe-icon">📄</div><p>${proformaInvoices.length?'No invoices match your search or filters. / لا توجد فواتير مطابقة.':'No Proforma Invoices saved yet. Convert a saved quotation to a Project first, then use Create Proforma.'}</p></div>`;return;}
   grid.innerHTML=rows.map(p=>{
     const pt=resolvedProformaCalculation(p);
     const paymentRec=p.projectId?getInvoicePaymentRecord(p.projectId,p.id):null;
@@ -6771,27 +6814,65 @@ function openProformaFromProject(projectId){
   openProformaFromQuotation(src.id);
 }
 
+// ── List filters (Projects, Proforma Invoices) ─────────────────────────────────
+function sfFillFilterOptions(id,values,allLabel,labelOf){
+  const el=document.getElementById(id);if(!el)return;
+  const keep=el.value,list=[...new Set(values.map(v=>String(v??'').trim()).filter(Boolean))];
+  const label=v=>labelOf?labelOf(v):v;list.sort((a,b)=>label(a).localeCompare(label(b)));
+  const sig=list.map(v=>v+'='+label(v)).join('\u0001');
+  if(el.dataset.sig!==sig){el.dataset.sig=sig;el.innerHTML=`<option value="">${escHtml(allLabel)}</option>`+list.map(v=>`<option value="${escHtml(v)}">${escHtml(label(v))}</option>`).join('');}
+  el.value=list.includes(keep)?keep:'';
+}
+function sfListCount(id,shown,total,noun){const el=document.getElementById(id);if(el)el.textContent=shown===total?`${total} ${noun}`:`Showing ${shown} of ${total} ${noun} / المعروض ${shown} من ${total}`}
+function sfIsoDate(v){const s=String(v||'').trim();if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);const m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''}
+function sfProjectFilterValues(){const v=id=>(document.getElementById(id)||{value:''}).value;return{status:v('pf-status'),client:v('pf-client'),from:v('pf-from'),to:v('pf-to'),collect:v('pf-collect')}}
+function sfProjectPassesFilters(p,f){
+  const status={active:'active',completed:'completed',hold:'hold'}[p.status]||'active';
+  if(f.status&&status!==f.status)return false;
+  if(f.client&&String(p.client||'').trim()!==f.client)return false;
+  if(f.from||f.to){const start=sfIsoDate(p.start);if(!start||(f.from&&start<f.from)||(f.to&&start>f.to))return false;}
+  if(f.collect){
+    const invoiced=(p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0),pending=Math.max(0,invoiced-projectReceivedTotal(p));
+    if(f.collect==='outstanding'&&!(pending>0.005))return false;
+    if(f.collect==='paid'&&!(invoiced>0&&pending<=0.005))return false;
+    if(f.collect==='none'&&invoiced>0)return false;
+  }
+  return true;
+}
+function sfInvoicePayment(p){
+  const rec=p.projectId?getInvoicePaymentRecord(p.projectId,p.id):null,total=resolvedProformaCalculation(p).grandTotal||0;
+  if(!rec?.payment)return{status:'pending',total,received:0,remaining:total};
+  return{status:rec.payment.status||'pending',total,received:paymentReceivedAmount(rec.payment),remaining:paymentRemainingAmount(rec.payment)};
+}
+function clearListFilters(kind){
+  const ids=kind==='proj'?['proj-search','pf-status','pf-client','pf-from','pf-to','pf-collect']:['pi-search','if-status','if-client','if-project'];
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  kind==='proj'?renderProjects():renderProformas();
+}
 function renderProjects(){
   const q=(document.getElementById('proj-search')||{value:''}).value.toLowerCase();
-  const filtered = projects.filter(p=>p.name.toLowerCase().includes(q)||(p.client||'').toLowerCase().includes(q));
+  sfFillFilterOptions('pf-client',projects.map(p=>p.client),'All clients / كل العملاء');
+  const pf=sfProjectFilterValues();
+  const filtered = projects.filter(p=>(p.name.toLowerCase().includes(q)||(p.client||'').toLowerCase().includes(q))&&sfProjectPassesFilters(p,pf));
+  sfListCount('pf-count',filtered.length,projects.length,'project(s)');
 
   // Summary bar
-  const totContract = projects.reduce((s,p)=>s+(parseFloat(p.contract)||0),0);
-  const totInvoiced = projects.reduce((s,p)=>s+(p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0),0);
-  const totReceived = projects.reduce((s,p)=>s+projectReceivedTotal(p),0);
+  const totContract = filtered.reduce((s,p)=>s+(parseFloat(p.contract)||0),0);
+  const totInvoiced = filtered.reduce((s,p)=>s+(p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0),0);
+  const totReceived = filtered.reduce((s,p)=>s+projectReceivedTotal(p),0);
   const totPending  = Math.max(0,totInvoiced-totReceived);
-  const totCommission = projects.reduce((s,p)=>s+projTotalCommission(p),0);
+  const totCommission = filtered.reduce((s,p)=>s+projTotalCommission(p),0);
   document.getElementById('proj-summary').innerHTML=`
-    <div class="pfs-card"><div class="pfs-lbl">Total Contract Value</div><div class="pfs-val">${fmtSAR(totContract)}</div><div class="pfs-sub">${projects.length} project(s)</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Total Contract Value</div><div class="pfs-val">${fmtSAR(totContract)}</div><div class="pfs-sub">${filtered.length===projects.length?projects.length+' project(s)':filtered.length+' of '+projects.length+' project(s) · filtered'}</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Total Invoiced</div><div class="pfs-val" style="color:#bfdbfe">${fmtSAR(totInvoiced)}</div><div class="pfs-sub">All linked invoices</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Total Received</div><div class="pfs-val" style="color:#4ade80">${fmtSAR(totReceived)}</div><div class="pfs-sub">Recorded invoice receipts</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Outstanding / Pending</div><div class="pfs-val" style="color:#fb923c">${fmtSAR(totPending)}</div><div class="pfs-sub">Invoiced less received</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Total Commission (عمولة)</div><div class="pfs-val" style="color:#f59e0b">${fmtSAR(totCommission)}</div><div class="pfs-sub">Across all projects</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Total Commission (عمولة)</div><div class="pfs-val" style="color:#f59e0b">${fmtSAR(totCommission)}</div><div class="pfs-sub">${filtered.length===projects.length?'Across all projects':'Across shown projects'}</div></div>
   `;
 
   const grid=document.getElementById('proj-grid');
   if(!filtered.length){
-    grid.innerHTML=`<div class="proj-empty" style="grid-column:1/-1"><div class="pe-icon">📁</div><p>${projects.length?'No projects match your search.':'No projects yet. Click <strong>+ New Project</strong> to get started.'}</p></div>`;
+    grid.innerHTML=`<div class="proj-empty" style="grid-column:1/-1"><div class="pe-icon">📁</div><p>${projects.length?'No projects match your search or filters.':'No projects yet. Click <strong>+ New Project</strong> to get started.'}</p></div>`;
     return;
   }
 
