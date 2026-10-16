@@ -588,3 +588,5 @@ function setupAttendanceTabs(){
 }
 
 Object.assign(translations,{"بدون راتب":"Unpaid leave"});
+
+Object.assign(translations,{'ملف Excel واحد لكل المشاريع، من الحضور المعتمد فقط، مع تفاصيل كل يوم وإجمالي الساعات.':'One Excel file for all projects, approved attendance only, with daily details and total hours.'});
