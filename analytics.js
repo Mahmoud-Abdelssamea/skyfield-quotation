@@ -37,15 +37,15 @@ function profitRows(){
     if(f.contractNet>0&&f.expectedProfit<0)flags.push(['bad','Expected loss','خسارة متوقعة']);
     if(f.estimated>0&&f.actual>f.estimated)flags.push(['bad','Cost over estimate','تجاوز التكلفة المقدّرة']);
     else if(f.estimated>0&&f.costUsedPct>=80&&f.invoicedNet<f.contractNet*0.8)flags.push(['warn','80%+ of cost used, under 80% invoiced','صُرف أكثر مما فُوتر']);
-    if(!f.estimated)flags.push(['info','No cost estimate','بلا تكلفة مقدّرة']);
+    if(!f.hasEstimate)flags.push(['info',`No cost estimate · at most ${fmtSAR(f.profitCeiling)}`,'بلا تكلفة مقدّرة']);
     if(from&&start&&start.slice(0,7)<from)flags.push(['info',`Labour cost before ${from} missing`,`العمالة قبل \u2066${from}\u2069 غير مرحّلة`]);
     return{p,f,flags};
   });
 }
 function sortProfit(rows){
   const by={
-    margin:(a,b)=>(a.f.contractNet>0?a.f.expectedMargin:Infinity)-(b.f.contractNet>0?b.f.expectedMargin:Infinity),
-    profit:(a,b)=>b.f.expectedProfit-a.f.expectedProfit,
+    margin:(a,b)=>(a.f.expectedMargin??Infinity)-(b.f.expectedMargin??Infinity),
+    profit:(a,b)=>(b.f.expectedProfit??-Infinity)-(a.f.expectedProfit??-Infinity),
     contract:(a,b)=>b.f.contractNet-a.f.contractNet,
     cost:(a,b)=>(b.f.costUsedPct??-1)-(a.f.costUsedPct??-1)
   }[S.sort]||(()=>0);
@@ -60,7 +60,7 @@ function costBar(f){
 function renderProfit(){
   if(!canSeeCost())return '';
   const rows=sortProfit(profitRows());
-  const t=rows.reduce((s,r)=>{s.contract+=r.f.contractNet;s.est+=r.f.estimated;s.actual+=r.f.actual;s.comm+=r.f.commission;s.exp+=r.f.expectedProfit;s.cash+=r.f.cashProfit;s.received+=r.f.receivedNet;return s},{contract:0,est:0,actual:0,comm:0,exp:0,cash:0,received:0});
+  const t=rows.reduce((s,r)=>{s.contract+=r.f.contractNet;s.est+=r.f.estimated;s.actual+=r.f.actual;s.comm+=r.f.commission;if(r.f.hasEstimate){s.exp+=r.f.expectedProfit;s.estContract+=r.f.contractNet}else s.noEst++;s.cash+=r.f.cashProfit;s.received+=r.f.receivedNet;return s},{contract:0,est:0,actual:0,comm:0,exp:0,estContract:0,noEst:0,cash:0,received:0});
   const attention=rows.filter(r=>r.flags.some(x=>x[0]==='bad'||x[0]==='warn')).length;
   const opt=(v,l,cur)=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`;
   const body=rows.length?rows.map(({p,f,flags})=>`<tr>
@@ -70,18 +70,18 @@ function renderProfit(){
       <td class="an-num">${fmtSAR(f.actual)}</td>
       <td>${costBar(f)}</td>
       <td class="an-num">${fmtSAR(f.commission)}</td>
-      <td class="an-num ${f.expectedProfit<0?'an-neg':''}">${fmtSAR(f.expectedProfit)}<div class="an-sub">${f.contractNet>0?pct(f.expectedMargin):''}</div></td>
+      <td class="an-num ${f.expectedProfit<0?'an-neg':''}">${f.hasEstimate?`${fmtSAR(f.expectedProfit)}<div class="an-sub">${f.expectedMargin==null?'':pct(f.expectedMargin)}${f.costOverEstimate?' · on actual cost':''}</div>`:'<span class="an-muted">—</span><div class="an-sub">no estimate</div>'}</td>
       <td class="an-num ${f.cashProfit<0?'an-neg':''}">${fmtSAR(f.cashProfit)}</td>
       <td class="an-notes">${flags.map(([k,en,ar])=>`<span class="an-flag ${k}">${esc(en)}<bdi dir="rtl" class="an-flag-ar">${esc(ar)}</bdi></span>`).join('')}</td></tr>`).join('')
     :'<tr><td colspan="9" class="an-empty">No projects match this filter.</td></tr>';
-  const margin=t.contract>0?t.exp/t.contract*100:0;
+  const margin=t.estContract>0?t.exp/t.estContract*100:0;
   return `<section class="an-sec" id="an-profit">
-    <div class="an-head"><div><h3>Profitability by project <span>الربحية</span></h3><p>All amounts are before VAT. Expected profit = contract − estimated cost − commission. Cash profit = received − actual cost − commission.</p></div>
+    <div class="an-head"><div><h3>Profitability by project <span>الربحية</span></h3><p>All amounts are before VAT. Expected profit = contract − expected cost (the larger of estimated and actual) − commission. Cash profit = received − actual cost − commission.</p></div>
       <div class="an-controls"><label>Status<select id="an-status" onchange="sfAnalyticsSet('status',this.value)">${opt('','All',S.status)}${opt('active','Active',S.status)}${opt('completed','Completed',S.status)}${opt('hold','On Hold',S.status)}</select></label>
       <label>Sort<select id="an-sort" onchange="sfAnalyticsSet('sort',this.value)">${opt('margin','Lowest margin first',S.sort)}${opt('profit','Highest expected profit',S.sort)}${opt('contract','Largest contract',S.sort)}${opt('cost','Most cost used',S.sort)}</select></label></div></div>
     <div class="proj-fin-summary an-strip">
       <div class="pfs-card"><div class="pfs-lbl">Contracts before VAT</div><div class="pfs-val">${fmtSAR(t.contract)}</div><div class="pfs-sub">${rows.length} project(s)</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Expected profit</div><div class="pfs-val" style="color:${t.exp<0?'#fca5a5':'#4ade80'}">${fmtSAR(t.exp)}</div><div class="pfs-sub">Margin ${pct(margin)}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Expected profit</div><div class="pfs-val" style="color:${t.exp<0?'#fca5a5':'#4ade80'}">${fmtSAR(t.exp)}</div><div class="pfs-sub">Margin ${pct(margin)}${t.noEst?` · ${t.noEst} project(s) without estimate not included`:''}</div></div>
       <div class="pfs-card"><div class="pfs-lbl">Cash profit to date</div><div class="pfs-val" style="color:${t.cash<0?'#fca5a5':'#bfdbfe'}">${fmtSAR(t.cash)}</div><div class="pfs-sub">Received before VAT ${fmtSAR(t.received)}</div></div>
       <div class="pfs-card"><div class="pfs-lbl">Need attention</div><div class="pfs-val" style="color:${attention?'#fb923c':'#4ade80'}">${attention}</div><div class="pfs-sub">Loss, over estimate or under-invoiced</div></div>
     </div>
