@@ -2,8 +2,8 @@
 // One navigation and authentication shell; attendance modules share this verified session.
 let sfUnifiedProfile=null,sfAttendanceOnly=false,sfUnifiedRoute='',sfUnifiedFrameReady=false,sfUnifiedReviewTimer=0;
 let sfUnifiedDesired=location.hash.slice(1)||localStorage.getItem('sfLastModule')||'dashboard';
-const sfUnifiedRoutes={engineers:['Engineers','إدارة المهندسين','engineersSection'],attendance:['Attendance','الحضور بالفترات','dailySection'],expenses:['Expenses','المصروفات','expenseSection'],timesheets:['Timesheets','السجل والاعتمادات والتصدير','monthlySection'],attendancesettings:['Attendance settings','إعدادات مشاريع الحضور','admin']};
-const sfUnifiedNativeTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','engineers','payroll','costsettings'];
+const sfUnifiedRoutes={engineers:['Engineers','إدارة المهندسين','engineersSection'],attendance:['Attendance','Record attendance by period.','dailySection'],expenses:['Field Expenses','Engineers’ expense receipts and requests.','expenseSection'],timesheets:['Timesheets & Approvals','Attendance and expense approvals, history, and Excel export.','monthlySection'],attendancesettings:['Attendance Settings','Projects available to engineers for attendance.','admin']};
+const sfUnifiedNativeTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','analytics','engineers','payroll','costsettings'];
 const sfUnifiedBaseShow=showTab,sfUnifiedBaseUnlock=sfUnlockApp,sfUnifiedBaseLock=sfLockApp,sfUnifiedBaseAuth=sfHandleAuthState,sfUnifiedBaseAccess=sfApplyRoleAccess,sfUnifiedBaseLanguage=sfSetInterfaceLanguage,sfUnifiedBasePull=sfCloudPullAll;
 function sfUnifiedCanManage(){return sfUnifiedProfile?.role==='admin'&&(sfAttendanceOnly||sfHasAccess('engineers'))}
 function sfUnifiedAllowed(route){
@@ -16,7 +16,10 @@ function sfUnifiedApplyAccess(){
  document.body.classList.toggle('sf-attendance-only',sfAttendanceOnly);
  for(const button of document.querySelectorAll('.side-nav-btn[data-module]'))button.style.display=sfUnifiedAllowed(button.dataset.module)?'':'none';
  const sync=document.querySelector('[data-unified-sync]');if(sync)sync.style.display=!sfAttendanceOnly&&sfUnifiedProfile?.role==='admin'&&sfHasAccess('payroll')?'':'none';
+  sfUnifiedRefreshNavGroups();
 }
+// Hide a sidebar group heading when every item under it is hidden for this account.
+function sfUnifiedRefreshNavGroups(){for(const label of document.querySelectorAll('.side-nav .side-nav-label')){let el=label.nextElementSibling,any=false;while(el&&!el.classList.contains('side-nav-label')){if(el.classList.contains('side-nav-btn')&&el.style.display!=='none'&&!el.hidden)any=true;el=el.nextElementSibling}label.style.display=any?'':'none'}}
 sfApplyRoleAccess=function(){if(!sfAttendanceOnly)sfUnifiedBaseAccess();sfUnifiedApplyAccess()};
 showTab=function(name,button){
  if(!sfAuthReady){sfUnifiedDesired=location.hash.slice(1)||sfUnifiedDesired;return;}
@@ -41,7 +44,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261015-monthend2';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261016-analytics';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }
