@@ -44,7 +44,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261016-analytics';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261016-simple-payroll';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }
@@ -97,7 +97,7 @@ sfSetInterfaceLanguage=function(lang,persist=true){sfUnifiedBaseLanguage(lang,pe
 sfCloudPullAll=async function(){if(sfAttendanceOnly)return [];return sfUnifiedBasePull()};
 window.addEventListener('hashchange',()=>{if(sfAuthReady)showTab(location.hash.slice(1))});
 // Keep employment and salary fields in the same edit form as the attendance identity.
-const sfExtraFields={nationality:'nationality',iqama:'iqama',profession:'profession',specialization:'specialization',loa:'loa',employment:'employment',status:'status',daily:'daily',monthly:'monthly','housing-transport':'housingTransport','site-allowance':'siteAllowance','car-allowance':'carAllowance',notes:'notes'};
+const sfExtraFields={nationality:'nationality',iqama:'iqama',profession:'profession',specialization:'specialization',loa:'loa',employment:'employment',status:'status',monthly:'monthly','housing-transport':'housingTransport','car-allowance':'carAllowance',notes:'notes'};
 async function sfUnifiedGetDetails(frameWindow,userId){
  if(frameWindow!==document.getElementById('sf-unified-frame').contentWindow||!sfUnifiedCanManage())throw Error('Access denied');
  if(sfAttendanceOnly)return null;
@@ -111,9 +111,10 @@ async function sfUnifiedSaveDetails(frameWindow,userId,values,identity){
  if(!old||!sfAttendanceRosterReady)throw Error('Engineer unavailable');
  const entry={...old,name:identity.name,overtime:Number(identity.overtime_rate),updatedAt:new Date().toISOString()};
  for(const [field,key] of Object.entries(sfExtraFields)){
-  if(['daily','monthly','housingTransport','siteAllowance','carAllowance'].includes(key)){const n=Number(values[field]);if(!Number.isFinite(n)||n<0)throw Error('Invalid salary or cost');entry[key]=n;}
+  if(['monthly','housingTransport','carAllowance'].includes(key)){const n=Number(values[field]);if(!Number.isFinite(n)||n<0)throw Error('Invalid salary or cost');entry[key]=n;}
   else entry[key]=String(values[field]??'').trim();
  }
+ entry.daily=sfRound2(sfAttendancePackage(entry)/30);
  const retained=new Map(sfAttendanceSupplemental);retained.set(id,entry);const rows=[...retained.values()];
  const {error}=await sfDb.rpc('sf_workspace_save_key',{p_key:'sfEngineers',p_value:rows});if(error)throw error;
  sfAttendanceSupplemental=retained;sfEngineers=sfEngineers.map(e=>e.id===id?entry:e);const paused=sfSyncPaused;sfSyncPaused=true;try{localStorage.setItem('sfEngineers',JSON.stringify(rows))}finally{sfSyncPaused=paused}

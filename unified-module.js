@@ -28,6 +28,7 @@ async function sfLoadSupplemental(member){
   const values=await sfHost.sfUnifiedGetDetails(window,member.user_id);
   if(request!==sfExtraRequest||$('memberForm').elements.user_id.value!==member.user_id)return;
   loaded=true;
+  if(!values){for(const input of $('supplementalEngineer').querySelectorAll('[name]'))$('memberForm').querySelector('.grid').appendChild(input.closest('label'));}
   if(values){for(const [key,value] of Object.entries(values))$('extra-'+key).value=value;sfExtraTarget=member.user_id;$('supplementalEngineer').hidden=false;}
  }finally{if(request===sfExtraRequest){sfExtraLoading=false;button.disabled=!loaded;}sfMeasureModule()}
 }
@@ -35,7 +36,7 @@ async function sfSaveSupplemental(userId,identity){
  if(sfExtraLoading)throw Error('انتظر اكتمال تحميل بيانات المهندس.');
  if($('supplementalEngineer').hidden)return;
  if(sfExtraTarget!==userId)throw Error('أعد فتح بيانات المهندس قبل الحفظ.');
- const values={};for(const input of $('supplementalEngineer').querySelectorAll('input,select,textarea'))values[input.id.replace('extra-','')]=input.value;
+ const values={};for(const input of $('supplementalEngineer').querySelectorAll('[id^="extra-"]'))values[input.id.replace('extra-','')]=input.value;
  try{await sfHost.sfUnifiedSaveDetails(window,userId,values,identity)}
  catch(error){throw Error('تم حفظ الاسم والبدلات، لكن تعذر حفظ بيانات الوظيفة والراتب. أبقِ النموذج مفتوحًا وأعد المحاولة. '+error.message)}
 }

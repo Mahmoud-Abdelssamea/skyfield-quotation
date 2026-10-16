@@ -113,7 +113,7 @@ let sfAttendanceSupplemental = new Map(sfEngineers.filter(e=>String(e.id).starts
 let sfAttendanceRosterUser = '', sfAttendanceFetch = null, sfAttendanceFetchUser = '';
 function sfProjectAttendanceEngineers(saved, roster) {
  const details=new Map(saved.map(e=>[e.id,e]));
- return roster.map(e=>({nationality:'',iqama:'',profession:'',specialization:'Other',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:0,monthly:0,overtime:0,housingTransport:0,siteAllowance:0,carAllowance:0,notes:'',...details.get(e.id),id:e.id,name:e.name,employeeNo:e.employee_no}));
+ return roster.map(e=>({nationality:'',iqama:'',profession:'',specialization:'Other',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:0,monthly:0,overtime:0,housingTransport:0,siteAllowance:0,carAllowance:0,notes:'',...details.get(e.id),id:e.id,name:e.name,employeeNo:e.employee_no})).map(e=>({...e,daily:sfRound2(sfAttendancePackage(e)/30)}));
 }
 function sfApplyAttendanceRoster(){
  for(const e of sfEngineers)if(String(e.id).startsWith('attendance_'))sfAttendanceSupplemental.set(e.id,e);
@@ -197,10 +197,11 @@ function sfPayrollAttendanceSummary(records,month,rule,standardDays,today){
  const elapsed=sfMonthDays(month).filter(d=>d<=today),byUser=new Map(),out=new Map();
  for(const r of records){if(!String(r.day).startsWith(month))continue;if(!byUser.has(r.user_id))byUser.set(r.user_id,[]);byUser.get(r.user_id).push(r)}
  for(const [uid,rows] of byUser){
-  const s={worked:0,paidLeave:0,unpaidLeave:0,absent:0,pending:0,unrecorded:0,unrecordedFridays:0,otHours:0,otAmount:0,allowance:0,days:0,mode};
+  const s={worked:0,paidLeave:0,unpaidLeave:0,absent:0,pending:0,rejected:0,inside:0,outside:0,unrecorded:0,unrecordedFridays:0,otHours:0,otAmount:0,allowance:0,days:0,mode};
   const recorded=new Set(rows.map(r=>r.day));
   for(const r of rows){
-   if(r.review!=='approved'){s.pending++;continue}
+   if(r.review!=='approved'){if(r.review==='rejected')s.rejected++;else s.pending++;continue}
+   if(r.status==='inside')s.inside++;if(r.status==='outside')s.outside++;
    if(['office','inside','outside'].includes(r.status))s.worked++;
    else if(r.status==='leave'){if(paid.has(r.leave_type))s.paidLeave++;else s.unpaidLeave++}
    else if(r.status==='absent')s.absent++;
@@ -214,86 +215,68 @@ function sfPayrollAttendanceSummary(records,month,rule,standardDays,today){
  return out;
 }
 function sfPayrollRule(){
- if(!sfCurrentPayroll.attendanceRule){
-  const last=[...(sfPayrollSheets||[])].filter(s=>s.attendanceRule).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
-  sfCurrentPayroll.attendanceRule=JSON.parse(JSON.stringify(last?.attendanceRule||SF_PAYROLL_DEFAULT_RULE));
- }
- return sfCurrentPayroll.attendanceRule;
+ return {mode:'month_minus_absence',paidLeave:['annual','sick','emergency']};
 }
 // A row counts as hand-edited if it differs from its last fill, or (never filled) already holds typed values.
 function sfPayrollRowEdited(r){return r.attFill?SF_PAYROLL_AUTO_FIELDS.some(f=>sfNum(r[f])!==sfNum(r.attFill[f])):(sfNum(r.attendanceDays)>0||sfNum(r.overtimeHours)>0)}
 function sfPayrollStatus(text){const el=document.getElementById('sf-payroll-att-status');if(el)el.textContent=text}
 async function sfPayrollFillFromAttendance({auto=false}={}){
- if(sfPayrollFillBusy){if(!auto)sfPayrollFillAgain=true;return}
+ if(sfPayrollFillBusy){sfPayrollFillAgain=true;return}
  if(!sfCurrentPayroll||!sfDb||!sfCurrentUser||!sfHasAccess('payroll'))return;
- const sheet=sfCurrentPayroll,month=sheet.month;if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))return;
- if(auto&&sheet.status==='approved')return; // approved sheets change only on request
- if(!auto&&sheet.status==='approved'&&!confirm('هذا الكشف معتمد. هل تحدّث قيمه من الحضور؟\nThis sheet is approved. Refresh it from attendance?'))return;
- sfPayrollFillBusy=true;sfPayrollStatus('جاري قراءة الحضور المعتمد…');
+ const sheet=sfCurrentPayroll,month=sheet.month;
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))return;
+ if(sheet.status==='approved'){sfPayrollStatus('هذا الكشف معتمد ومحفوظ بقيمه. أنشئ كشفًا جديدًا للمراجعة.');return}
+ sfPayrollFillBusy=true;sfPayrollStatus('جاري حساب الراتب من ملف المهندس والحضور المعتمد…');
  try{
   const {data:member,error:memberError}=await sfDb.from('sf_daily_members').select('role').eq('user_id',sfCurrentUser.id).maybeSingle();
-  if(memberError)throw memberError;if(member?.role!=='admin')throw Error('يلزم حساب إدارة الحضور / Attendance administrator account required');
-  if(!sfAttendanceRosterReady)await sfRefreshAttendanceRoster();
+  if(memberError)throw memberError;if(member?.role!=='admin')throw Error('يلزم حساب إدارة الحضور');
+  await sfRefreshAttendanceRoster();if(!sfAttendanceRosterReady)throw Error('تعذر تحميل بيانات رواتب المهندسين');
   const [y,m]=month.split('-').map(Number),end=`${m===12?y+1:y}-${String(m===12?1:m+1).padStart(2,'0')}-01`;
   const records=[];
   for(let o=0;;o+=1000){const {data,error}=await sfDb.from('sf_daily_records').select('user_id,day,status,leave_type,overtime,overtime_amount,allowance,review').gte('day',month+'-01').lt('day',end).order('day').order('id').range(o,o+999);if(error)throw error;records.push(...data);if(data.length<1000)break}
-  if(sfCurrentPayroll!==sheet||sheet.month!==month)return; // the user moved to another sheet or month meanwhile
-  const summary=sfPayrollAttendanceSummary(records,month,sfPayrollRule(),sheet.standardDays,sfRiyadhToday());
-  let added=0;
-  if(!sheet.projectId){ // company-wide sheet: add engineers who have attendance this month
-   const have=new Set(sheet.rows.map(r=>r.engineerId));
-   for(const uid of summary.keys()){const e=sfEngineers.find(x=>x.id==='attendance_'+uid);if(e&&!have.has(e.id)){sheet.rows.push(payrollRowFromEngineer(e));added++}}
+  if(sfCurrentPayroll!==sheet||sheet.month!==month)return;
+  const today=sfRiyadhToday();if(month>today.slice(0,7))throw Error('لا يمكن حساب راتب شهر مستقبلي');
+  const summary=sfPayrollAttendanceSummary(records,month,sfPayrollRule(),30,today);
+  const have=new Set(sheet.rows.map(r=>r.engineerId));
+  if(!sheet.projectId)for(const eng of sfEngineers)if(!have.has(eng.id)){sheet.rows.push(payrollRowFromEngineer(eng));have.add(eng.id)}
+  let filled=0;
+  const nextRows=sheet.rows.map(r=>({...r}));
+  for(const r of nextRows){
+   if(!String(r.engineerId||'').startsWith('attendance_'))continue;
+   const uid=r.engineerId.slice(11),eng=sfEngineers.find(e=>e.id===r.engineerId)||sfAttendanceSupplemental.get(r.engineerId);
+   if(!eng)throw Error('بيانات راتب مهندس غير متاحة: '+r.name);
+   // No entries does not mean absence. Mark it explicitly for month-end review.
+   const v=summary.get(uid)||{worked:0,paidLeave:0,unpaidLeave:0,absent:0,pending:0,rejected:0,inside:0,outside:0,unrecorded:sfMonthDays(month).filter(d=>d<=today).length,unrecordedFridays:0,otHours:0,otAmount:0,allowance:0,days:30,noData:true};
+   Object.assign(r,{salaryModel:2,baseSalary:sfNum(eng.monthly),housingTransport:sfNum(eng.housingTransport),carAllowance:sfNum(eng.carAllowance??eng.siteCar),attendanceDays:v.days,siteAllowance:v.allowance,overtimeHours:v.otHours,attendanceOvertimeAmount:v.otAmount,overtimeRate:v.otHours?v.otAmount/v.otHours:sfNum(eng.overtime),attSummary:{...v},attFill:{attendanceDays:v.days,overtimeHours:v.otHours,siteAllowance:v.allowance,at:new Date().toISOString()}});
+   filled++;
   }
-  const uidOf=r=>String(r.engineerId||'').startsWith('attendance_')?String(r.engineerId).slice(11):'';
-  const edited=sheet.rows.filter(r=>summary.has(uidOf(r))&&sfPayrollRowEdited(r));
-  const overwrite=!auto&&edited.length>0&&confirm(`${edited.length} صف فيه قيم مُدخلة يدويًا.\nموافق = استبدالها بقيم الحضور\nإلغاء = الإبقاء عليها وتحديث باقي الصفوف\n\n${edited.length} row(s) hold manual values. OK = replace, Cancel = keep them.`);
-  let filled=0,kept=0,none=0;
-  for(const r of sheet.rows){
-   const uid=uidOf(r),s=uid&&summary.get(uid);
-   if(!uid)continue;
-   if(!s){r.attSummary={noData:true};none++;continue}
-   const eng=sfEngineers.find(e=>e.id===r.engineerId)||sfAttendanceSupplemental.get(r.engineerId)||{},fixed=sfNum(eng.siteAllowance);
-   if(sfPayrollRowEdited(r)&&!overwrite){r.attSummary={...s,fixedAllowance:fixed,kept:true};kept++;continue}
-   r.attendanceDays=s.days;r.overtimeHours=s.otHours;if(fixed<=0)r.siteAllowance=s.allowance;
-   r.attFill={attendanceDays:r.attendanceDays,overtimeHours:r.overtimeHours,siteAllowance:r.siteAllowance,at:new Date().toISOString()};
-   r.attSummary={...s,fixedAllowance:fixed};filled++;
-  }
-  sheet.updatedAt=new Date().toISOString();payrollRenderRows();
-  sfPayrollStatus(`تمت التعبئة لـ ${filled} مهندس`+(added?` · أُضيف ${added}`:'')+(kept?` · أُبقي على القيم اليدوية لـ ${kept}`:'')+(none?` · ${none} بلا حضور مسجل`:'')+` — شهر \u2066${month}\u2069. احفظ الكشف لتثبيت القيم.`);
- }catch(error){sfPayrollStatus('تعذرت التعبئة من الحضور: '+error.message)}
+  sheet.rows=nextRows;sheet.standardDays=30;sheet.salaryModel=2;sheet.attendanceRule=sfPayrollRule();sheet.attendanceLoadedMonth=month;sheet.updatedAt=new Date().toISOString();
+  payrollRenderRows();sfPayrollStatus(`تم حساب ${filled} مهندس — راجع الغياب والأيام غير المسجلة ثم احفظ الشهر. أسعار الإضافي المختلفة تُجمع بقيمها المعتمدة.`);return true;
+ }catch(error){sfPayrollStatus('تعذر حساب الرواتب: '+error.message);return false}
  finally{sfPayrollFillBusy=false;if(sfPayrollFillAgain){sfPayrollFillAgain=false;setTimeout(()=>void sfPayrollFillFromAttendance(),0)}}
 }
 function sfPayrollNoteHtml(r){
  const s=r.attSummary;if(!s)return '';
- if(s.noData)return '<span class="warn">لا يوجد حضور مسجل هذا الشهر</span>';
- const parts=[`عمل ${s.worked}`];
+ if(s.noData)return '<span class="warn">لا يوجد حضور مسجل: الراتب الثابت محسوب كاملًا مبدئيًا. راجع الغياب قبل الاعتماد.</span>';
+ const parts=[`أيام الاستحقاق ${s.days}`,`داخل الرياض ${s.inside||0}`,`خارج الرياض ${s.outside||0}`];
  if(s.paidLeave)parts.push(`إجازة مدفوعة ${s.paidLeave}`);if(s.unpaidLeave)parts.push(`إجازة غير مدفوعة ${s.unpaidLeave}`);
  if(s.absent)parts.push(`غياب ${s.absent}`);
  let html=escHtml(parts.join(' · '));
- if(s.pending)html+=`<br><span class="warn">${s.pending} يوم بانتظار الاعتماد (غير محسوب)</span>`;
+ if(s.pending)html+=`<br><span class="warn">${s.pending} يوم بانتظار الاعتماد؛ بدله وإضافيه غير محسوبين، وخصم الغياب يتطلب الاعتماد</span>`;
+ if(s.rejected)html+=`<br><span class="warn">${s.rejected} يوم مرفوض يحتاج تصحيحًا</span>`;
  if(s.unrecorded)html+=`<br><span class="warn">${s.unrecorded} يوم غير مسجل${s.unrecordedFridays?` (منها ${s.unrecordedFridays} جمعة)`:''}</span>`;
  if(s.fixedAllowance>0&&s.allowance>0)html+=`<br><span class="warn">بدل ثابت في ملفه ${payrollMoney(s.fixedAllowance)} وبدلات يومية معتمدة ${payrollMoney(s.allowance)} — راجع البدل</span>`;
- if(s.otHours>0&&Math.abs(s.otHours*sfNum(r.overtimeRate)-s.otAmount)>0.01)html+=`<br><span class="warn">قيمة الأوفر في الحضور ${payrollMoney(s.otAmount)} تختلف عن سعر الكشف</span>`;
- if(s.kept||sfPayrollRowEdited(r))html+=`<br><span class="edited">قيم معدّلة يدويًا</span>`;
+ if(r.salaryModel!==2&&s.otHours>0&&Math.abs(s.otHours*sfNum(r.overtimeRate)-s.otAmount)>0.01)html+=`<br><span class="warn">قيمة الأوفر في الحضور ${payrollMoney(s.otAmount)} تختلف عن سعر الكشف</span>`;
+ if(r.salaryModel!==2&&(s.kept||sfPayrollRowEdited(r)))html+=`<br><span class="edited">قيم معدّلة يدويًا</span>`;
  return html;
 }
-function sfPayrollSyncPanel(){
- const box=document.getElementById('sf-payroll-att');if(!box||!sfCurrentPayroll)return;
- const rule=sfPayrollRule();box.querySelector('#sf-payroll-rule').value=rule.mode;
- for(const c of box.querySelectorAll('[data-sf-leave]'))c.checked=rule.paidLeave.includes(c.dataset.sfLeave);
-}
+function sfPayrollSyncPanel(){}
 function sfPayrollEnsurePanel(){
- if(document.getElementById('sf-payroll-att'))return sfPayrollSyncPanel();
+ if(document.getElementById('sf-payroll-att'))return;
  const anchor=document.querySelector('#tab-payroll .payroll-controls');if(!anchor)return;
- if(!document.getElementById('sf-payroll-att-style')){const st=document.createElement('style');st.id='sf-payroll-att-style';st.textContent='#sf-payroll-att .sf-att-controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:8px 0 4px}#sf-payroll-att label{display:inline-flex;gap:5px;align-items:center}#sf-payroll-att select{padding:5px 8px}#sf-payroll-att-status{display:block;margin-top:4px}.sf-att-note{font-size:10px;line-height:1.5;color:#6b7280;margin-top:4px;min-width:160px;white-space:normal;direction:rtl;text-align:right}#sf-payroll-att small{display:block;direction:rtl;text-align:right}.sf-att-note .warn{color:#b45309}.sf-att-note .edited{color:#1d4ed8}';document.head.appendChild(st)}
  const box=document.createElement('div');box.id='sf-payroll-att';box.className='payroll-note';
- box.innerHTML=`<b>التعبئة من الحضور المعتمد / Fill from approved attendance</b><div class="sf-att-controls"><label>قاعدة أيام الراتب / Paid days rule <select id="sf-payroll-rule">${Object.entries(SF_PAYROLL_RULES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><span>الإجازات المدفوعة / Paid leave: ${Object.entries(SF_PAYROLL_LEAVES).map(([k,v])=>`<label><input type="checkbox" data-sf-leave="${k}">${v}</label>`).join(' ')}</span><button class="btn-outline" type="button" id="sf-payroll-fill">تحديث من الحضور / Refresh from attendance</button></div><small dir="rtl">تُملأ أيام الحضور والأوفر تايم والبدل اليومي من الأيام المعتمدة، وكل الخانات قابلة للتعديل. القيم المدخلة يدويًا لا تُستبدل إلا بموافقتك.</small><small id="sf-payroll-att-status" dir="rtl"></small>`;
- anchor.after(box);
- const changed=()=>{if(sfCurrentPayroll)sfCurrentPayroll.updatedAt=new Date().toISOString();void sfPayrollFillFromAttendance()};
- box.querySelector('#sf-payroll-rule').onchange=e=>{sfPayrollRule().mode=e.target.value;changed()};
- for(const c of box.querySelectorAll('[data-sf-leave]'))c.onchange=()=>{sfPayrollRule().paidLeave=[...box.querySelectorAll('[data-sf-leave]:checked')].map(x=>x.dataset.sfLeave);changed()};
- box.querySelector('#sf-payroll-fill').onclick=()=>void sfPayrollFillFromAttendance();
- sfPayrollSyncPanel();
+ box.innerHTML='<b>حساب الراتب تلقائيًا / Automatic payroll</b><p dir="rtl">أيام الاستحقاق = 30 − الغياب المعتمد − الإجازة غير المدفوعة المعتمدة. الإجازات السنوية والمرضية والطارئة مدفوعة. الأيام غير المسجلة لا تعتبر غيابًا تلقائيًا؛ راجعها قبل اعتماد الشهر. الحقول المحسوبة تُعدّل من ملف المهندس أو سجل الحضور.</p><button class="btn-outline" type="button" id="sf-payroll-fill">تحديث الحساب من الحضور / Refresh payroll</button><small id="sf-payroll-att-status" dir="rtl" style="display:block;margin-top:8px"></small>';
+ anchor.after(box);box.querySelector('#sf-payroll-fill').onclick=()=>void sfPayrollFillFromAttendance();
 }
 function sfPayrollVisible(){const tab=document.getElementById('tab-payroll');return !!tab&&tab.style.display!=='none'}
 // Hook the payroll page only where it exists, so this file never breaks pages without it.
@@ -305,6 +288,7 @@ payrollRenderRows=function(){
  sfPayrollEnsurePanel();
  const body=document.getElementById('payroll-table-body');if(!body||!sfCurrentPayroll)return;
  for(const r of sfCurrentPayroll.rows){
+  if(r.salaryModel===2)for(const field of ['baseSalary','housingTransport','carAllowance','siteAllowance','attendanceDays','overtimeHours','overtimeRate']){const input=body.querySelector(`input[onchange^="payrollSetRow('${r.id}','${field}'"]`);if(input){input.readOnly=true;input.title='يُحسب من ملف المهندس والحضور / Calculated automatically';}}
   const html=sfPayrollNoteHtml(r);if(!html)continue;
   const input=body.querySelector(`input[onchange^="payrollSetRow('${r.id}','attendanceDays'"]`);if(!input)continue;
   const note=document.createElement('div');note.className='sf-att-note';note.innerHTML=html;input.after(note);
@@ -320,9 +304,8 @@ const sfPayrollNewBase=payrollNewSheet;
 payrollNewSheet=function(){sfPayrollNewBase();if(sfCurrentPayroll){sfCurrentPayroll.attAutoTried=true;void sfPayrollFillFromAttendance({auto:true})}};
 const sfPayrollMonthBase=payrollMonthChanged;
 payrollMonthChanged=function(){
- sfPayrollMonthBase();if(!sfCurrentPayroll)return;
- if(!sfCurrentPayroll.rows.some(sfPayrollRowEdited))void sfPayrollFillFromAttendance({auto:true});
- else sfPayrollStatus('تغيّر الشهر. بعض الصفوف فيها قيم يدوية؛ اضغط «تحديث من الحضور» لمراجعتها.');
+ if(sfCurrentPayroll?.status==='approved'){document.getElementById('payroll-month').value=sfCurrentPayroll.month;sfPayrollStatus('أنشئ كشفًا جديدًا لتغيير الشهر.');return}
+ sfPayrollMonthBase();if(sfCurrentPayroll){delete sfCurrentPayroll.attendanceLoadedMonth;void sfPayrollFillFromAttendance({auto:true})}
 };
 const sfPayrollLoadEngineersBase=payrollLoadProjectEngineers;
 payrollLoadProjectEngineers=function(){sfPayrollLoadEngineersBase();void sfPayrollFillFromAttendance({auto:true})};
@@ -333,7 +316,7 @@ payrollSetRow=function(id,field,value){
  if(field!=='engineerId')return;
  const r=sfCurrentPayroll?.rows.find(x=>x.id===id);
  // Values filled for the previous engineer must not carry over to the newly selected one.
- if(r){if(wasAuto){r.attendanceDays=0;r.overtimeHours=0}delete r.attFill;delete r.attSummary;payrollRenderRows()}
+ if(r){if(wasAuto){r.attendanceDays=0;r.overtimeHours=0}delete r.attFill;delete r.attSummary;delete r.salaryModel;delete r.attendanceOvertimeAmount;payrollRenderRows()}
  void sfPayrollFillFromAttendance({auto:true});
 };
 }
@@ -409,3 +392,27 @@ if(typeof renderProjectDetails==='function'){
  const sfProjectCrewRenderBase=renderProjectDetails;
  renderProjectDetails=function(){sfProjectCrewRenderBase();if(sfProjectDetailsPanel==='engineers'&&sfHasAccess('engineers'))void sfRenderProjectCrew()};
 }
+
+// Saving a draft always refreshes the six salary inputs and approved attendance first.
+const sfSimplePayrollSaveBase=payrollSaveSheet;
+payrollSaveSheet=async function(){
+ if(sfPayrollFillBusy){sfPayrollStatus('انتظر اكتمال الحساب قبل الحفظ.');return}
+ if(!sfCurrentPayroll)return;
+ if(sfCurrentPayroll.status==='approved'){sfPayrollStatus('الكشف معتمد. أنشئ كشفًا جديدًا لأي مراجعة.');return}
+ const sheet=sfCurrentPayroll;
+ if(!(await sfPayrollFillFromAttendance())||sfCurrentPayroll!==sheet)return;
+ sfSimplePayrollSaveBase();
+};
+payrollApproveCurrent=async function(){
+ if(sfPayrollFillBusy||!sfCurrentPayroll||sfCurrentPayroll.status==='approved')return;
+ const sheet=sfCurrentPayroll;
+ if(!(await sfPayrollFillFromAttendance())||sfCurrentPayroll!==sheet)return;
+ if(sheet.rows.some(r=>(r.attSummary?.pending||0)+(r.attSummary?.rejected||0)>0)){
+  sfPayrollStatus('اعتمد أو صحّح سجلات الحضور المعلقة والمرفوضة أولًا، حتى يُحسب الغياب والبدلات بشكل صحيح.');return;
+ }
+ if(sheet.month===sfRiyadhToday().slice(0,7)||sheet.rows.some(r=>r.attSummary?.unrecorded)){
+  if(!confirm('تأكيد مراجعة الشهر: الأيام غير المسجلة والأيام المتبقية لا تخصم تلقائيًا، وتُحسب ضمن الراتب الثابت. هل راجعت الغياب والإجازات قبل الاعتماد؟'))return;
+ }
+ if(!sheet.rows.length)return;
+ sheet.status='approved';sfSimplePayrollSaveBase();
+};

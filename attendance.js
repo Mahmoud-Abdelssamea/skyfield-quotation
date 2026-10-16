@@ -100,7 +100,7 @@ function buildApprovalGroups(){
  const name=g=>members.find(m=>m.user_id===g.userId)?.name||'';
  return groups.sort((a,b)=>name(a).localeCompare(name(b))||a.from.localeCompare(b.from));
 }
-function periodStatusLabel(row){return tr(labels[row.status])+(row.status==='leave'&&row.leave_type?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة'}[row.leave_type]):'')}
+function periodStatusLabel(row){return tr(labels[row.status])+(row.status==='leave'&&row.leave_type?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة',unpaid:'بدون راتب'}[row.leave_type]):'')}
 function renderPeriodApprovalTable(){
  const admin=me.role==='admin',cost=!!salaryInfo;approvalGroups=buildApprovalGroups();
  $('rows').closest('table').className='period-table approval-periods';
@@ -372,7 +372,7 @@ function normalizeMonthEntry(entry){
 function validateMonthEntry(row){
  if(!['office','inside','outside','leave','absent'].includes(row.status))throw Error(tr('اختر حالة اليوم.'));
  if(['inside','outside'].includes(row.status)){if(!row.project_id)throw Error(tr('اختر المشروع.'));assertProjectAllowed(row.project_id);}
- if(row.status==='leave'&&!['annual','sick','emergency'].includes(row.leave_type))throw Error(tr('نوع الإجازة مطلوب.'));
+ if(row.status==='leave'&&!['annual','sick','emergency','unpaid'].includes(row.leave_type))throw Error(tr('نوع الإجازة مطلوب.'));
  if(!Number.isFinite(row.overtime)||row.overtime<0||row.overtime>16||!Number.isInteger(row.overtime*4))throw Error(tr('ساعات الإضافي يجب أن تكون بين 0 و16 وبمضاعفات ربع ساعة.'));
  if(row.notes.length>2000)throw Error(tr('الملاحظات بحد أقصى 2000 حرف.'));
 }
@@ -436,7 +436,7 @@ function renderMonthEntries(){
  $('periodCount').textContent=periodGroups.length+' '+tr('فترة');
  $('monthEntryRows').innerHTML=periodGroups.map((group,i)=>{
   const row=group.rows[0],reviews=[...new Set(group.rows.map(r=>r.review))],locked=group.rows.some(r=>r.review==='approved'),review=reviews.length===1?reviews[0]:'mixed';
-  const status=tr(labels[row.status])+(row.status==='leave'?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة'}[row.leave_type]):''),project=projects.find(p=>String(p.id)===String(row.project_id))?.name;
+  const status=tr(labels[row.status])+(row.status==='leave'?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة',unpaid:'بدون راتب'}[row.leave_type]):''),project=projects.find(p=>String(p.id)===String(row.project_id))?.name;
   return `<tr class="${editingPeriod?.key===group.key?'editing':''}"><td data-label="${esc(tr('الفترة'))}"><span class="period-dates">${group.from} → ${group.to}</span>${group.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${group.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}</td><td data-label="${esc(tr('المشروع / الحالة'))}"><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${row.notes?`<small>${esc(row.notes)}</small>`:''}</td><td data-label="${esc(tr('عدد الأيام'))}">${group.rows.length}</td><td data-label="${esc(tr('إضافي / يوم'))}">${Number(row.overtime)||0}</td><td data-label="${esc(tr('الاعتماد'))}"><span class="status-badge ${review}">${esc(tr(labels[review]||'حالات اعتماد مختلفة'))}</span>${(()=>{const note=group.rows.find(r=>r.review==='rejected'&&r.review_note)?.review_note;return note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(note)}</small>`:''})()}</td><td data-label="${esc(tr('إجراءات'))}">${locked?`<small>${esc(tr('مقفولة — بها أيام معتمدة'))}</small>`:`<div class="actions"><button type="button" class="secondary" data-edit-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('تعديل'))}</button><button type="button" class="delete-period" data-delete-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('مسح'))}</button></div>`}</td></tr>`;
  }).join('')||`<tr><td colspan="6" class="empty-state">${esc(tr(monthReady?'لا توجد فترات مسجلة. أضف أول فترة من النموذج أعلاه.':'جاري تحميل الفترات…'))}</td></tr>`;
  renderMonthSummary();updateRangeControls();
@@ -586,3 +586,5 @@ function setupAttendanceTabs(){
  window.addEventListener('hashchange',()=>{if(me)setAttendanceView(location.hash.slice(1),false)});
  translateUI();
 }
+
+Object.assign(translations,{"بدون راتب":"Unpaid leave"});
