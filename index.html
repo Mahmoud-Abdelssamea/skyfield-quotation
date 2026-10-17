@@ -912,8 +912,7 @@
     .proj-fin-summary { grid-template-columns:1fr 1fr; }
     .bottom-bar { bottom:4px; }
   }
-  @media (max-width:520px){
-    .dash-kpis,.dash-actions { grid-template-columns:1fr; }
+  @media (max-width:520px){ .dash-actions { grid-template-columns:1fr; } .dash-kpis{grid-template-columns:1fr 1fr;gap:10px} .dash-kpi{padding:12px} .dash-kpi .dk-icon{display:none} .dash-kpi .dk-value{font-size:17px}
     .stats-grid { grid-template-columns:1fr 1fr;gap:7px; }
     .stat-card .sval { font-size:15px; }
     .page-command-bar .btn-primary { padding:9px 10px;font-size:11px; }
@@ -1114,7 +1113,7 @@
   html[dir="rtl"] input:not([type="checkbox"]):not([type="radio"]),html[dir="rtl"] textarea,html[dir="rtl"] select{text-align:right}
   html[dir="rtl"] input[type="email"],html[dir="rtl"] input[type="tel"],html[dir="rtl"] input[type="number"]{direction:ltr;text-align:right}
   @media(max-width:820px){html[dir="rtl"] body{padding-right:0}html[dir="rtl"] .app-sidebar{transform:translateX(105%);box-shadow:-10px 0 35px rgba(0,0,0,.25)}html[dir="rtl"] body.nav-open .app-sidebar{transform:translateX(0)}html[dir="rtl"] .header-title{margin-left:0;margin-right:10px;text-align:right}.sf-language-switcher{top:auto;right:10px;bottom:10px}html[dir="rtl"] .sf-language-switcher{right:auto;left:10px}.condition-language-grid,.lc-controls-grid,.condition-edit-grid,.lc-amount-summary{grid-template-columns:1fr}.lc-documents{grid-template-columns:1fr 1fr}}
-  @media print{.sf-language-switcher{display:none!important}}
+  @media print{.sf-language-switcher{display:none!important}} .dash-attn{margin:0 0 16px} .dash-attn .dash-panel-hdr{display:flex;align-items:center;gap:8px} .attn-count{background:var(--orange);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px} .attn-list{display:flex;flex-direction:column;gap:8px;padding:12px 14px} .attn-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--gray-200);border-inline-start:4px solid #94a3b8;border-radius:8px;background:#fff} .attn-item.sev-high{border-inline-start-color:#dc2626;background:#fef2f2} .attn-item.sev-mid{border-inline-start-color:#f59e0b;background:#fffbeb} .attn-item.sev-info{border-inline-start-color:#3b82f6;background:#eff6ff} .attn-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px} .attn-text strong{font-size:13px;color:var(--navy)} .attn-text span{font-size:12px;color:#4b5563;line-height:1.45} .attn-go{flex:none;border:1px solid #d1d5db;background:#fff;color:var(--navy);border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;min-height:34px} .attn-go:hover{border-color:var(--orange);color:var(--orange-dark)} .attn-more{align-self:flex-start;border:0;background:none;color:var(--orange-dark);font-weight:700;font-size:12px;cursor:pointer;padding:4px 2px} .attn-ok{padding:4px 2px;color:#15803d;font-weight:600;font-size:13px} .attn-loading{font-size:12px;color:var(--gray-500);padding:2px} @media(max-width:520px){.attn-item{flex-wrap:wrap}.attn-go{width:100%}} .payroll-table{font-size:11.5px} .payroll-table th{font-size:10px} .payroll-table input,.payroll-table select{font-size:11.5px} .payroll-table th:nth-child(1),.payroll-table td:nth-child(1){position:sticky;inset-inline-start:0;z-index:1;width:34px;min-width:34px} .payroll-table th:nth-child(2),.payroll-table td:nth-child(2){position:sticky;inset-inline-start:34px;z-index:1;box-shadow:inset -1px 0 0 var(--gray-300,#d1d5db)} .payroll-table th:nth-child(1),.payroll-table th:nth-child(2){z-index:3} .payroll-table td[colspan]{position:static} .payroll-table th:nth-child(12),.payroll-table td:nth-child(12){min-width:230px} .sf-att-note{margin-top:4px;font-size:10.5px;line-height:1.45;color:#4b5563;white-space:normal} .sf-att-note>br:first-child,.sf-chips+br{display:none} .sf-att-note .warn[title]{cursor:help} .sf-att-note .warn{color:#b45309;font-weight:600} .sf-att-note .edited{color:#1d4ed8;font-weight:600} .sf-chips{display:flex;flex-wrap:wrap;gap:3px} .sf-chip{background:#eef2f7;border-radius:999px;padding:1px 7px;white-space:nowrap;color:var(--navy)} .payroll-howto summary{cursor:pointer;font-weight:700;margin-top:8px} .payroll-howto p{margin:6px 0 0} .sf-language-switcher.in-sidebar{position:static!important;inset:auto!important;width:100%;box-sizing:border-box;margin:0 0 8px;justify-content:space-between;box-shadow:none;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)} .sf-language-switcher.in-sidebar select{flex:1} .quote-actions .pay-action-btn{flex-basis:100%;white-space:normal;font-size:11px;padding:7px 9px} .pfs-sub.pfs-loose{margin-top:2px;color:#fdba74}
 
 .pd-kpi-note{display:block;font-size:9.5px;color:rgba(255,255,255,.62);margin-top:4px;line-height:1.35}
 .pd-hdr-note{font-size:11px;color:var(--gray-500,#6b7280)}
@@ -1134,8 +1133,8 @@
 .pi-summary{margin:0 0 14px}
 @media(max-width:700px){.list-filters label{flex:1 1 140px}.list-filters select,.list-filters input{min-width:0;width:100%}}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="supabase-js-2.117.2.js"></script>
+<script src="xlsx-0.18.5.full.min.js"></script>
 <script>
   // ── Shared database config ──
   // Paste your Supabase project URL and anon public key here (Project Settings → API).
@@ -1188,10 +1187,7 @@
         <p id="sf-auth-subtitle">Sign in to open your company workspace.</p>
       </div>
 
-      <div class="sf-auth-tabs" id="sf-auth-tabs">
-        <button type="button" class="sf-auth-tab active" data-auth-tab="login" onclick="sfShowAuthPanel('login')">Login</button>
-        <button type="button" class="sf-auth-tab" data-auth-tab="register" onclick="sfShowAuthPanel('register')">Register</button>
-      </div>
+      
 
       <div class="sf-auth-message info show" id="sf-auth-message">Checking secure session…</div>
 
@@ -1204,15 +1200,7 @@
         <div class="sf-auth-row"><span></span><button type="button" class="sf-auth-secondary" onclick="sfShowAuthPanel('forgot')">Forgot password?</button></div>
       </form>
 
-      <form class="sf-auth-form" data-auth-panel="register" id="sf-register-form" onsubmit="sfRegister(event)">
-        <div class="sf-auth-grid">
-          <div class="sf-auth-field"><label for="sf-register-name">Full Name</label><input id="sf-register-name" type="text" autocomplete="name" required placeholder="Full name"></div>
-          <div class="sf-auth-field"><label for="sf-register-email">Email Address</label><input id="sf-register-email" type="email" autocomplete="email" required placeholder="name@company.com"></div>
-          <div class="sf-auth-field"><label for="sf-register-password">Password</label><input id="sf-register-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Minimum 8 characters"><div class="sf-auth-password-hint">Use at least 8 characters with letters and numbers.</div></div>
-          <div class="sf-auth-field"><label for="sf-register-confirm">Confirm Password</label><input id="sf-register-confirm" type="password" autocomplete="new-password" minlength="8" required placeholder="Repeat password"></div>
-          <button class="sf-auth-primary" type="submit">Create Account</button>
-        </div>
-      </form>
+      
 
       <form class="sf-auth-form" data-auth-panel="forgot" id="sf-forgot-form" onsubmit="sfSendPasswordReset(event)">
         <button type="button" class="sf-auth-secondary sf-auth-back" onclick="sfShowAuthPanel('login')">← Back to login</button>
@@ -1271,7 +1259,7 @@
       </div>
       <button class="side-logout-btn" type="button" onclick="sfLogout()">Log out securely</button>
     </div>
-    <button class="side-data-btn" onclick="toggleBackupTools()">↕ Data Backup &amp; Restore</button>
+    <div class="side-language-slot" id="side-language-slot"></div><button class="side-data-btn" onclick="toggleBackupTools();if(typeof closeSidebar==='function')closeSidebar();document.getElementById('backup-tools')?.scrollIntoView({block:'nearest'})">↕ Data Backup &amp; Restore</button>
   </div>
 </aside>
 <div class="sidebar-scrim" onclick="closeSidebar()"></div>
@@ -1303,7 +1291,7 @@
     </div>
     <div class="cloud-chip" id="cloud-status" title="Cloud synchronization status"><span class="cloud-dot"></span><span class="cloud-label">Checking cloud…</span></div>
     <div class="command-actions">
-      <button class="btn-outline" type="button" onclick="toggleBackupTools()">Data Tools</button>
+      
       <button class="btn-primary" type="button" id="command-primary-action" onclick="showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'))">+ New Quotation</button>
     </div>
   </div>
@@ -1739,7 +1727,7 @@
             <button class="btn-primary" type="button" onclick="payrollSaveSheet()">Save Month</button>
           </div>
         </div>
-        <div class="payroll-note" dir="rtl">بيانات الراتب تُدخل مرة واحدة في ملف المهندس. الراتب = (الأساسي + السكن والتنقل + السيارة) ÷ 30 × أيام الاستحقاق + بدل الموقع داخل وخارج الرياض + الإضافي المعتمد. الغياب والإجازة غير المدفوعة يُخصمان؛ المكتب والراحة والأيام دون تكليف بالموقع لا تُخصم. راجع الأيام غير المسجلة قبل اعتماد الشهر. تكلفة المشروع تُرحّل من أيام الموقع المعتمدة، وباقي تكلفة الراتب تتحملها الشركة.</div>
+        
         <div class="payroll-table-wrap">
           <table class="payroll-table">
             <thead><tr>
@@ -1805,7 +1793,7 @@
       <div class="proj-toolbar">
         <h3>📁 Project Records</h3>
         <input class="proj-search" id="proj-search" placeholder="Search projects…" oninput="renderProjects()">
-        <button class="btn-primary" style="font-size:12px;padding:6px 14px" onclick="openProjModal()">+ New Project</button>
+        
       </div>
       <!-- Grid -->
       <div id="proj-comm-review" style="display:none"></div>
@@ -2373,7 +2361,7 @@ async function sfResolveWorkspaceUserId(user){
   if(!sfTeamMember(user?.email))throw new Error('This email is not approved for the Sky Field company workspace.');
   const {data,error}=await sfDb.rpc('sf_workspace_data_user_id');
   if(error)throw new Error('Shared workspace setup is required. Run the supplied SkyField_Team_Access_Setup.sql file in Supabase, then sign in again.');
-  if(!data)throw new Error('The Sky Field workspace owner account was not found. Sign in or register the main administrator account first.');
+  if(!data)throw new Error('The Sky Field workspace owner account was not found. Sign in with the main administrator account first.');
   sfWorkspaceUserId=String(data);
   return sfWorkspaceUserId;
 }
@@ -2500,35 +2488,7 @@ async function sfLogin(event){
   }finally{sfSetFormBusy(form,false);}
 }
 
-async function sfRegister(event){
-  event.preventDefault();
-  if(!sfDb){sfSetAuthMessage('Supabase is not configured.','error');return;}
-  const form=event.currentTarget;
-  const fullName=document.getElementById('sf-register-name').value.trim();
-  const email=document.getElementById('sf-register-email').value.trim();
-  const password=document.getElementById('sf-register-password').value;
-  const confirmPassword=document.getElementById('sf-register-confirm').value;
-  const member=sfTeamMember(email);
-  if(!member){sfSetAuthMessage('Registration is limited to approved Sky Field company emails.','error');return;}
-  if(password.length<8){sfSetAuthMessage('Password must contain at least 8 characters.','error');return;}
-  if(password!==confirmPassword){sfSetAuthMessage('The password confirmation does not match.','error');return;}
-  sfSetFormBusy(form,true,'Creating account…'); sfSetAuthMessage('Creating your secure account…','info');
-  try{
-    const options={data:{full_name:member.name||fullName,company_role:member.role||'Administrator'}};
-    const redirect=sfAuthRedirectUrl(); if(redirect)options.emailRedirectTo=redirect;
-    const {data,error}=await sfDb.auth.signUp({email,password,options});
-    if(error)throw error;
-    if(data?.session){
-      sfSetAuthMessage('Account created. Loading your workspace…','success');
-    }else{
-      sfSetAuthMessage('Account created. Check your email and confirm the account, then return to login.','success');
-      document.getElementById('sf-login-email').value=email;
-    }
-  }catch(error){
-    console.error('Registration failed',error);
-    sfSetAuthMessage(error?.message||'Unable to create the account.','error');
-  }finally{sfSetFormBusy(form,false);}
-}
+// Self-registration was removed: accounts are created by the administrator only.
 
 async function sfSendPasswordReset(event){
   event.preventDefault();
@@ -3657,7 +3617,7 @@ const APP_PAGE_META = {
 // language. Exact English UI phrases are translated at runtime, including UI
 // fragments created later by the dashboard/project renderers. Customer PDFs
 // are deliberately excluded and continue to follow conditionLanguage.
-const SF_UI_AR = Object.freeze({
+const SF_UI_AR = Object.freeze({ "All invoices, incl. VAT":"كل الفواتير شاملة الضريبة","Unpaid, incl. VAT":"غير المدفوع شاملًا الضريبة","Project invoices & installments":"فواتير ودفعات المشاريع","Unpaid on these projects":"غير المدفوع على هذه المشاريع",
   "Analytics":"التحليلات","Proforma Invoices":"الفواتير المبدئية","Team & Attendance":"الفريق والحضور","Attendance":"الحضور","Field Expenses":"مصروفات الميدان","Timesheets & Approvals":"التايم شيت والاعتمادات","Finance":"المالية","Payroll":"الرواتب","Settings":"الإعدادات","Attendance Settings":"إعدادات الحضور","Sync attendance & projects":"مزامنة الحضور والمشاريع","Monthly Payroll Sheets":"كشوف الرواتب الشهرية","Record attendance by period.":"تسجيل الحضور بالفترات.","Engineers’ expense receipts and requests.":"إيصالات مصروفات المهندسين وطلباتها.","Attendance and expense approvals, history, and Excel export.":"اعتماد الحضور والمصروفات، والسجل، والتصدير إلى Excel.","Projects available to engineers for attendance.":"المشاريع المتاحة للمهندسين في الحضور.","Profitability, collection, monthly trend, and engineer utilisation.":"الربحية والتحصيل والاتجاه الشهري واستغلال المهندسين.","Adds new projects to the attendance list and posts approved attendance and expenses to project cost":"يضيف المشاريع الجديدة لقائمة الحضور ويرحّل الحضور والمصروفات المعتمدة إلى تكلفة المشاريع",
   "Secure access to the management, quotations, projects, invoices, payments, and company documents system.":"وصول آمن إلى نظام الإدارة وعروض الأسعار والمشاريع والفواتير والمدفوعات ومستندات الشركة.",
   "Supabase secure email authentication":"مصادقة آمنة عبر البريد الإلكتروني",
@@ -3889,7 +3849,14 @@ function sfNormalizePaymentRecord(pay){
 }
 function paymentReceivedAmount(pay){return sfNormalizePaymentRecord(pay).receivedAmount}
 function paymentRemainingAmount(pay){const x=sfNormalizePaymentRecord(pay);return Math.max(0,x.amount-x.receivedAmount)}
-function projectReceivedTotal(project){return(project?.payments||[]).reduce((sum,p)=>sum+paymentReceivedAmount(p),0)}
+// One definition of invoiced / received / outstanding for every screen. Each project billing entry
+// (a linked proforma invoice or an installment) counts once, and a receipt only reduces its own entry,
+// so money received on one project can never hide an unpaid invoice on another.
+function sfProjectMoney(p){let invoiced=0,received=0;(p?.payments||[]).forEach(raw=>{const x=sfNormalizePaymentRecord(raw);invoiced+=x.amount;received+=x.receivedAmount});const contract=sfNum(p?.contract);return{contract,invoiced,received,outstanding:Math.max(0,invoiced-received),toInvoice:Math.max(0,contract-invoiced)}}
+function sfMoneyTotals(list){const t={contract:0,invoiced:0,received:0,outstanding:0,toInvoice:0};(list||[]).forEach(p=>{const m=sfProjectMoney(p);for(const k in t)t[k]+=m[k]});return t}
+// Proforma invoices with no billing entry on a project (not linked, or linked to a missing project).
+function sfUnlinkedProformas(){return(typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!(pi&&pi.projectId&&getInvoicePaymentRecord(pi.projectId,pi.id)?.payment))}
+function sfUnlinkedProformaTotal(){return sfUnlinkedProformas().reduce((s,pi)=>{try{return s+(sfNum(resolvedProformaCalculation(pi).grandTotal)||0)}catch(_){return s}},0)}
 
 function renderDashboard(){
   const root=document.getElementById('dashboard-content'); if(!root)return;
@@ -3897,19 +3864,15 @@ function renderDashboard(){
   const qs=(typeof savedQuotes!=='undefined'?savedQuotes:[]);
   const pis=(typeof proformaInvoices!=='undefined'?proformaInvoices:[]);
   const totalContract=ps.reduce((s,p)=>s+(parseFloat(p.contract)||0),0);
-  const totalInvoiced=pis.reduce((s,p)=>s+(parseFloat((p.totals||{}).grandTotal)||parseFloat((p.amounts||{}).grandTotal)||parseFloat(p.total)||0),0);
-  const totalReceived=ps.reduce((s,p)=>s+projectReceivedTotal(p),0);
-  const outstanding=Math.max(0,totalInvoiced-totalReceived);
+  const sfMoney=sfMoneyTotals(ps),sfLoose=sfUnlinkedProformaTotal(); const totalInvoiced=sfMoney.invoiced+sfLoose; const totalReceived=sfMoney.received; const outstanding=sfMoney.outstanding+sfLoose;
   const recentProjects=ps.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')).slice(0,5);
   const recentInvoices=pis.slice().sort((a,b)=>(b.updatedAt||b.date||'').localeCompare(a.updatedAt||a.date||'')).slice(0,5);
   root.innerHTML=`
     <div class="dash-kpis">
       <div class="dash-kpi"><div class="dk-icon">▣</div><div class="dk-label">Active Projects</div><div class="dk-value">${ps.filter(p=>p.status!=='completed').length}</div><div class="dk-sub">${ps.length} projects in total</div></div>
       <div class="dash-kpi"><div class="dk-icon">◫</div><div class="dk-label">Contract Value</div><div class="dk-value">${fmtSAR(totalContract)}</div><div class="dk-sub">Across tracked projects</div></div>
-      <div class="dash-kpi"><div class="dk-icon">▧</div><div class="dk-label">Total Invoiced</div><div class="dk-value">${fmtSAR(totalInvoiced)}</div><div class="dk-sub">${pis.length} invoices issued</div></div>
-      <div class="dash-kpi"><div class="dk-icon">◉</div><div class="dk-label">Outstanding</div><div class="dk-value">${fmtSAR(outstanding)}</div><div class="dk-sub">Invoiced less received</div></div>
-    </div>
-    <div class="dash-grid">
+      <div class="dash-kpi"><div class="dk-icon">▧</div><div class="dk-label">Total Invoiced</div><div class="dk-value">${fmtSAR(totalInvoiced)}</div><div class="dk-sub">All invoices, incl. VAT</div></div>
+      <div class="dash-kpi"><div class="dk-icon">◉</div><div class="dk-label">Outstanding</div><div class="dk-value">${fmtSAR(outstanding)}</div><div class="dk-sub">Unpaid, incl. VAT</div></div> </div> <div id="dash-attention"></div> <div class="dash-grid">
       <div class="dash-panel">
         <div class="dash-panel-hdr"><h3>Recent Projects</h3><button class="eo-mini-link" onclick="showTab('projects',document.querySelector('.side-nav-btn[data-module=projects]'))">View all</button></div>
         <div class="dash-list">${recentProjects.length?recentProjects.map(p=>`<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(p.name)}</div><div class="dash-row-sub">${escHtml(p.client||'No client')} · ${escHtml(p.status||'active')}</div></div><strong>${fmtSAR(p.contract||0)}</strong></div>`).join(''):'<div class="dash-empty">No projects yet. Convert an approved quotation into a project.</div>'}</div>
@@ -3923,9 +3886,7 @@ function renderDashboard(){
           <button class="dash-action" onclick="showTab('proformas',document.querySelector('.side-nav-btn[data-module=proformas]'))">▧ Invoice register</button>
         </div>
         <div class="dash-panel-hdr" style="border-top:1px solid var(--gray-200)"><h3>Recent Invoices</h3></div>
-        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · ${escHtml(pi.issueDate||pi.date||'')}</div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.totals||{}).grandTotal||(pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div>
-      </div>
-    </div>`;
+        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · ${escHtml(pi.issueDate||pi.date||'')}</div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.totals||{}).grandTotal||(pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div> </div> </div>`; if(typeof sfRenderAttention==='function')sfRenderAttention();
 }
 
 function showTab(name,btn){
@@ -3953,12 +3914,12 @@ function showTab(name,btn){
   const primary=document.getElementById('command-primary-action');
   if(primary){
     if(name==='projects'){primary.textContent='+ New Project';primary.onclick=()=>openProjModal('');}
-    else if(name==='projectdetails'){primary.textContent='Back to Projects';primary.onclick=()=>closeProjectDetails();}
+    else if(name==='projectdetails'){primary.hidden=true;}
     else if(name==='proformas'){primary.textContent='View Projects to Invoice';primary.onclick=()=>showTab('projects',document.querySelector('.side-nav-btn[data-module=projects]'));}
     else if(name==='quotes'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
     else if(name==='dashboard'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
     else if(name==='engineers'){primary.textContent='+ Add Engineer';primary.onclick=()=>{resetEngineerForm();document.getElementById('eng-name')?.focus();};}
-    else if(name==='payroll'){primary.textContent='Save Monthly Sheet';primary.onclick=()=>payrollSaveSheet();}
+    else if(name==='payroll'){primary.hidden=true;}
     else if(name==='analytics'){primary.textContent='Refresh / تحديث';primary.onclick=()=>{if(typeof sfRenderAnalytics==='function')sfRenderAnalytics({reload:true})};} else if(name==='costsettings'){primary.textContent='+ Add Equipment Rate';primary.onclick=()=>{resetCostEquipmentForm();document.getElementById('cost-eq-name')?.focus();};}
     else {primary.textContent='Save Quotation';primary.onclick=()=>saveCurrentQuotation(false,'quotation');}
   }
@@ -6727,7 +6688,7 @@ function payrollRemoveRow(id){if(!sfCurrentPayroll)return;sfCurrentPayroll.rows=
 function payrollEngineerOptions(selected){return '<option value="">Manual employee</option>'+sfEngineers.map(e=>`<option value="${e.id}" ${selected===e.id?'selected':''}>${escHtml(e.name)}</option>`).join('')}
 function payrollRenderRows(){const body=document.getElementById('payroll-table-body');if(!body||!sfCurrentPayroll)return;body.innerHTML=sfCurrentPayroll.rows.length?sfCurrentPayroll.rows.map((r,i)=>{const c=payrollCalcRow(r);return`<tr>
 <td style="text-align:center">${i+1}</td>
-<td><select onchange="payrollSetRow('${r.id}','engineerId',this.value)" style="min-width:160px">${payrollEngineerOptions(r.engineerId)}</select><input class="name-inp" value="${escHtml(r.name)}" placeholder="Employee name" onchange="payrollSetRow('${r.id}','name',this.value)"></td>
+<td><select onchange="payrollSetRow('${r.id}','engineerId',this.value)" style="min-width:160px">${payrollEngineerOptions(r.engineerId)}</select>${r.engineerId&&sfEngineers.some(e=>e.id===r.engineerId)?'':`<input class="name-inp" value="${escHtml(r.name)}" placeholder="Employee name" onchange="payrollSetRow('${r.id}','name',this.value)">`}</td>
 <td><input value="${escHtml(r.nationality)}" onchange="payrollSetRow('${r.id}','nationality',this.value)"></td><td><input class="id-inp" value="${escHtml(r.iqama)}" onchange="payrollSetRow('${r.id}','iqama',this.value)"></td><td><input class="id-inp" value="${escHtml(r.employeeNo)}" onchange="payrollSetRow('${r.id}','employeeNo',this.value)"></td><td><input value="${escHtml(r.profession)}" onchange="payrollSetRow('${r.id}','profession',this.value)"></td>
 <td><input type="number" value="${r.baseSalary}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','baseSalary',this.value)"></td><td><input type="number" value="${r.housingTransport}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','housingTransport',this.value)"></td><td><input type="number" value="${r.carAllowance??r.siteCar??0}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','carAllowance',this.value)"></td><td><input type="number" value="${r.siteAllowance||0}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','siteAllowance',this.value)"></td><td><input type="number" value="${r.otherAllowance}" onchange="payrollSetRow('${r.id}','otherAllowance',this.value)"></td>
 <td><input type="number" min="0" max="31" value="${r.attendanceDays}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','attendanceDays',this.value)"></td><td class="money">${payrollMoney(c.attendanceSalary)}</td><td><input type="number" min="0" value="${r.overtimeHours}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','overtimeHours',this.value)"></td><td><input type="number" min="0" value="${r.overtimeRate}" ${r.salaryModel===2?'readonly class="payroll-locked" title="Calculated from the engineer profile and approved attendance. Change it there, then save again. / يُحسب من ملف المهندس والحضور المعتمد"':''} onchange="payrollSetRow('${r.id}','overtimeRate',this.value)"></td><td class="money">${payrollMoney(c.overtimeAmount)}</td>
@@ -6901,7 +6862,7 @@ function sfProjectPassesFilters(p,f){
   if(f.client&&String(p.client||'').trim()!==f.client)return false;
   if(f.from||f.to){const start=sfIsoDate(p.start);if(!start||(f.from&&start<f.from)||(f.to&&start>f.to))return false;}
   if(f.collect){
-    const invoiced=(p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0),pending=Math.max(0,invoiced-projectReceivedTotal(p));
+    const sfM=sfProjectMoney(p),invoiced=sfM.invoiced,pending=sfM.outstanding;
     if(f.collect==='outstanding'&&!(pending>0.005))return false;
     if(f.collect==='paid'&&!(invoiced>0&&pending<=0.005))return false;
     if(f.collect==='none'&&invoiced>0)return false;
@@ -6985,16 +6946,13 @@ function renderProjects(){
   sfListCount('pf-count',filtered.length,projects.length,'project(s)');
 
   // Summary bar
-  const totContract = filtered.reduce((s,p)=>s+(parseFloat(p.contract)||0),0);
-  const totInvoiced = filtered.reduce((s,p)=>s+(p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0),0);
-  const totReceived = filtered.reduce((s,p)=>s+projectReceivedTotal(p),0);
-  const totPending  = Math.max(0,totInvoiced-totReceived);
+  const sfMoney=sfMoneyTotals(filtered); const totContract=sfMoney.contract; const totInvoiced=sfMoney.invoiced; const totReceived=sfMoney.received; const totPending=sfMoney.outstanding; const sfLooseTotal=sfUnlinkedProformaTotal();
   const totCommission = filtered.reduce((s,p)=>s+projTotalCommission(p),0);
   document.getElementById('proj-summary').innerHTML=`
     <div class="pfs-card"><div class="pfs-lbl">Total Contract Value</div><div class="pfs-val">${fmtSAR(totContract)}</div><div class="pfs-sub">${filtered.length===projects.length?projects.length+' project(s)':filtered.length+' of '+projects.length+' project(s) · filtered'}</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Total Invoiced</div><div class="pfs-val" style="color:#bfdbfe">${fmtSAR(totInvoiced)}</div><div class="pfs-sub">All linked invoices</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Total Invoiced</div><div class="pfs-val" style="color:#bfdbfe">${fmtSAR(totInvoiced)}</div><div class="pfs-sub">Project invoices &amp; installments</div></div>
     <div class="pfs-card"><div class="pfs-lbl">Total Received</div><div class="pfs-val" style="color:#4ade80">${fmtSAR(totReceived)}</div><div class="pfs-sub">Recorded invoice receipts</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Outstanding / Pending</div><div class="pfs-val" style="color:#fb923c">${fmtSAR(totPending)}</div><div class="pfs-sub">Invoiced less received</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Outstanding / Pending</div><div class="pfs-val" style="color:#fb923c">${fmtSAR(totPending)}</div><div class="pfs-sub">Unpaid on these projects</div>${sfLooseTotal>0.005?`<div class="pfs-sub pfs-loose">+ ${fmtSAR(sfLooseTotal)} on invoices not linked to a project</div>`:''}</div>
     <div class="pfs-card"><div class="pfs-lbl">Total Commission (عمولة)</div><div class="pfs-val" style="color:#f59e0b">${fmtSAR(totCommission)}</div><div class="pfs-sub">${filtered.length===projects.length?'Across all projects':'Across shown projects'}</div></div>
   `;
 
@@ -7005,11 +6963,7 @@ function renderProjects(){
   }
 
   grid.innerHTML = filtered.map(p=>{
-    const contract = parseFloat(p.contract)||0;
-    const invoiced = (p.proformas||[]).reduce((a,x)=>a+(parseFloat(x.total)||0),0);
-    const received = projectReceivedTotal(p);
-    const pending  = Math.max(0,invoiced-received);
-    const remainingToInvoice=Math.max(0,contract-invoiced);
+    const sfM=sfProjectMoney(p); const contract=sfM.contract; const invoiced=sfM.invoiced; const received=sfM.received; const pending=sfM.outstanding; const remainingToInvoice=sfM.toInvoice;
     const statusColor = {active:'active',completed:'completed',hold:'hold'}[p.status]||'active';
     const statusLabel = {active:'Active',completed:'Completed',hold:'On Hold'}[p.status]||'Active';
 
@@ -7161,7 +7115,7 @@ function renderProjectDetails(){
   const root=document.getElementById('project-details-root');if(!root)return;
   const p=projects.find(x=>x.id===sfActiveProjectDetailsId);
   if(!p){root.innerHTML='<div class="pd-empty">Project not found.</div>';return;}
-  const invoices=projectInvoiceRecords(p),payroll=projectPayrollRecords(p),contract=sfNum(p.contract),invoiced=projectInvoiceTotal(p),received=projectReceivedTotal(p),outstanding=Math.max(0,invoiced-received),remaining=Math.max(0,contract-invoiced),fin=sfProjectFinance(p),estimated=fin.estimated,actual=fin.actual,commission=fin.commission,expectedProfit=fin.expectedProfit,actualProfit=fin.cashProfit;
+  const invoices=projectInvoiceRecords(p),payroll=projectPayrollRecords(p),contract=sfNum(p.contract),sfM=sfProjectMoney(p),invoiced=sfM.invoiced,received=sfM.received,outstanding=sfM.outstanding,remaining=sfM.toInvoice,fin=sfProjectFinance(p),estimated=fin.estimated,actual=fin.actual,commission=fin.commission,expectedProfit=fin.expectedProfit,actualProfit=fin.cashProfit;
   const newInvoiceBtn=document.getElementById('pd-new-invoice-btn');if(newInvoiceBtn)newInvoiceBtn.onclick=()=>openProformaFromProject(p.id);
   const editBtn=document.getElementById('pd-edit-project-btn');if(editBtn)editBtn.onclick=()=>openProjModal(p.id);
   root.innerHTML=`
@@ -7483,6 +7437,6 @@ setTimeout(()=>{
 // Auth starts after the unified modules have registered.
 </script>
 
-<script src="attendance-integration.js?v=20261016-fixes2"></script><script src="analytics.js?v=20261016-fixes2"></script><script src="unified-shell.js?v=20261016-fixes2"></script><script>sfInitAuth();</script>
+<script src="attendance-integration.js?v=20261017-review5"></script><script src="analytics.js?v=20261017-review5"></script><script src="dashboard-attention.js?v=20261017-review5"></script><script src="unified-shell.js?v=20261017-review5"></script><script>sfInitAuth();</script>
 </body>
 </html>

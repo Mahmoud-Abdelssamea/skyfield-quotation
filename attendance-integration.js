@@ -258,11 +258,9 @@ async function sfPayrollFillFromAttendance({auto=false}={}){
 function sfPayrollNoteHtml(r){
  const s=r.attSummary;if(!s)return '';
  if(s.noData)return '<span class="warn">لا يوجد حضور مسجل: الراتب الثابت محسوب كاملًا مبدئيًا. راجع الغياب قبل الاعتماد.</span>';
- const parts=[`أيام الاستحقاق ${s.days}`,`داخل الرياض ${s.inside||0}`,`خارج الرياض ${s.outside||0}`];
- if(s.paidLeave)parts.push(`إجازة مدفوعة ${s.paidLeave}`);if(s.unpaidLeave)parts.push(`إجازة غير مدفوعة ${s.unpaidLeave}`);
- if(s.absent)parts.push(`غياب ${s.absent}`);
- let html=escHtml(parts.join(' · '));
- if(s.pending)html+=`<br><span class="warn">${s.pending} يوم بانتظار الاعتماد؛ بدله وإضافيه غير محسوبين، وخصم الغياب يتطلب الاعتماد</span>`;
+ // Paid days are already in the field above; the breakdown shows only what is non-zero, as small chips.
+ const parts=[[s.inside,'داخل الرياض'],[s.outside,'خارج الرياض'],[s.paidLeave,'إجازة مدفوعة'],[s.unpaidLeave,'إجازة غير مدفوعة'],[s.absent,'غياب']].filter(([n])=>n>0).map(([n,l])=>`<span class="sf-chip">${escHtml(l)} ${n}</span>`); let html=parts.length?`<span class="sf-chips">${parts.join('')}</span>`:'';
+ if(s.pending)html+=`<br><span class="warn" title="بدله وإضافيه غير محسوبين، وخصم الغياب يتطلب الاعتماد / Not counted until approved">${s.pending} يوم بانتظار الاعتماد ⓘ</span>`;
  if(s.rejected)html+=`<br><span class="warn">${s.rejected} يوم مرفوض يحتاج تصحيحًا</span>`;
  if(s.unrecorded)html+=`<br><span class="warn">${s.unrecorded} يوم غير مسجل${s.unrecordedFridays?` (منها ${s.unrecordedFridays} جمعة)`:''}</span>`;
  if(s.fixedAllowance>0&&s.allowance>0)html+=`<br><span class="warn">بدل ثابت في ملفه ${payrollMoney(s.fixedAllowance)} وبدلات يومية معتمدة ${payrollMoney(s.allowance)} — راجع البدل</span>`;
@@ -275,7 +273,7 @@ function sfPayrollEnsurePanel(){
  if(document.getElementById('sf-payroll-att'))return;
  const anchor=document.querySelector('#tab-payroll .payroll-controls');if(!anchor)return;
  const box=document.createElement('div');box.id='sf-payroll-att';box.className='payroll-note';
- box.innerHTML='<b>حساب الراتب تلقائيًا / Automatic payroll</b><p dir="rtl">أيام الاستحقاق = 30 − الغياب المعتمد − الإجازة غير المدفوعة المعتمدة. الإجازات السنوية والمرضية والطارئة مدفوعة. الأيام غير المسجلة لا تعتبر غيابًا تلقائيًا؛ راجعها قبل اعتماد الشهر. الحقول المحسوبة تُعدّل من ملف المهندس أو سجل الحضور.</p><button class="btn-outline" type="button" id="sf-payroll-fill">تحديث الحساب من الحضور / Refresh payroll</button><small id="sf-payroll-att-status" dir="rtl" style="display:block;margin-top:8px"></small>';
+ box.innerHTML='<b>حساب الراتب تلقائيًا / Automatic payroll</b> <button class="btn-outline" type="button" id="sf-payroll-fill" style="margin-inline-start:8px">تحديث الحساب من الحضور / Refresh payroll</button><small id="sf-payroll-att-status" dir="rtl" style="display:block;margin-top:8px"></small><details class="payroll-howto" dir="rtl"><summary>كيف يُحسب الراتب؟ / How is payroll calculated?</summary><p>بيانات الراتب تُدخل مرة واحدة في ملف المهندس. الراتب = (الأساسي + السكن والتنقل + السيارة) ÷ 30 × أيام الاستحقاق + بدل الموقع داخل وخارج الرياض + الإضافي المعتمد.</p><p>أيام الاستحقاق = 30 − الغياب المعتمد − الإجازة غير المدفوعة المعتمدة. الإجازات السنوية والمرضية والطارئة مدفوعة، والمكتب والراحة والأيام دون تكليف بالموقع لا تُخصم. الأيام غير المسجلة لا تعتبر غيابًا تلقائيًا؛ راجعها قبل اعتماد الشهر.</p><p>الحقول المحسوبة تُعدّل من ملف المهندس أو سجل الحضور. تكلفة المشروع تُرحّل من أيام الموقع المعتمدة، وباقي تكلفة الراتب تتحملها الشركة.</p></details>';
  anchor.after(box);box.querySelector('#sf-payroll-fill').onclick=()=>void sfPayrollFillFromAttendance();
 }
 function sfPayrollVisible(){const tab=document.getElementById('tab-payroll');return !!tab&&tab.style.display!=='none'}

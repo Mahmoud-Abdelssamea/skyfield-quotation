@@ -43,7 +43,8 @@ function renderApprovalFilters(){
  select.innerHTML=(me.role==='admin'?`<option value="all">${esc(tr('كل المهندسين'))}</option>`:'')+list.map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');
  select.value=list.some(m=>m.user_id===old)?old:me.role==='admin'?'all':me.user_id;
  if(!approvalFiltersReady){$('approvalState').value=me.role==='admin'?'pending':'all';approvalFiltersReady=true;}
- syncApprovalExportEngineer();
+  syncApprovalExportEngineer();
+ if(window.sfAccountingExportSync)window.sfAccountingExportSync();
 }
 function filteredApprovalRecords(){
  const table=approvalType==='expenses'?'sf_daily_expenses':'sf_daily_records',engineer=$('approvalEngineer').value,state=$('approvalState').value;
@@ -333,14 +334,19 @@ function availableProjects(){return projects.filter(p=>selectedProjectIds.has(St
 function populateProjectSelect(form){const select=form.elements.project_id,previous=select.value;select.innerHTML=`<option value="">${esc(tr('بدون مشروع / مصروف عام'))}</option>`+availableProjects().map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selectedProjectIds.has(previous)?previous:'';}
 function assertProjectAllowed(id){if(id&&(!projectVisibilityReady||!selectedProjectIds.has(String(id))))throw Error(tr('حدد مشروعًا متاحًا من القائمة.'));}
 async function loadProjectVisibility(){projectVisibilityReady=false;try{const rows=await checked(db.from('sf_daily_project_visibility').select('project_id'));selectedProjectIds=new Set(rows.map(r=>String(r.project_id)));projectVisibilityReady=true;}catch(e){selectedProjectIds=new Set();message(language==='en'?'Project selection needs setup: run attendance-projects-v3.sql in Supabase.':'اختيار المشاريع يحتاج تفعيل: نفّذ attendance-projects-v3.sql في Supabase.');}$('saveProjectChoices').disabled=!projectVisibilityReady;}
-function updateProjectCount(){const count=$('projectChoices').querySelectorAll('input:checked').length;$('projectCount').textContent=language==='en'?`${count} of ${projects.length} selected`:`تم اختيار ${count} من ${projects.length}`;}
-function filterProjectChoices(){const term=$('projectSearch').value.trim().toLocaleLowerCase();for(const label of $('projectChoices').querySelectorAll('label'))label.hidden=!label.textContent.toLocaleLowerCase().includes(term);}
-function renderProjectChoices(){if(me?.role!=='admin')return;$('projectChoices').innerHTML=projects.map(p=>`<label><input type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span>${esc(p.name)}</span></label>`).join('')||`<p>${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;filterProjectChoices();updateProjectCount();}
+function updateProjectCount(){const count=$('projectChoices').querySelectorAll('input:checked').length,missing=[...$('projectChoices').querySelectorAll('.project-choice')].filter(r=>r.querySelector('input').checked&&!r.querySelector('select').value).length;$('projectCount').textContent=(language==='en'?`${count} of ${projects.length} selected`:`تم اختيار ${count} من ${projects.length}`)+(missing?(language==='en'?` · ${missing} without a location`:` · ${missing} بلا موقع`):'');$('projectCount').classList.toggle('location-missing',missing>0);}
+function filterProjectChoices(){const term=$('projectSearch').value.trim().toLocaleLowerCase();for(const row of $('projectChoices').querySelectorAll('.project-choice'))row.hidden=!row.querySelector('span').textContent.toLocaleLowerCase().includes(term);}
+function renderProjectChoices(){if(me?.role!=='admin')return;$('projectChoices').innerHTML=projects.map(p=>`<div class="project-choice"><label><input type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span>${esc(p.name)}</span></label><select class="project-location" data-project-location="${esc(p.id)}" aria-label="${esc(tr('موقع المشروع'))}"><option value="">${esc(tr('— الموقع —'))}</option><option value="inside" ${p.location==='inside'?'selected':''}>${esc(tr('داخل الرياض'))}</option><option value="outside" ${p.location==='outside'?'selected':''}>${esc(tr('خارج الرياض'))}</option></select></div>`).join('')||`<p>${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;filterProjectChoices();updateProjectCount();}
 $('projectSearch').oninput=filterProjectChoices;
 $('projectChoices').onchange=updateProjectCount;
 $('selectAllProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('input'))field.checked=true;updateProjectCount();};
 $('clearProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('input'))field.checked=false;updateProjectCount();};
-$('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.role!=='admin'||!projectVisibilityReady)return;const button=$('saveProjectChoices');button.disabled=true;try{const ids=Array.from($('projectChoices').querySelectorAll('input:checked'),i=>i.value);await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع المختارة.');}finally{button.disabled=false}})};
+$('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.role!=='admin'||!projectVisibilityReady)return;const button=$('saveProjectChoices');button.disabled=true;try{const rows=[...$('projectChoices').querySelectorAll('.project-choice')],missing=rows.filter(r=>r.querySelector('input').checked&&!r.querySelector('select').value).map(r=>r.querySelector('span').textContent);
+ if(missing.length)throw Error(tr('حدد موقع كل مشروع متاح للمهندسين (داخل أو خارج الرياض):')+' '+missing.join('، '));
+ const locations=rows.map(r=>({id:r.querySelector('input').value,location:r.querySelector('select').value}));
+ try{await checked(db.rpc('sf_set_project_locations',{p_locations:locations}))}catch(error){if(/sf_set_project_locations|function/i.test(String(error?.message||'')))throw Error(tr('حفظ مواقع المشاريع يحتاج تشغيل الملف 13-attendance-project-location-v14.sql في Supabase أولًا.'));throw error}
+ for(const l of locations){const p=projects.find(x=>String(x.id)===String(l.id));if(p)p.location=l.location||null}
+ const ids=Array.from($('projectChoices').querySelectorAll('input:checked'),i=>i.value);await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع المختارة.');}finally{button.disabled=false}})};
 
 
 
@@ -400,9 +406,18 @@ function groupAttendancePeriods(rows){
 function monthlyNotice(text){$('monthlyEntryMessage').textContent=tr(text)}
 function monthlyDirty(){return periodFormDirty}
 function monthProjectOptions(selected){
- const list=availableProjects();let html=`<option value="">${esc(tr('اختر المشروع'))}</option>`+list.map(p=>`<option value="${esc(p.id)}" ${String(p.id)===String(selected)?'selected':''}>${esc(p.name)}</option>`).join('');
+ const list=availableProjects();let html=`<option value="">${esc(tr('اختر المشروع'))}</option>`+list.map(p=>`<option value="${esc(p.id)}" ${String(p.id)===String(selected)?'selected':''}>${esc(p.name)}${p.location?' — '+esc(tr(p.location==='outside'?'خارج الرياض':'داخل الرياض')):''}</option>`).join('');
  if(selected&&!list.some(p=>String(p.id)===String(selected)))html+=`<option value="${esc(selected)}" selected>${esc(projects.find(p=>String(p.id)===String(selected))?.name||selected)} (${esc(tr('غير متاح'))})</option>`;
  return html;
+}
+// The administrator sets each project's location; a site day always takes it (the server enforces it too).
+function projectLocationOf(id){return projects.find(p=>String(p.id)===String(id))?.location||''}
+function applyProjectLocation(){
+ const status=$('rangeStatus'),hint=$('rangeLocationHint');if(!status||!hint)return;
+ const site=['inside','outside'].includes(status.value),pid=$('rangeProject').value,loc=projectLocationOf(pid);
+ if(site&&loc&&status.value!==loc)status.value=loc;
+ hint.hidden=!site||!pid;hint.classList.toggle('missing',site&&!!pid&&!loc);
+ hint.textContent=!pid?'':loc?tr(loc==='outside'?'موقع هذا المشروع: خارج الرياض — يحدده المدير':'موقع هذا المشروع: داخل الرياض — يحدده المدير'):tr('لم يحدد المدير موقع هذا المشروع بعد، فلا يمكن تسجيل أيام موقع عليه.');
 }
 function updateRangeControls(){
  const disabled=monthBusy||!monthReady;
@@ -415,7 +430,7 @@ function updateRangeControls(){
  $('rangeOvertimeLabel').hidden=off||!$('rangeHasOvertime').checked;$('rangeOvertime').disabled=disabled||off||!$('rangeHasOvertime').checked;
  $('attendanceMonth').disabled=monthBusy;$('reloadAttendance').disabled=monthBusy;
  $('applyRange').textContent=tr(editingPeriod?'حفظ التعديل':'إضافة الفترة');$('rangeFormTitle').textContent=tr(editingPeriod?'تعديل فترة الحضور':'إضافة فترة حضور');
- $('cancelPeriodEdit').hidden=!editingPeriod;$('rangeEditHint').hidden=!editingPeriod;
+ $('cancelPeriodEdit').hidden=!editingPeriod;$('rangeEditHint').hidden=!editingPeriod;applyProjectLocation();
  $('quickTimesheet').disabled=disabled||!monthSaved.size;$('timesheetOptions').disabled=monthBusy;
 }
 function resetPeriodForm(){
@@ -475,6 +490,7 @@ function periodError(error){
 }
 async function savePeriod(remove=false,group=editingPeriod){
  if(monthBusy||!monthReady)return;
+ if(!remove&&['inside','outside'].includes($('rangeStatus').value)&&$('rangeProject').value&&!projectLocationOf($('rangeProject').value))throw Error(tr('لم يحدد المدير موقع هذا المشروع بعد، فلا يمكن تسجيل أيام موقع عليه.'));
  const from=$('rangeFrom').value,to=$('rangeTo').value,skip=!$('includeFriday').checked;
  const row=normalizeMonthEntry({status:$('rangeStatus').value,project_id:$('rangeProject').value,leave_type:$('rangeLeave').value,overtime:$('rangeHasOvertime').checked?$('rangeOvertime').value:0,notes:$('rangeNotes').value});
  if(!remove){
@@ -497,7 +513,7 @@ async function savePeriod(remove=false,group=editingPeriod){
   message('');monthlyNotice(remove?'تم مسح الفترة.':group?'تم حفظ التعديل وإعادة إرسال الفترة للاعتماد.':'تمت إضافة الفترة وإرسالها للاعتماد.');
  }
 }
-$('rangeStatus').onchange=updateRangeControls;$('rangeHasOvertime').onchange=updateRangeControls;
+$('rangeStatus').onchange=updateRangeControls;$('rangeProject').addEventListener('change',applyProjectLocation);$('rangeHasOvertime').onchange=updateRangeControls;
 $('rangeForm').addEventListener('input',()=>{periodFormDirty=true});$('rangeForm').addEventListener('change',()=>{periodFormDirty=true});
 $('rangeForm').onsubmit=event=>{event.preventDefault();run(()=>savePeriod())};
 $('cancelPeriodEdit').onclick=()=>{if(mayDiscardForm()){resetPeriodForm();renderMonthEntries()}};
@@ -590,3 +606,12 @@ function setupAttendanceTabs(){
 Object.assign(translations,{"بدون راتب":"Unpaid leave"});
 
 Object.assign(translations,{'ملف Excel واحد لكل المشاريع، من الحضور المعتمد فقط، مع تفاصيل كل يوم وإجمالي الساعات.':'One Excel file for all projects, approved attendance only, with daily details and total hours.'});
+
+
+Object.assign(translations,{'خارج الرياض':'Outside Riyadh','داخل الرياض':'Inside Riyadh','موقع المشروع':'Project location','— الموقع —':'— Location —',
+'موقع هذا المشروع: خارج الرياض — يحدده المدير':'This project is outside Riyadh — set by the administrator',
+'موقع هذا المشروع: داخل الرياض — يحدده المدير':'This project is inside Riyadh — set by the administrator',
+'لم يحدد المدير موقع هذا المشروع بعد، فلا يمكن تسجيل أيام موقع عليه.':'The administrator has not set this project\'s location yet, so site days cannot be recorded on it.',
+'حدد موقع كل مشروع متاح للمهندسين (داخل أو خارج الرياض):':'Set the location (inside or outside Riyadh) of every project available to engineers:',
+'حفظ مواقع المشاريع يحتاج تشغيل الملف 13-attendance-project-location-v14.sql في Supabase أولًا.':'Saving project locations needs 13-attendance-project-location-v14.sql to be run in Supabase first.'});
+Object.assign(translations,{'حدد موقع كل مشروع (داخل أو خارج الرياض). المهندس لا يختاره؛ أيام الموقع تأخذ موقع المشروع ويُحسب البدل على أساسه.':'Set each project\'s location (inside or outside Riyadh). Engineers do not choose it: site days take the project\'s location and the allowance follows it.'});

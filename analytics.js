@@ -99,7 +99,7 @@ function collectionData(){
     const pay=sfNormalizePaymentRecord(raw);
     items.push({client:String(p.client||'').trim()||'No client',date:isoDate(pay.date),amount:num(pay.amount),received:pay.receivedAmount,remaining:paymentRemainingAmount(pay)});
   }));
-  (typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!pi.projectId||!projects.some(p=>p.id===pi.projectId)).forEach(pi=>{
+  (typeof sfUnlinkedProformas==='function'?sfUnlinkedProformas():(typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!pi.projectId||!projects.some(p=>p.id===pi.projectId))).forEach(pi=>{
     let g=0;try{g=num((resolvedProformaCalculation(pi)||{}).grandTotal)}catch(_){}
     items.push({client:String(pi.clientName||'').trim()||'No client',date:isoDate(pi.issueDate),amount:g,received:0,remaining:g});
   });
@@ -153,7 +153,7 @@ function trendData(){
     });
     (p.actualExpenses||[]).forEach(x=>put(cost,x.date,num(x.amount)));
   });
-  (typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!pi.projectId||!projects.some(p=>p.id===pi.projectId)).forEach(pi=>{
+  (typeof sfUnlinkedProformas==='function'?sfUnlinkedProformas():(typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!pi.projectId||!projects.some(p=>p.id===pi.projectId))).forEach(pi=>{
     try{const t=resolvedProformaCalculation(pi)||{};put(inv,pi.issueDate,num(t.totalAfterDiscount)||num(t.grandTotal)/1.15)}catch(_){}
   });
   return{keys,inv,col,cost};

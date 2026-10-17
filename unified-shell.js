@@ -45,7 +45,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261016-fixes2';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261017-review5';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }
@@ -138,3 +138,7 @@ async function sfUnifiedSalaryPackages(frameWindow){
  return {standardDays:SF_ATTENDANCE_STANDARD_DAYS,costingFrom:SF_ATTENDANCE_COSTING_FROM,packages};
 }
 function sfUnifiedRosterChanged(frameWindow){if(frameWindow===document.getElementById('sf-unified-frame').contentWindow&&!sfAttendanceOnly)void sfRefreshAttendanceRoster()}
+
+// Language switcher: floating on the sign-in screen, inside the sidebar once signed in
+// (it used to cover the header on computers and the content on phones).
+(function(){const place=()=>{const sw=document.querySelector('.sf-language-switcher'),slot=document.getElementById('side-language-slot');if(!sw||!slot)return;const locked=document.body.classList.contains('sf-auth-locked');if(locked&&sw.parentElement!==document.body)document.body.prepend(sw);else if(!locked&&sw.parentElement!==slot)slot.appendChild(sw);sw.classList.toggle('in-sidebar',!locked)};place();new MutationObserver(place).observe(document.body,{attributes:true,attributeFilter:['class']})})();
