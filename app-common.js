@@ -212,3 +212,9 @@ async function handleDocFiles(input){
   catch(error){console.error('Project document upload failed',error);alert('Document upload failed. Ensure the Supabase Storage SQL setup has been applied.\n'+(error?.message||error));setCloudStatus('error','Upload failed')}
   finally{input.disabled=false;input.value=''}
 }
+
+// Stable numeric employee-code order; empty codes appear last. Never mutate source arrays.
+function sfSortEmployees(rows){
+ const key=r=>String(r.employeeNo??'').trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+ return [...rows].sort((a,b)=>{const x=key(a),y=key(b);if(!x||!y)return x?-1:y?1:0;return x.localeCompare(y,'en',{numeric:true})});
+}

@@ -23,3 +23,10 @@
 #tab-payroll button:focus-visible,#tab-payroll input:focus-visible,#tab-payroll select:focus-visible{outline:2px solid #d97706;outline-offset:3px}
 @media(max-width:1000px){#tab-payroll .payroll-controls{grid-template-columns:1fr 1fr}#tab-payroll .payroll-summary{grid-template-columns:repeat(2,1fr)}#tab-payroll .pay-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#tab-payroll .payroll-controls{grid-template-columns:1fr}#tab-payroll .payroll-summary-box .val{font-size:17px}#tab-payroll .payroll-actions button{flex:1 1 auto;min-height:42px}}
+/* Consistent centered alignment for employee and payroll review tables. */
+#tab-engineers .resource-table th,#tab-engineers .resource-table td,
+#tab-payroll .payroll-table th,#tab-payroll .payroll-table td,
+#tab-payroll .payroll-table .money,#tab-payroll .payroll-summary-box{text-align:center;vertical-align:middle}
+#tab-payroll .pay-person{justify-content:center;text-align:center;width:100%}
+#tab-engineers #engineer-table-body td>div{margin-inline:auto}
+#tab-payroll .pay-detail-grid input{text-align:center}

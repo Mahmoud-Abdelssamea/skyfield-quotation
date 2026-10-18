@@ -333,19 +333,45 @@ function availableProjects(){return projects.filter(p=>selectedProjectIds.has(St
 function populateProjectSelect(form){const select=form.elements.project_id,previous=select.value;select.innerHTML=`<option value="">${esc(tr('بدون مشروع / مصروف عام'))}</option>`+availableProjects().map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selectedProjectIds.has(previous)?previous:'';}
 function assertProjectAllowed(id){if(id&&(!projectVisibilityReady||!selectedProjectIds.has(String(id))))throw Error(tr('حدد مشروعًا متاحًا من القائمة.'));}
 async function loadProjectVisibility(){projectVisibilityReady=false;try{const rows=await checked(db.from('sf_daily_project_visibility').select('project_id'));selectedProjectIds=new Set(rows.map(r=>String(r.project_id)));projectVisibilityReady=true;}catch(e){selectedProjectIds=new Set();message(language==='en'?'Project selection needs setup: run attendance-projects-v3.sql in Supabase.':'اختيار المشاريع يحتاج تفعيل: نفّذ attendance-projects-v3.sql في Supabase.');}$('saveProjectChoices').disabled=!projectVisibilityReady;}
-function updateProjectCount(){const count=$('projectChoices').querySelectorAll('input:checked').length,missing=[...$('projectChoices').querySelectorAll('.project-choice')].filter(r=>r.querySelector('input').checked&&!r.querySelector('select').value).length;$('projectCount').textContent=(language==='en'?`${count} of ${projects.length} selected`:`تم اختيار ${count} من ${projects.length}`)+(missing?(language==='en'?` · ${missing} without a location`:` · ${missing} بلا موقع`):'');$('projectCount').classList.toggle('location-missing',missing>0);}
-function filterProjectChoices(){const term=$('projectSearch').value.trim().toLocaleLowerCase();for(const row of $('projectChoices').querySelectorAll('.project-choice'))row.hidden=!row.querySelector('span').textContent.toLocaleLowerCase().includes(term);}
-function renderProjectChoices(){if(me?.role!=='admin')return;$('projectChoices').innerHTML=projects.map(p=>`<div class="project-choice"><label><input type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span>${esc(p.name)}</span></label><select class="project-location" data-project-location="${esc(p.id)}" aria-label="${esc(tr('موقع المشروع'))}"><option value="">${esc(tr('— الموقع —'))}</option><option value="inside" ${p.location==='inside'?'selected':''}>${esc(tr('داخل الرياض'))}</option><option value="outside" ${p.location==='outside'?'selected':''}>${esc(tr('خارج الرياض'))}</option></select></div>`).join('')||`<p>${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;filterProjectChoices();updateProjectCount();}
+function updateProjectCount(){
+ const rows=[...$('projectChoices').querySelectorAll('.project-choice')],on=rows.filter(r=>r.querySelector('.pc-check').checked),missing=on.filter(r=>!projectRowLocation(r)).length;
+ $('projectCount').textContent=(language==='en'?`${on.length} of ${projects.length} available`:`المتاح ${on.length} من ${projects.length}`)+(missing?(language==='en'?` · ${missing} without a location`:` · ${missing} بلا موقع`):'');
+ $('projectCount').classList.toggle('location-missing',missing>0);
+ // Once nothing is missing a location, leave the "No location" view (it would stay empty).
+ if(!missing&&window.sfProjectFilter==='missing'){window.sfProjectFilter='all';filterProjectChoices()}
+ const counts={all:rows.length,on:on.length,off:rows.length-on.length,missing};
+ for(const b of document.querySelectorAll('#projectFilters [data-filter]')){const n=b.querySelector('b');if(n)n.textContent=counts[b.dataset.filter];b.classList.toggle('active',(window.sfProjectFilter||'all')===b.dataset.filter);b.hidden=b.dataset.filter==='missing'&&!missing&&(window.sfProjectFilter||'all')!=='missing'}
+}
+function filterProjectChoices(){
+ const term=$('projectSearch').value.trim().toLocaleLowerCase(),f=window.sfProjectFilter||'all';
+ for(const row of $('projectChoices').querySelectorAll('.project-choice')){
+  const on=row.querySelector('.pc-check').checked,loc=projectRowLocation(row);
+  const keep=f==='all'||(f==='on'&&on)||(f==='off'&&!on)||(f==='missing'&&on&&!loc);
+  row.hidden=!keep||!row.querySelector('.pc-name').textContent.toLocaleLowerCase().includes(term);
+ }
+ const shown=[...$('projectChoices').querySelectorAll('.project-choice')].filter(r=>!r.hidden).length,empty=$('projectNoMatch');
+ if(empty)empty.hidden=shown>0||!projects.length;
+}
+function renderProjectChoices(){if(me?.role!=='admin')return;
+ $('projectSearch').placeholder=tr('ابحث باسم المشروع');
+ // One row per project: checkbox, full name, and an inside / outside toggle. Available projects first.
+ const list=[...projects].sort((a,b)=>(selectedProjectIds.has(String(b.id))-selectedProjectIds.has(String(a.id)))||String(a.name).localeCompare(String(b.name)));
+ const loc=(p,v,label)=>`<label class="pc-loc-option"><input type="radio" name="loc-${esc(p.id)}" value="${v}" ${p.location===v?'checked':''}><span>${esc(tr(label))}</span></label>`;
+ $('projectChoices').innerHTML=list.map(p=>`<div class="project-choice" data-project-row="${esc(p.id)}"><label class="pc-main"><input class="pc-check" type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span class="pc-name" title="${esc(p.name)}">${esc(p.name)}</span></label><div class="pc-loc" role="radiogroup" aria-label="${esc(tr('موقع المشروع'))}">${loc(p,'inside','داخل الرياض')}${loc(p,'outside','خارج الرياض')}</div><span class="pc-missing">${esc(tr('حدد الموقع'))}</span></div>`).join('')||`<p class="pc-empty">${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;
+ filterProjectChoices();updateProjectCount();}
+function projectRowLocation(row){return row.querySelector('.pc-loc input:checked')?.value||''}
 $('projectSearch').oninput=filterProjectChoices;
-$('projectChoices').onchange=updateProjectCount;
-$('selectAllProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('input'))field.checked=true;updateProjectCount();};
-$('clearProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('input'))field.checked=false;updateProjectCount();};
-$('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.role!=='admin'||!projectVisibilityReady)return;const button=$('saveProjectChoices');button.disabled=true;try{const rows=[...$('projectChoices').querySelectorAll('.project-choice')],missing=rows.filter(r=>r.querySelector('input').checked&&!r.querySelector('select').value).map(r=>r.querySelector('span').textContent);
+$('projectChoices').onchange=()=>{updateProjectCount();if((window.sfProjectFilter||'all')!=='all')filterProjectChoices()};
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#projectFilters [data-filter]');if(!b)return;window.sfProjectFilter=b.dataset.filter;filterProjectChoices();updateProjectCount()});
+$('selectAllProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('.project-choice:not([hidden]) .pc-check'))field.checked=true;updateProjectCount();};
+$('clearProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('.project-choice:not([hidden]) .pc-check'))field.checked=false;updateProjectCount();};
+$('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.role!=='admin'||!projectVisibilityReady)return;const button=$('saveProjectChoices');button.disabled=true;try{const rows=[...$('projectChoices').querySelectorAll('.project-choice')],missing=rows.filter(r=>r.querySelector('.pc-check').checked&&!projectRowLocation(r)).map(r=>r.querySelector('.pc-name').textContent);
+ if(missing.length){window.sfProjectFilter='missing';$('projectSearch').value='';filterProjectChoices();updateProjectCount();}
  if(missing.length)throw Error(tr('حدد موقع كل مشروع متاح للمهندسين (داخل أو خارج الرياض):')+' '+missing.join('، '));
- const locations=rows.map(r=>({id:r.querySelector('input').value,location:r.querySelector('select').value}));
+ const locations=rows.map(r=>({id:r.querySelector('.pc-check').value,location:projectRowLocation(r)}));
  try{await checked(db.rpc('sf_set_project_locations',{p_locations:locations}))}catch(error){if(/sf_set_project_locations|function/i.test(String(error?.message||'')))throw Error(tr('حفظ مواقع المشاريع يحتاج تشغيل الملف 13-attendance-project-location-v14.sql في Supabase أولًا.'));throw error}
  for(const l of locations){const p=projects.find(x=>String(x.id)===String(l.id));if(p)p.location=l.location||null}
- const ids=Array.from($('projectChoices').querySelectorAll('input:checked'),i=>i.value);await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع المختارة.');}finally{button.disabled=false}})};
+ const ids=Array.from($('projectChoices').querySelectorAll('.pc-check:checked'),i=>i.value);await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع المختارة.');}finally{button.disabled=false}})};
 
 
 
@@ -613,3 +639,41 @@ Object.assign(translations,{'خارج الرياض':'Outside Riyadh','داخل �
 'حدد موقع كل مشروع متاح للمهندسين (داخل أو خارج الرياض):':'Set the location (inside or outside Riyadh) of every project available to engineers:',
 'حفظ مواقع المشاريع يحتاج تشغيل الملف 13-attendance-project-location-v14.sql في Supabase أولًا.':'Saving project locations needs 13-attendance-project-location-v14.sql to be run in Supabase first.'});
 Object.assign(translations,{'حدد موقع كل مشروع (داخل أو خارج الرياض). المهندس لا يختاره؛ أيام الموقع تأخذ موقع المشروع ويُحسب البدل على أساسه.':'Set each project\'s location (inside or outside Riyadh). Engineers do not choose it: site days take the project\'s location and the allowance follows it.'});
+
+Object.assign(translations,{'حدد الموقع':'Set location','المتاحة':'Available','غير المتاحة':'Not available','بلا موقع':'No location','الكل':'All','تحديد المعروض':'Select shown','إلغاء تحديد المعروض':'Clear shown','لا توجد مشاريع مطابقة.':'No matching projects.','ابحث باسم المشروع':'Search by project name'});
+
+// After "Sync attendance & projects" in the main system: reload the project list in place (no page refresh).
+// Changes made in Attendance Settings but not saved yet (ticks and locations) are kept; only the rows the
+// administrator actually changed are carried over, so changes saved elsewhere are not overwritten.
+window.sfReloadAttendanceProjects=async function(){
+ if(typeof db==='undefined'||!db||!me)return null;
+ const before=new Map(projects.map(p=>[String(p.id),p])),savedOn=new Set(selectedProjectIds),pending=new Map();
+ for(const row of document.querySelectorAll('#projectChoices .project-choice')){
+  const id=row.dataset.projectRow,on=row.querySelector('.pc-check').checked,loc=projectRowLocation(row),p=before.get(id);
+  if(!p)continue;
+  const v={};if(on!==savedOn.has(id))v.on=on;if(loc!==(p.location||''))v.loc=loc; // only what was changed here
+  if(Object.keys(v).length)pending.set(id,v);
+ }
+ projects=await checked(db.from('sf_daily_projects').select('*').order('name'));
+ if(me.role==='admin')await loadProjectVisibility();
+ const added=projects.filter(p=>!before.has(String(p.id))).map(p=>String(p.id));
+ const renamed=projects.filter(p=>before.has(String(p.id))&&before.get(String(p.id)).name!==p.name).length;
+ if(me.role==='admin'){
+  renderProjectChoices();
+  for(const [id,v] of pending){
+   const row=document.querySelector(`#projectChoices [data-project-row="${CSS.escape(id)}"]`);if(!row)continue;
+   if('on' in v)row.querySelector('.pc-check').checked=v.on;
+   if('loc' in v)row.querySelectorAll('.pc-loc input').forEach(r=>{r.checked=r.value===v.loc});
+  }
+  for(const id of added){const row=document.querySelector(`#projectChoices [data-project-row="${CSS.escape(id)}"]`);if(row){row.classList.add('pc-new');row.querySelector('.pc-main').insertAdjacentHTML('beforeend',`<em class="pc-new-badge">${esc(tr('جديد'))}</em>`)}}
+  filterProjectChoices();updateProjectCount();
+ }
+ try{updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'))}catch(e){console.warn('Project lists not refreshed',e)}
+ if(added.length||renamed){
+  const parts=[];if(added.length)parts.push(language==='en'?`${added.length} new project${added.length>1?'s':''} added`:`أُضيف ${added.length} مشروع جديد`);
+  if(renamed)parts.push(language==='en'?`${renamed} renamed`:`تحدّث اسم ${renamed}`);
+  message((parts.join(language==='en'?' · ':' · '))+(pending.size?(language==='en'?' — your unsaved changes were kept.':' — تعديلاتك غير المحفوظة باقية.'):'.'));
+ }
+ return{added:added.length,renamed,kept:pending.size};
+};
+Object.assign(translations,{'جديد':'New'});

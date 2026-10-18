@@ -86,12 +86,16 @@ async function sfBuildAttendanceCostLines(){
  return {byProject,missingSalary:[...missing],unmatchedProjects:[...unmatched],zeroPaidDays:[...zeroDays]};
 }
 
-async function sfSyncDailyModule(silent=false){
+// While a sync runs, opening a project must not start a second full sync (it used to run twice per click).
+let sfSyncDailyDepth=0;
+async function sfSyncDailyModule(silent=false){ sfSyncDailyDepth++;try{
  if(!sfHasAccess('payroll')){alert('هذه العملية للإدارة فقط');return;}
  try{
   const {data:member,error:memberError}=await sfDb.from('sf_daily_members').select('role').eq('user_id',sfCurrentUser.id).maybeSingle();
   if(memberError)throw memberError;if(member?.role!=='admin')throw Error('يجب تفعيل صلاحية إدارة الحضور لهذا الحساب');
   if(projects.length){const {error}=await sfDb.from('sf_daily_projects').upsert(projects.map(p=>({id:String(p.id),name:p.name||String(p.id)})));if(error)throw error;}
+  // The attendance screen, if open, reloads its project list in place (no page refresh needed).
+  try{const f=document.getElementById('sf-unified-frame');if(f?.contentWindow?.sfReloadAttendanceProjects)f.contentWindow.sfReloadAttendanceProjects().catch(e=>console.warn('Attendance project list not reloaded',e))}catch(e){console.warn(e)}
   let expenses=[];
   for(let offset=0;;offset+=500){const {data,error}=await sfDb.from('sf_daily_expenses').select('*').eq('review','approved').order('id').range(offset,offset+499);if(error)throw error;expenses.push(...data);if(data.length<500)break;}
   // Attendance cost is best-effort: when it cannot be computed, existing attendance lines are left untouched.
@@ -128,7 +132,7 @@ async function sfSyncDailyModule(silent=false){
   }
   return true;
  }catch(e){if(!silent)alert('لم تكتمل المزامنة: '+e.message);else if(typeof setCloudStatus==='function')setCloudStatus('error','Expense sync failed: '+e.message);return false;}
-}
+}finally{sfSyncDailyDepth--} }
 
 // Payroll sheets of months covered by attendance costing keep their own record but no longer post a lump sum.
 const sfPayrollPostBase=payrollPostProjectExpense;
@@ -203,6 +207,7 @@ sfMirrorCollection=async function(table,records){
 let sfExpenseAutoSync=null,sfExpenseSyncAgain=false;
 function sfAutoSyncProjectExpenses(){
  if(typeof sfUnifiedProfile==='undefined'||sfUnifiedProfile?.role!=='admin'||!sfHasAccess('payroll'))return;
+ if(sfSyncDailyDepth>0)return; // a sync is already running and covers this
  if(sfExpenseAutoSync){sfExpenseSyncAgain=true;return sfExpenseAutoSync}
  sfExpenseAutoSync=(async()=>{try{do{sfExpenseSyncAgain=false;await sfSyncDailyModule(true)}while(sfExpenseSyncAgain)}finally{sfExpenseAutoSync=null}})();
  return sfExpenseAutoSync;

@@ -19,7 +19,7 @@ function sfBuildPayrollWorkbook(template,sheet,projectName=''){
  const title=`رواتب شركة سماء الميدان${projectName?' ( '+projectName+' )':''} لشهر ${sheet.month}`;
  const rows=[sfPayrollCell(row(1),'A1',title),row(2),row(3)];
  const totals=[0,0,0,0];
- sheet.rows.forEach((r,i)=>{
+ sfSortEmployees(sheet.rows).forEach((r,i)=>{
   const n=i+4,c=payrollCalcStandalone(r,sheet.standardDays),num=sfNum;
   const divisor=r.salaryModel===2?30:Math.max(1,Math.min(31,num(sheet.standardDays)||30));
   const days=Math.min(divisor,Math.max(0,num(r.attendanceDays)));
