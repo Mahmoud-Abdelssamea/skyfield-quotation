@@ -16,6 +16,37 @@ const sfExpenseLineKey=e=>[e.id,e.source,e.sourceId,e.category,e.description,sfR
 const sfById=(a,b)=>a.id<b.id?-1:a.id>b.id?1:0;
 // Monthly package charged per site day: (base + housing/transport + car) ÷ standard days. Shared with the approval screen.
 function sfAttendancePackage(eng){return sfNum(eng?.monthly)+sfNum(eng?.housingTransport)+sfNum(eng?.carAllowance??eng?.siteCar)}
+// Salary basis of a month once its payroll is approved: the package recorded in the approved sheet, so a later
+// raise never changes the cost of months already closed. Null = no approved sheet for that engineer and month.
+function sfApprovedPayrollRow(engineerId,ym){
+ const matches=[];
+ for(const sheet of sfPayrollSheets||[])if(sheet?.status==='approved'&&String(sheet.month)===String(ym))for(const row of sheet.rows||[])if(row.engineerId===engineerId)matches.push({row,sheet});
+ if(matches.length>1)throw Error('توجد كشوف معتمدة مكررة للمهندس في '+ym+'؛ أوقف الترحيل لحين مراجعتها.');
+ return matches[0]||null;
+}
+function sfApprovedPayrollPackage(engineerId,ym){const x=sfApprovedPayrollRow(engineerId,ym);return x?sfNum(x.row.baseSalary)+sfNum(x.row.housingTransport)+sfNum(x.row.carAllowance??x.row.siteCar):null}
+async function sfSalaryUnpaidDays(from){
+ const counts=new Map();
+ for(let o=0;;o+=500){
+  const {data,error}=await sfDb.from('sf_daily_records').select('id,user_id,day,status,leave_type').eq('review','approved').gte('day',from).in('status',['absent','leave']).order('id').range(o,o+499);
+  if(error)throw error;
+  for(const r of data||[])if(r.status==='absent'||(r.status==='leave'&&!['annual','sick','emergency'].includes(r.leave_type))){const k=r.user_id+'|'+String(r.day).slice(0,7);counts.set(k,(counts.get(k)||0)+1);}
+  if((data||[]).length<500)return counts;
+ }
+}
+function sfProjectSalaryBasis(engineerId,ym,eng,unpaid,totalSiteDays){
+ const frozen=sfApprovedPayrollRow(engineerId,ym);
+ const pkg=frozen?sfApprovedPayrollPackage(engineerId,ym):sfAttendancePackage(eng);
+ let paidDays=frozen?Math.min(30,sfNum(frozen.row.attendanceDays)):Math.max(0,30-(unpaid||0));
+ // An approved row with no paid days although the engineer worked on site that month is a data error
+ // (for example a row added by hand and approved without refreshing from attendance). Do not post a
+ // silent zero: use the approved attendance instead and report it for review.
+ const zeroSheet=!!frozen&&paidDays<=0&&totalSiteDays>0;
+ if(zeroSheet)paidDays=Math.max(0,30-(unpaid||0));
+ // The unpaid-day reduction caps the combined project salary at the earned monthly salary.
+ const cap=totalSiteDays>0?Math.min(1,paidDays/totalSiteDays):0;
+ return {pkg,paidDays,cap,frozen:!!frozen,zeroSheet};
+}
 function sfAttendanceCostingCovers(sheet){return !!SF_ATTENDANCE_COSTING_FROM&&!!sheet?.month&&String(sheet.month)>=SF_ATTENDANCE_COSTING_FROM}
 
 async function sfBuildAttendanceCostLines(){
@@ -29,30 +60,30 @@ async function sfBuildAttendanceCostLines(){
  }
  // Months before the costing start are never charged, even if the server returns them.
  const rows=(data||[]).filter(r=>String(r.ym)>=SF_ATTENDANCE_COSTING_FROM);
+ const unpaid=await sfSalaryUnpaidDays(SF_ATTENDANCE_COSTING_FROM+'-01');
  // Salary can never exceed the standard days per engineer/month, even in 31-day months or with several projects.
  const totalDays=new Map();
  for(const r of rows){const k=r.u_id+'|'+r.ym;totalDays.set(k,(totalDays.get(k)||0)+Number(r.day_count))}
- const byProject=new Map(),missing=new Set(),projectIds=new Set(projects.map(p=>String(p.id))),unmatched=new Set();
+ const byProject=new Map(),missing=new Set(),zeroDays=new Set(),projectIds=new Set(projects.map(p=>String(p.id))),unmatched=new Set();
  for(const r of rows){
   const pid=String(r.proj_id);
   if(!projectIds.has(pid)){unmatched.add(pid);continue}
   const eid='attendance_'+r.u_id;
   const eng=sfEngineers.find(e=>e.id===eid)||sfAttendanceSupplemental.get(eid)||{};
   const name=eng.name||String(r.u_id).slice(0,8);
-  const pkg=sfAttendancePackage(eng);
-  if(pkg<=0)missing.add(name);
-  const days=Number(r.day_count),cap=Math.min(1,SF_ATTENDANCE_STANDARD_DAYS/totalDays.get(r.u_id+'|'+r.ym));
+  const {frozen,pkg,cap,zeroSheet}=sfProjectSalaryBasis(eid,r.ym,eng,unpaid.get(r.u_id+'|'+r.ym),totalDays.get(r.u_id+'|'+r.ym));if(pkg<=0)missing.add(name);if(zeroSheet)zeroDays.add(name+' · '+r.ym);
+  const days=Number(r.day_count);
   const list=byProject.get(pid)||[];
   const add=(kind,label,amount)=>{
    amount=sfRound2(amount);if(!(amount>0))return;
    list.push({id:'att_'+r.ym+'_'+kind+'_'+r.u_id,source:'payroll',sourceId:'attendance:'+r.u_id+':'+r.ym+':'+pid+':'+kind,category:'Payroll',description:label,amount,date:r.ym+'-01'});
   };
-  add('salary','Salary · '+name+' · '+r.ym+' · '+days+(days===1?' day':' days'),pkg*(days*cap)/SF_ATTENDANCE_STANDARD_DAYS);
+  add('salary','Salary · '+name+' · '+r.ym+' · '+days+(days===1?' day':' days')+(frozen?' · approved payroll':''),pkg*(days*cap)/SF_ATTENDANCE_STANDARD_DAYS);
   add('allowance','Site allowance · '+name+' · '+r.ym+' · '+days+(days===1?' day':' days'),Number(r.allowance_sum));
   add('overtime','Overtime · '+name+' · '+r.ym+' · '+Number(r.ot_hours)+' h',Number(r.ot_amount));
   byProject.set(pid,list);
  }
- return {byProject,missingSalary:[...missing],unmatchedProjects:[...unmatched]};
+ return {byProject,missingSalary:[...missing],unmatchedProjects:[...unmatched],zeroPaidDays:[...zeroDays]};
 }
 
 async function sfSyncDailyModule(silent=false){
@@ -90,6 +121,7 @@ async function sfSyncDailyModule(silent=false){
    if(costWarning)notes.push('تنبيه: لم تُحدَّث تكلفة الحضور — '+costWarning);
    else if(SF_ATTENDANCE_COSTING_FROM){
     if(costs.missingSalary.length)notes.push('مهندسون بلا راتب مسجل (احتُسب راتبهم صفرًا): '+costs.missingSalary.join('، '));
+    if(costs.zeroPaidDays?.length)notes.push('كشف رواتب معتمد بأيام استحقاق صفر رغم وجود أيام موقع؛ احتُسبت التكلفة من الحضور المعتمد، راجع الكشف: '+costs.zeroPaidDays.join('، '));
     if(costs.unmatchedProjects.length)notes.push('مشاريع في الحضور غير موجودة في المشاريع الحالية: '+costs.unmatchedProjects.join('، '));
    }
    alert('تم تحديث قائمة المشاريع وترحيل المصروفات المعتمدة'+(SF_ATTENDANCE_COSTING_FROM?'، وتكلفة الحضور المعتمد (الراتب والبدلات والأوفر تايم) بدءًا من شهر '+SF_ATTENDANCE_COSTING_FROM:'')+' دون تكرار. المصروفات العامة بلا مشروع لا تدخل تكلفة أي مشروع.'+(notes.length?'\n\n'+notes.join('\n'):''));
@@ -357,6 +389,8 @@ async function sfRenderProjectCrew(){
    if(cost.error.code==='42501'||/admin/i.test(text))throw Error('يلزم حساب إدارة الحضور لعرض من عمل على المشروع.');
    throw cost.error;
   }
+  const unpaid=await sfSalaryUnpaidDays('2000-01-01');
+  if(token!==sfProjectCrewRequest||String(sfActiveProjectDetailsId)!==pid)return;
   const rows=cost.data||[],totalDays=new Map();
   for(const r of rows){const k=r.u_id+'|'+r.ym;totalDays.set(k,(totalDays.get(k)||0)+Number(r.day_count))}
   const names=new Map((members.data||[]).map(m=>[m.user_id,m.name]));
@@ -364,8 +398,8 @@ async function sfRenderProjectCrew(){
   const planned=new Set((p.assignedEngineers||[]).map(a=>a.engineerId).filter(Boolean));
   const lines=rows.filter(r=>String(r.proj_id)===pid).map(r=>{
    const eid='attendance_'+r.u_id,eng=sfEngineers.find(e=>e.id===eid)||sfAttendanceSupplemental.get(eid)||{};
-   const days=Number(r.day_count),costed=!!SF_ATTENDANCE_COSTING_FROM&&r.ym>=SF_ATTENDANCE_COSTING_FROM,pkg=sfAttendancePackage(eng);
-   const cap=Math.min(1,SF_ATTENDANCE_STANDARD_DAYS/totalDays.get(r.u_id+'|'+r.ym));
+   const days=Number(r.day_count),costed=!!SF_ATTENDANCE_COSTING_FROM&&r.ym>=SF_ATTENDANCE_COSTING_FROM;
+   const {pkg,cap}=sfProjectSalaryBasis(eid,r.ym,eng,unpaid.get(r.u_id+'|'+r.ym),totalDays.get(r.u_id+'|'+r.ym));
    const salary=costed&&pkg>0?sfRound2(pkg*(days*cap)/SF_ATTENDANCE_STANDARD_DAYS):null,allowance=sfRound2(r.allowance_sum),ot=sfRound2(r.ot_amount);
    return{uid:r.u_id,name:nameOf(r.u_id),ym:r.ym,days,allowance,otHours:Number(r.ot_hours)||0,ot,salary,pkg,costed,capped:cap<1,
     total:costed?sfRound2((salary||0)+allowance+ot):null,offPlan:planned.size>0&&!planned.has(eid)};
@@ -411,6 +445,6 @@ payrollApproveCurrent=async function(){
  if(sheet.month===sfRiyadhToday().slice(0,7)||sheet.rows.some(r=>r.attSummary?.unrecorded)){
   if(!confirm('تأكيد مراجعة الشهر: الأيام غير المسجلة والأيام المتبقية لا تخصم تلقائيًا، وتُحسب ضمن الراتب الثابت. هل راجعت الغياب والإجازات قبل الاعتماد؟'))return;
  }
- if(!sheet.rows.length)return;
+ if(!sheet.rows.length||!sfValidatePayrollUnique(sheet))return;
  sheet.status='approved';sfSimplePayrollSaveBase();
 };

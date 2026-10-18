@@ -77,14 +77,25 @@ function go(target){
  if(anchor)setTimeout(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}),400);
 }
 document.addEventListener('click',e=>{if(!e.target.closest)return;const b=e.target.closest('[data-attn-go]');if(b)return go(b.dataset.attnGo);if(e.target.closest('[data-attn-more]')){expanded=true;draw()}});
-window.sfRenderAttention=function(){
- draw();
- if(!attendanceAdmin())return;
+// Sidebar counter on "Timesheets & Approvals": periods + expenses waiting for approval (attendance administrators).
+function badge(){
+ const btn=document.querySelector('.side-nav-btn[data-module="timesheets"]');if(!btn)return;
+ let el=document.getElementById('side-approval-count');
+ if(!el){el=document.createElement('span');el.id='side-approval-count';el.className='side-nav-count side-nav-alert';btn.appendChild(el)}
+ const d=attendanceAdmin()?att.data:null,n=d?(d.periods||0)+(d.pendingExp||0):0;
+ el.textContent=n;el.hidden=!n;el.title=n?L(`${d.periods} period(s) and ${d.pendingExp} expense(s) awaiting approval`,`${d.periods} فترة و${d.pendingExp} مصروف بانتظار الاعتماد`):'';
+}
+function refreshAttendance(maxAge){
+ if(!attendanceAdmin()){badge();return}
  const user=typeof sfCurrentUser!=='undefined'&&sfCurrentUser?.id||'';
  if(att.user!==user)att={at:0,data:null,busy:null,user};
- if(att.busy||Date.now()-att.at<CACHE_MS)return;
- att.busy=loadAttendance().then(d=>{if(att.user!==user)return;att.data=d;att.error=null}).catch(err=>{if(att.user===user)att.error=err}).finally(()=>{if(att.user!==user)return;att.at=Date.now();att.busy=null;draw()});
- draw();
-};
+ if(att.busy||Date.now()-att.at<maxAge)return;
+ att.busy=loadAttendance().then(d=>{if(att.user!==user)return;att.data=d;att.error=null}).catch(err=>{if(att.user===user)att.error=err}).finally(()=>{if(att.user!==user)return;att.at=Date.now();att.busy=null;draw();badge()});
+}
+window.sfRenderAttention=function(){draw();refreshAttendance(CACHE_MS);draw()};
 window.sfAttentionInvalidate=function(){att.at=0};
+// The approvals screen reports changes at once; otherwise the counter is refreshed every 45 seconds.
+window.sfApprovalsChanged=function(){att.at=0;refreshAttendance(0)};
+setInterval(()=>{if(document.visibilityState==='visible')refreshAttendance(40000)},45000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshAttendance(40000)});
 })();
