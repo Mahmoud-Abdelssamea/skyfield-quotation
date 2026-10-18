@@ -61,12 +61,12 @@ async function sfRetryUnsaved(){
 const sfPushChains=new Map();
 function sfPushQueued(key){
  const next=(sfPushChains.get(key)||Promise.resolve()).catch(()=>{}).then(()=>sfPushNow(key));
- sfPushChains.set(key,next);next.finally(()=>{if(sfPushChains.get(key)===next)sfPushChains.delete(key)});
+ const clean=()=>{if(sfPushChains.get(key)===next)sfPushChains.delete(key)};sfPushChains.set(key,next);next.then(clean,clean);
  return next;
 }
 async function sfPushNow(key){
  if(typeof sfDb==='undefined'||!sfDb||!sfCurrentUser){setCloudStatus('error','Sign in required');return false}
- if(SF_SHARED_LISTS[key]&&!(await sfMergeSharedBeforePush(key)))return true;
+ try{if(SF_SHARED_LISTS[key]&&!(await sfMergeSharedBeforePush(key)))return true;}catch(error){setCloudStatus('error','Could not check latest cloud data; changes remain pending.');sfScheduleSyncRetry();return false;}
  const raw=localStorage.getItem(key);
  if(raw===null){sfPendingClear(key);return true}
  let value;try{value=JSON.parse(raw)}catch{value=raw}
@@ -206,7 +206,7 @@ function sfRerenderShared(){
 // Called before uploading a shared list. Returns false when nothing needs uploading.
 async function sfMergeSharedBeforePush(key){
  const cfg=SF_SHARED_LISTS[key];let remoteAll;
- try{remoteAll=await sfFetchSharedValues([key])}catch(error){console.warn('Could not read the server copy of',key,error);return true}
+ try{remoteAll=await sfFetchSharedValues([key])}catch(error){console.warn('Could not read the server copy of',key,error);throw error}
  if(!(key in remoteAll))return true;                      // nothing on the server yet
  const remote=remoteAll[key],base=sfBaseRead(key),local=sfParseRaw(localStorage.getItem(key));
  if(base===null||sfCanon(remote)===sfCanon(base))return true; // the server has not changed since this device saw it

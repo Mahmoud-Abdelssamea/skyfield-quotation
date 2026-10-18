@@ -88,14 +88,23 @@ async function sfBuildAttendanceCostLines(){
 
 // While a sync runs, opening a project must not start a second full sync (it used to run twice per click).
 let sfSyncDailyDepth=0;
-async function sfSyncDailyModule(silent=false){ sfSyncDailyDepth++;try{
+async function sfSyncDailyModule(silent=false){
+ if(sfSyncDailyDepth>0){if(!silent)alert('المزامنة جارية بالفعل، انتظر اكتمالها. / Sync is already running.');return false;}
+ sfSyncDailyDepth++;
+ const syncButtons=[...document.querySelectorAll('[data-unified-sync]')],syncDisabled=syncButtons.map(b=>b.disabled);
+ syncButtons.forEach(b=>b.disabled=true);
+ try{
  if(!sfHasAccess('payroll')){alert('هذه العملية للإدارة فقط');return;}
  try{
   const {data:member,error:memberError}=await sfDb.from('sf_daily_members').select('role').eq('user_id',sfCurrentUser.id).maybeSingle();
   if(memberError)throw memberError;if(member?.role!=='admin')throw Error('يجب تفعيل صلاحية إدارة الحضور لهذا الحساب');
   if(projects.length){const {error}=await sfDb.from('sf_daily_projects').upsert(projects.map(p=>({id:String(p.id),name:p.name||String(p.id)})));if(error)throw error;}
   // The attendance screen, if open, reloads its project list in place (no page refresh needed).
-  try{const f=document.getElementById('sf-unified-frame');if(f?.contentWindow?.sfReloadAttendanceProjects)f.contentWindow.sfReloadAttendanceProjects().catch(e=>console.warn('Attendance project list not reloaded',e))}catch(e){console.warn(e)}
+  let projectListWarning='';
+  try{const f=document.getElementById('sf-unified-frame');if(f?.contentWindow?.sfReloadAttendanceProjects)await f.contentWindow.sfReloadAttendanceProjects()}
+  catch(e){projectListWarning='تمت مزامنة أسماء المشاريع، لكن تعذر تحديث القائمة المعروضة. أعد الضغط على Sync. '+(e?.message||'');}
+  if(projectListWarning&&silent&&typeof setCloudStatus==='function')setCloudStatus('error',projectListWarning);
+
   let expenses=[];
   for(let offset=0;;offset+=500){const {data,error}=await sfDb.from('sf_daily_expenses').select('*').eq('review','approved').order('id').range(offset,offset+499);if(error)throw error;expenses.push(...data);if(data.length<500)break;}
   // Attendance cost is best-effort: when it cannot be computed, existing attendance lines are left untouched.
@@ -122,17 +131,18 @@ async function sfSyncDailyModule(silent=false){ sfSyncDailyDepth++;try{
   if(costWarning&&silent&&typeof setCloudStatus==='function')setCloudStatus('error','Attendance cost sync: '+costWarning);
   if(!silent){
    const notes=[];
+   if(projectListWarning)notes.push(projectListWarning);
    if(costWarning)notes.push('تنبيه: لم تُحدَّث تكلفة الحضور — '+costWarning);
    else if(SF_ATTENDANCE_COSTING_FROM){
     if(costs.missingSalary.length)notes.push('مهندسون بلا راتب مسجل (احتُسب راتبهم صفرًا): '+costs.missingSalary.join('، '));
     if(costs.zeroPaidDays?.length)notes.push('كشف رواتب معتمد بأيام استحقاق صفر رغم وجود أيام موقع؛ احتُسبت التكلفة من الحضور المعتمد، راجع الكشف: '+costs.zeroPaidDays.join('، '));
     if(costs.unmatchedProjects.length)notes.push('مشاريع في الحضور غير موجودة في المشاريع الحالية: '+costs.unmatchedProjects.join('، '));
    }
-   alert('تم تحديث قائمة المشاريع وترحيل المصروفات المعتمدة'+(SF_ATTENDANCE_COSTING_FROM?'، وتكلفة الحضور المعتمد (الراتب والبدلات والأوفر تايم) بدءًا من شهر '+SF_ATTENDANCE_COSTING_FROM:'')+' دون تكرار. المصروفات العامة بلا مشروع لا تدخل تكلفة أي مشروع.'+(notes.length?'\n\n'+notes.join('\n'):''));
+   alert((projectListWarning?'تم ترحيل المصروفات المعتمدة مع تنبيه بشأن تحديث قائمة المشاريع':'تم تحديث قائمة المشاريع وترحيل المصروفات المعتمدة')+(SF_ATTENDANCE_COSTING_FROM?'، وتكلفة الحضور المعتمد (الراتب والبدلات والأوفر تايم) بدءًا من شهر '+SF_ATTENDANCE_COSTING_FROM:'')+' دون تكرار. المصروفات العامة بلا مشروع لا تدخل تكلفة أي مشروع.'+(notes.length?'\n\n'+notes.join('\n'):''));
   }
   return true;
  }catch(e){if(!silent)alert('لم تكتمل المزامنة: '+e.message);else if(typeof setCloudStatus==='function')setCloudStatus('error','Expense sync failed: '+e.message);return false;}
-}finally{sfSyncDailyDepth--} }
+}finally{sfSyncDailyDepth--;syncButtons.forEach((b,i)=>b.disabled=syncDisabled[i])} }
 
 // Payroll sheets of months covered by attendance costing keep their own record but no longer post a lump sum.
 const sfPayrollPostBase=payrollPostProjectExpense;
@@ -140,7 +150,7 @@ payrollPostProjectExpense=function(sheet){
  if(!sfAttendanceCostingCovers(sheet))return sfPayrollPostBase(sheet);
  let touched=false;
  projects.forEach(p=>{if(Array.isArray(p.actualExpenses)&&p.actualExpenses.some(e=>e.sourceId===sheet.id)){p.actualExpenses=p.actualExpenses.filter(e=>e.sourceId!==sheet.id);p.updatedAt=new Date().toISOString();touched=true}});
- if(touched)saveProjects();
+ if(touched)return saveProjects();
 };
 
 // Attendance owns identities. The main workspace keeps supplemental cost data.
@@ -438,7 +448,7 @@ payrollSaveSheet=async function(){
  if(sfCurrentPayroll.status==='approved'){sfPayrollStatus('الكشف معتمد. أنشئ كشفًا جديدًا لأي مراجعة.');return}
  const sheet=sfCurrentPayroll;
  if(!(await sfPayrollFillFromAttendance())||sfCurrentPayroll!==sheet)return;
- sfSimplePayrollSaveBase();
+ return await sfSimplePayrollSaveBase();
 };
 payrollApproveCurrent=async function(){
  if(sfPayrollFillBusy||!sfCurrentPayroll||sfCurrentPayroll.status==='approved')return;
@@ -451,5 +461,5 @@ payrollApproveCurrent=async function(){
   if(!confirm('تأكيد مراجعة الشهر: الأيام غير المسجلة والأيام المتبقية لا تخصم تلقائيًا، وتُحسب ضمن الراتب الثابت. هل راجعت الغياب والإجازات قبل الاعتماد؟'))return;
  }
  if(!sheet.rows.length||!sfValidatePayrollUnique(sheet))return;
- sheet.status='approved';sfSimplePayrollSaveBase();
+ sheet.status='approved';return await sfSimplePayrollSaveBase();
 };

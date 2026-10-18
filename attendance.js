@@ -565,7 +565,7 @@ async function engineerAccountAction(body){
 function renderEngineerList(){
  if(me?.role!=='admin'){$('members').innerHTML='';return;}
  const term=$('engineerSearch').value.trim().toLocaleLowerCase();
- const all=members.filter(m=>m.role==='engineer'&&m.is_active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+ const all=members.filter(m=>m.role==='engineer'&&m.is_active!==false).sort((a,b)=>String(a.engineer_id||'').localeCompare(String(b.engineer_id||''),'en',{numeric:true}));
  const list=all.filter(m=>(m.name+' '+m.engineer_id).toLocaleLowerCase().includes(term));
  $('engineerCount').textContent=language==='en'?`${list.length} of ${all.length} active engineers`:`${list.length} من ${all.length} مهندس نشط`;
  $('members').innerHTML=list.map(m=>`<tr><td data-label="${esc(tr('كود الموظف'))}">${esc(m.engineer_id)}</td><td data-label="${esc(tr('اسم المهندس'))}"><b>${esc(m.name)}</b></td><td data-label="${esc(tr('بدل داخل الرياض / يوم'))}">${Number(m.inside_rate).toFixed(2)}</td><td data-label="${esc(tr('بدل خارج الرياض / يوم'))}">${Number(m.outside_rate).toFixed(2)}</td><td data-label="${esc(tr('سعر الساعة الإضافية'))}">${Number(m.overtime_rate).toFixed(2)}</td><td><div class="actions"><button type="button" class="secondary" data-edit-member="${esc(m.user_id)}">${esc(tr('تعديل'))}</button><button type="button" class="danger" data-remove-member="${esc(m.user_id)}">${esc(tr('حذف المهندس'))}</button></div></td></tr>`).join('')||`<tr><td colspan="6">${esc(tr('لا يوجد مهندسون مطابقون للبحث.'))}</td></tr>`;
@@ -645,17 +645,25 @@ Object.assign(translations,{'حدد الموقع':'Set location','المتاحة
 // After "Sync attendance & projects" in the main system: reload the project list in place (no page refresh).
 // Changes made in Attendance Settings but not saved yet (ticks and locations) are kept; only the rows the
 // administrator actually changed are carried over, so changes saved elsewhere are not overwritten.
+let sfAttendanceProjectReloadSequence=0;
 window.sfReloadAttendanceProjects=async function(){
  if(typeof db==='undefined'||!db||!me)return null;
+ const userId=me.user_id,sequence=++sfAttendanceProjectReloadSequence;
+ // Stage both reads before touching local state. Failed reads leave the draft intact.
+ const latest=await checked(db.from('sf_daily_projects').select('*').order('name'));
+ if(me?.user_id!==userId||sequence!==sfAttendanceProjectReloadSequence)return null;
+ const visibility=me.role==='admin'?await checked(db.from('sf_daily_project_visibility').select('project_id')):null;
+ if(me?.user_id!==userId||sequence!==sfAttendanceProjectReloadSequence)return null;
+ // Read the current DOM after all awaits, including changes made during the request.
  const before=new Map(projects.map(p=>[String(p.id),p])),savedOn=new Set(selectedProjectIds),pending=new Map();
  for(const row of document.querySelectorAll('#projectChoices .project-choice')){
   const id=row.dataset.projectRow,on=row.querySelector('.pc-check').checked,loc=projectRowLocation(row),p=before.get(id);
   if(!p)continue;
-  const v={};if(on!==savedOn.has(id))v.on=on;if(loc!==(p.location||''))v.loc=loc; // only what was changed here
+  const v={};if(on!==savedOn.has(id))v.on=on;if(loc!==(p.location||''))v.loc=loc;
   if(Object.keys(v).length)pending.set(id,v);
  }
- projects=await checked(db.from('sf_daily_projects').select('*').order('name'));
- if(me.role==='admin')await loadProjectVisibility();
+ projects=latest;
+ if(visibility!==null){selectedProjectIds=new Set(visibility.map(r=>String(r.project_id)));projectVisibilityReady=true;$('saveProjectChoices').disabled=false;}
  const added=projects.filter(p=>!before.has(String(p.id))).map(p=>String(p.id));
  const renamed=projects.filter(p=>before.has(String(p.id))&&before.get(String(p.id)).name!==p.name).length;
  if(me.role==='admin'){
@@ -668,7 +676,7 @@ window.sfReloadAttendanceProjects=async function(){
   for(const id of added){const row=document.querySelector(`#projectChoices [data-project-row="${CSS.escape(id)}"]`);if(row){row.classList.add('pc-new');row.querySelector('.pc-main').insertAdjacentHTML('beforeend',`<em class="pc-new-badge">${esc(tr('جديد'))}</em>`)}}
   filterProjectChoices();updateProjectCount();
  }
- try{updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'))}catch(e){console.warn('Project lists not refreshed',e)}
+ updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));
  if(added.length||renamed){
   const parts=[];if(added.length)parts.push(language==='en'?`${added.length} new project${added.length>1?'s':''} added`:`أُضيف ${added.length} مشروع جديد`);
   if(renamed)parts.push(language==='en'?`${renamed} renamed`:`تحدّث اسم ${renamed}`);
