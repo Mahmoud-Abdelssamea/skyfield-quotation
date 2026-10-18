@@ -23,6 +23,7 @@
     : null;
   if (!sfDb) console.warn('Supabase not configured — running in local-only mode (data stays on this device/browser).');
 </script>
+<link rel="stylesheet" href="payroll-ui.css?v=20261018-ui1">
 </head>
 <body data-module="dashboard" class="sf-auth-locked">
 
@@ -567,26 +568,23 @@
             <button class="btn-outline" type="button" onclick="payrollNewSheet()">New Sheet</button>
             <button class="btn-outline" type="button" onclick="payrollLoadProjectEngineers()">Load Engineers</button>
             <button class="btn-outline" type="button" onclick="payrollAddRow()">+ Add Row</button>
-            <button class="btn-primary" type="button" onclick="payrollSaveSheet()">Save Month</button>
+            <button class="btn-primary" type="button" onclick="payrollSaveSheet()">حفظ مسودة / Save draft</button>
           </div>
         </div>
         
+        <div class="payroll-summary" id="payroll-summary"></div>
+        <div id="payroll-review-notice" role="status"></div>
         <div class="payroll-table-wrap">
           <table class="payroll-table">
-            <thead><tr>
-              <th>#</th><th>Name / الاسم</th><th>Nationality</th><th>Iqama / ID</th><th>Employee No.</th><th>Profession</th>
-              <th>Basic Salary</th><th>Housing &amp; Transport</th><th>Car Allowance</th><th>Approved Site Allowance</th><th>Other Allowance</th>
-              <th>Paid Days / أيام الاستحقاق</th><th>Prorated Package</th><th>OT Hours</th><th>OT Rate</th><th>OT Amount</th>
-              <th>Other Earnings</th><th>Deductions</th><th>Net Total</th><th>Notes</th><th></th>
-            </tr></thead>
+            <thead><tr><th>الموظف / Employee</th><th>الحضور / Worked</th><th>الغياب / Absent</th><th>المستحقات / Gross</th><th>الخصومات / Deductions</th><th>الصافي / Net</th><th>المراجعة / Review</th></tr></thead>
             <tbody id="payroll-table-body"></tbody>
           </table>
         </div>
-        <div class="payroll-summary" id="payroll-summary"></div>
+
         <div class="payroll-actions" style="justify-content:flex-start;margin-bottom:12px">
           <button class="btn-outline" type="button" onclick="payrollExportXlsx()">Export Excel</button>
           <button class="btn-outline" type="button" onclick="payrollPrint()">Print / Save PDF</button>
-          <button class="btn-outline" type="button" onclick="payrollApproveCurrent()">Approve Sheet</button>
+          <button class="btn-outline" type="button" onclick="payrollApproveCurrent()">اعتماد الكشف / Approve</button>
         </div>
         <div class="payroll-signatures"><div>General Manager<br>المدير العام</div><div>Accounts<br>الحسابات</div><div>HR Department<br>إدارة شؤون الموظفين</div></div>
         <div class="payroll-saved">
@@ -1029,8 +1027,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261018-review2"></script><script src="app-common.js?v=20261017-split2"></script><script src="app-cloud.js?v=20261018-review2"></script><script src="app-ui.js?v=20261017-split2"></script><script src="app-quotation.js?v=20261017-split2"></script><script src="app-projects.js?v=20261017-split2"></script><script src="app-invoices.js?v=20261017-review2"></script><script src="app-payroll-team.js?v=20261017-fixes1"></script><script src="app-setup.js?v=20261017-split2"></script>
+<script src="i18n-ar.js?v=20261018-review2"></script><script src="app-common.js?v=20261017-split2"></script><script src="app-cloud.js?v=20261018-review2"></script><script src="app-ui.js?v=20261017-split2"></script><script src="app-quotation.js?v=20261017-split2"></script><script src="app-projects.js?v=20261017-split2"></script><script src="app-invoices.js?v=20261017-review2"></script><script src="app-payroll-team.js?v=20261017-fixes1"></script><script src="app-setup.js?v=20261018-team"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261017-payroll-template"></script><script src="attendance-integration.js?v=20261017-review2"></script><script src="analytics.js?v=20261017-location-ui"></script><script src="dashboard-attention.js?v=20261017-live1"></script><script src="unified-shell.js?v=20261017-location-ui"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261017-payroll-template"></script><script src="attendance-integration.js?v=20261017-review2"></script><script src="analytics.js?v=20261017-location-ui"></script><script src="dashboard-attention.js?v=20261017-live1"></script><script src="unified-shell.js?v=20261017-location-ui"></script><script src="payroll-ui.js?v=20261018-ui1"></script><script>sfInitAuth();</script>
 </body>
 </html>

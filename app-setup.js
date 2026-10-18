@@ -18,7 +18,7 @@ const SF_STORAGE_BUCKET = 'company-documents';
 const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',invoices:'sf_invoices',payments:'sf_payments',engineers:'sf_engineers',payroll:'sf_payroll_sheets',expenses:'sf_expenses',documents:'sf_documents'};
 const SF_TEAM_MEMBERS = Object.freeze({
   'm.awwad@skyfield-sa.com':{name:'Mahmoud Awwad',role:'Administrator'},
-  'sa6476925@gmail.com':{name:'Mahmoud Abdelssamea',role:'Administrator'},
+  
   'rabieshaban900@gmail.com':{name:'Rabie Shaban',role:'Commercial Administrator',blocked:['engineers','payroll']}
 });
 const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);

@@ -1,0 +1,27 @@
+// Compact payroll review; calculation and export functions remain unchanged.
+let sfPayrollOpenRow='';
+function sfPayrollToggle(id){sfPayrollOpenRow=sfPayrollOpenRow===id?'':id;payrollRenderRows();document.getElementById('payroll-toggle-'+id)?.focus()}
+function sfPayrollNeedsReview(r){const s=r.attSummary;return !s||s.noData||s.pending>0||s.rejected>0||s.unrecorded>0}
+function sfPayrollDetail(r){
+ const locked=sfCurrentPayroll.status==='approved';
+ const auto=['baseSalary','housingTransport','carAllowance','siteAllowance','attendanceDays','overtimeHours','overtimeRate'];
+ const fields=[['name','الاسم / Name'],['employeeNo','الرقم الوظيفي / Employee no.'],['nationality','الجنسية / Nationality'],['iqama','الإقامة / ID'],['profession','المهنة / Profession'],['baseSalary','الأساسي / Basic'],['housingTransport','السكن والتنقل / Housing & transport'],['carAllowance','السيارة / Car'],['siteAllowance','بدل الموقع / Site'],['attendanceDays','أيام الاستحقاق / Paid days'],['overtimeHours','ساعات إضافية / OT hours'],['overtimeRate','متوسط سعر الإضافي / OT rate'],['otherAllowance','بدلات أخرى / Other allowance'],['otherEarnings','إضافات / Other earnings'],['deductions','خصومات / Deductions'],['notes','ملاحظات / Notes']];
+ return `<div class="pay-detail"><p>الحقول المحسوبة تُحدّث من ملف الموظف والحضور المعتمد. أيام الاستحقاق تشمل الإجازات المدفوعة والراحة؛ تختلف عن أيام العمل الفعلية.</p>${!locked?`<label>اختيار الموظف / Employee<select onchange="payrollSetRow('${r.id}','engineerId',this.value)">${payrollEngineerOptions(r.engineerId)}</select></label>`:''}<div class="pay-detail-grid">${fields.map(([f,l],i)=>{const number=i>=5&&f!=='notes';const readonly=locked||(r.salaryModel===2&&auto.includes(f));return `<label>${l}<input aria-label="${l}" type="${number?'number':'text'}" ${number?'min="0" step="any"':''} value="${escHtml(String(r[f]??(f==='carAllowance'?r.siteCar??0:number?0:'')))}" ${readonly?'readonly':''} onchange="payrollSetRow('${r.id}','${f}',this.value)"></label>`}).join('')}</div><div class="sf-att-note">${sfPayrollNoteHtml(r)}</div>${!locked?`<button class="btn-outline" onclick="payrollRemoveRow('${r.id}')">حذف من الكشف / Remove row</button>`:''}</div>`;
+}
+payrollRenderRows=function(){
+ const body=document.getElementById('payroll-table-body');if(!body||!sfCurrentPayroll)return;
+ const sheet=sfCurrentPayroll,locked=sheet.status==='approved',t=payrollTotals();
+ sfPayrollEnsurePanel();
+ body.innerHTML=sheet.rows.length?sheet.rows.map(r=>{const c=payrollCalcRow(r),open=sfPayrollOpenRow===r.id,s=r.attSummary;return `<tr><td><button class="pay-person" id="payroll-toggle-${r.id}" aria-expanded="${open}" aria-controls="payroll-detail-${r.id}" onclick="sfPayrollToggle('${r.id}')">${escHtml(r.name||'اختر موظفًا / Select employee')} <span>${open?'−':'+'}</span></button><small>${escHtml(r.employeeNo||'—')}</small></td><td>${s?sfNum(s.worked):'—'}</td><td>${s?sfNum(s.absent):'—'}${s?.unpaidLeave?`<small>إجازة بدون راتب: ${s.unpaidLeave}</small>`:''}</td><td class="money">${payrollMoney(c.gross)}</td><td class="money">${payrollMoney(r.deductions)}</td><td class="money net-cell">${payrollMoney(c.net)}</td><td><span class="pay-badge ${sfPayrollNeedsReview(r)?'review':''}">${locked?'معتمد / Approved':sfPayrollNeedsReview(r)?'يحتاج مراجعة / Review':'جاهز / Ready'}</span></td></tr><tr id="payroll-detail-${r.id}" ${open?'':'hidden'}><td colspan="7">${open?sfPayrollDetail(r):''}</td></tr>`}).join(''):'<tr><td colspan="7"><div class="empty-resource">ابدأ بتحميل الموظفين لحساب الرواتب من الحضور المعتمد.<br>Load employees to calculate payroll.</div></td></tr>';
+ const cards=[['الموظفون / Employees',sheet.rows.length],['المستحقات / Gross',fmtSAR(t.attendance+t.allowances+t.overtime)],['الخصومات / Deductions',fmtSAR(t.deductions)],['صافي الرواتب / Net',fmtSAR(t.net)],[locked?'معتمد / Approved':'مسودة / Draft',sheet.month||'—']];
+ document.getElementById('payroll-summary').innerHTML=cards.map(([l,v],i)=>`<div class="payroll-summary-box ${i===3?'total':''}"><div class="lbl">${l}</div><div class="val">${escHtml(String(v))}</div></div>`).join('');
+ const count=sheet.rows.filter(sfPayrollNeedsReview).length;
+ document.getElementById('payroll-review-notice').textContent=locked?'الكشف معتمد ومقفل للتعديل / Approved — read only':count?`${count} موظف يحتاج مراجعة الحضور. افتح الاسم لعرض الأيام الناقصة أو المعلقة. / Attendance review needed`:'راجع القيم ثم احفظ المسودة أو اعتمد الكشف. / Review, save or approve';
+ for(const el of document.querySelectorAll('#tab-payroll button[onclick],#payroll-month,#payroll-project,#sf-payroll-fill')){const action=el.getAttribute('onclick')||'';if(el.id==='payroll-month'||el.id==='payroll-project'||el.id==='sf-payroll-fill'||/^(payrollLoadProjectEngineers|payrollAddRow|payrollSaveSheet|payrollApproveCurrent)\(/.test(action))el.disabled=locked;}
+};
+// Protect every editor entry point, including wrappers installed by attendance integration.
+for(const name of ['payrollSetRow','payrollRemoveRow','payrollAddRow','payrollLoadProjectEngineers','payrollSetHeader','payrollProjectChanged']){
+ const original=window[name];window[name]=function(...args){if(sfCurrentPayroll?.status==='approved'){sfPayrollStatus('الكشف معتمد ومقفل للتعديل.');return}return original(...args)};
+}
+const sfPayrollApproveUI=payrollApproveCurrent;
+payrollApproveCurrent=async function(){await sfPayrollApproveUI();payrollRenderRows()};

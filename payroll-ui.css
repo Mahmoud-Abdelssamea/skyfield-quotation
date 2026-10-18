@@ -1,0 +1,25 @@
+#tab-payroll .payroll-table{min-width:800px;font-size:13px}
+#tab-payroll .payroll-table th{font-size:11px;padding:14px 10px;white-space:normal;text-transform:none}
+#tab-payroll .payroll-table td{padding:14px 10px;border-inline:0}
+#tab-payroll .payroll-table tr[hidden]{display:none}
+#tab-payroll .payroll-table td small{display:block;margin-top:5px;color:#64748b;font-size:11px}
+#tab-payroll .pay-person{font:inherit;font-weight:700;color:var(--navy);background:transparent;border:0;cursor:pointer;text-align:start;padding:4px 0;display:flex;gap:18px;align-items:center;min-width:160px}
+#tab-payroll .pay-person span{border-radius:50%;background:#e9eff5;width:24px;height:24px;text-align:center;flex-shrink:0}
+#tab-payroll .pay-badge{display:inline-block;background:#e7f4ed;color:#16623c;border-radius:20px;padding:6px 10px;font-size:11px;white-space:nowrap}
+#tab-payroll .pay-badge.review{background:#fff2d8;color:#825210}
+#tab-payroll .pay-detail{background:#f3f6fa;padding:20px;border-inline-start:3px solid var(--orange);text-align:start}
+#tab-payroll .pay-detail p{font-size:12px;color:#526277;margin:0 0 16px;line-height:1.8}
+#tab-payroll .pay-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:16px 0}
+#tab-payroll .pay-detail label{display:block;font-size:12px;font-weight:600;color:#384c65}
+#tab-payroll .pay-detail input,#tab-payroll .pay-detail select{display:block;background:white;border:1px solid #c7d2df;font-size:13px;font-family:inherit;padding:10px;margin-top:7px;min-width:0}
+#tab-payroll .pay-detail input[readonly]{background:#e9eef4;color:#526277;border-color:transparent}
+#tab-payroll .payroll-summary-box{padding:18px 10px;text-align:start}
+#tab-payroll .payroll-summary-box .lbl{font-size:11px;text-transform:none}
+#tab-payroll .payroll-summary-box .val{font-size:20px;margin-top:10px}
+#payroll-review-notice{background:#edf3f9;color:#284666;padding:14px 16px;border-radius:8px;margin:14px 0;font-size:13px;line-height:1.7}
+#tab-payroll .payroll-actions{gap:8px;flex-wrap:wrap}
+#tab-payroll .payroll-signatures{display:none}
+#tab-payroll button:disabled{opacity:.45;cursor:not-allowed}
+#tab-payroll button:focus-visible,#tab-payroll input:focus-visible,#tab-payroll select:focus-visible{outline:2px solid #d97706;outline-offset:3px}
+@media(max-width:1000px){#tab-payroll .payroll-controls{grid-template-columns:1fr 1fr}#tab-payroll .payroll-summary{grid-template-columns:repeat(2,1fr)}#tab-payroll .pay-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#tab-payroll .payroll-controls{grid-template-columns:1fr}#tab-payroll .payroll-summary-box .val{font-size:17px}#tab-payroll .payroll-actions button{flex:1 1 auto;min-height:42px}}
