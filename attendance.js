@@ -12,6 +12,8 @@ const db=window.supabase.createClient('https://kmcgnttunukbwsqyilcv.supabase.co'
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me, members=[], projects=[], records=[];
 let selectedProjectIds=new Set(), projectVisibilityReady=false;
+let teamApprovalMode='mine',teamApprovalData={projects:[],members:[],records:[]},teamGroups=[],teamRejectKey='',teamLoading=false;
+
 const labels={office:'المكتب',inside:'داخل الرياض',outside:'خارج الرياض',leave:'إجازة',absent:'غياب',housing_invoice:'فاتورة سكن',housing_allowance:'بدل سكن',fuel:'بنزين',transport:'انتقالات',extra:'بدل إضافي',other:'أخرى',pending:'بانتظار الاعتماد',approved:'معتمد',rejected:'مرفوض'};
 function message(s){for(const id of ['message','loginMessage']){$(id).textContent=tr(s);$(id).hidden=!s;}}
 async function checked(q){const r=await q;if(r.error)throw r.error;return r.data;}
@@ -29,6 +31,7 @@ async function load(){
  const member=await checked(db.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle());
  if(!member||member.is_active===false){message('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.');return;}
  me=member;members=await checked(db.from('sf_daily_members').select('*'));projects=await checked(db.from('sf_daily_projects').select('*').order('name'));
+ syncLeaderTabAccess();
  $('who').textContent=me.name;$('tabAdmin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';
  await loadProjectVisibility();showPortal(true);setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
  const form=$('expenseForm');form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form);
@@ -357,7 +360,8 @@ function renderProjectChoices(){if(me?.role!=='admin')return;
  // One row per project: checkbox, full name, and an inside / outside toggle. Available projects first.
  const list=[...projects].sort((a,b)=>(selectedProjectIds.has(String(b.id))-selectedProjectIds.has(String(a.id)))||String(a.name).localeCompare(String(b.name)));
  const loc=(p,v,label)=>`<label class="pc-loc-option"><input type="radio" name="loc-${esc(p.id)}" value="${v}" ${p.location===v?'checked':''}><span>${esc(tr(label))}</span></label>`;
- $('projectChoices').innerHTML=list.map(p=>`<div class="project-choice" data-project-row="${esc(p.id)}"><label class="pc-main"><input class="pc-check" type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span class="pc-name" title="${esc(p.name)}">${esc(p.name)}</span></label><div class="pc-loc" role="radiogroup" aria-label="${esc(tr('موقع المشروع'))}">${loc(p,'inside','داخل الرياض')}${loc(p,'outside','خارج الرياض')}</div><span class="pc-missing">${esc(tr('حدد الموقع'))}</span></div>`).join('')||`<p class="pc-empty">${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;
+ const leaderOptions=(p)=>`<label class="pc-leader">${esc(tr('قائد المشروع'))}<select class="pc-leader-select" aria-label="${esc(tr('قائد المشروع'))} — ${esc(p.name)}"><option value="">${esc(tr('بدون قائد — تعتمد الإدارة'))}</option>${members.filter(m=>m.role==='engineer'&&m.is_active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(m=>`<option value="${esc(m.user_id)}" ${m.user_id===p.leader_user_id?'selected':''}>${esc(m.name)} (${esc(m.engineer_id)})</option>`).join('')}</select></label>`;
+ $('projectChoices').innerHTML=list.map(p=>`<div class="project-choice" data-project-row="${esc(p.id)}"><label class="pc-main"><input class="pc-check" type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span class="pc-name" title="${esc(p.name)}">${esc(p.name)}</span></label><div class="pc-loc" role="radiogroup" aria-label="${esc(tr('موقع المشروع'))}">${loc(p,'inside','داخل الرياض')}${loc(p,'outside','خارج الرياض')}</div>${leaderOptions(p)}<span class="pc-missing">${esc(tr('حدد الموقع'))}</span></div>`).join('')||`<p class="pc-empty">${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;
  filterProjectChoices();updateProjectCount();}
 function projectRowLocation(row){return row.querySelector('.pc-loc input:checked')?.value||''}
 $('projectSearch').oninput=filterProjectChoices;
@@ -371,7 +375,13 @@ $('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.
  const locations=rows.map(r=>({id:r.querySelector('.pc-check').value,location:projectRowLocation(r)}));
  try{await checked(db.rpc('sf_set_project_locations',{p_locations:locations}))}catch(error){if(/sf_set_project_locations|function/i.test(String(error?.message||'')))throw Error(tr('حفظ مواقع المشاريع يحتاج تشغيل الملف 13-attendance-project-location-v14.sql في Supabase أولًا.'));throw error}
  for(const l of locations){const p=projects.find(x=>String(x.id)===String(l.id));if(p)p.location=l.location||null}
- const ids=Array.from($('projectChoices').querySelectorAll('.pc-check:checked'),i=>i.value);await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع المختارة.');}finally{button.disabled=false}})};
+ const ids=Array.from($('projectChoices').querySelectorAll('.pc-check:checked'),i=>i.value);
+ // Save delegation separately: it is project-scoped and optional, not tied to visibility.
+ const assignments=rows.map(r=>({id:r.querySelector('.pc-check').value,leader_user_id:r.querySelector('.pc-leader-select').value||null}));
+ await checked(db.rpc('sf_set_project_leaders',{p_assignments:assignments}));
+ for(const item of assignments){const p=projects.find(x=>String(x.id)===String(item.id));if(p)p.leader_user_id=item.leader_user_id}
+ await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);
+ updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع وقادة المشاريع المختارين.');}finally{button.disabled=false}})};
 
 
 
@@ -571,7 +581,7 @@ function renderEngineerList(){
  $('members').innerHTML=list.map(m=>`<tr><td data-label="${esc(tr('كود الموظف'))}">${esc(m.engineer_id)}</td><td data-label="${esc(tr('اسم المهندس'))}"><b>${esc(m.name)}</b></td><td data-label="${esc(tr('بدل داخل الرياض / يوم'))}">${Number(m.inside_rate).toFixed(2)}</td><td data-label="${esc(tr('بدل خارج الرياض / يوم'))}">${Number(m.outside_rate).toFixed(2)}</td><td data-label="${esc(tr('سعر الساعة الإضافية'))}">${Number(m.overtime_rate).toFixed(2)}</td><td><div class="actions"><button type="button" class="secondary" data-edit-member="${esc(m.user_id)}">${esc(tr('تعديل'))}</button><button type="button" class="danger" data-remove-member="${esc(m.user_id)}">${esc(tr('حذف المهندس'))}</button></div></td></tr>`).join('')||`<tr><td colspan="6">${esc(tr('لا يوجد مهندسون مطابقون للبحث.'))}</td></tr>`;
 }
 async function reloadEngineerDirectory(){
- members=await checked(db.from('sf_daily_members').select('*'));renderEngineerList();renderTimesheetControls();renderApprovalFilters();renderApprovalTable();
+ members=await checked(db.from('sf_daily_members').select('*'));renderEngineerList();renderProjectChoices();renderTimesheetControls();renderApprovalFilters();renderApprovalTable();
 }
 $('engineerSearch').oninput=renderEngineerList;
 $('showCreateEngineer').onclick=()=>{$('createEngineerPanel').hidden=false;$('createAccountForm').elements.engineer_id.focus();$('createEngineerPanel').scrollIntoView({behavior:'smooth',block:'start'})};
@@ -603,6 +613,94 @@ setupAttendanceTabs();
 setupTimesheetExports();
 run(load);
 
+function isProjectLeader(){return me?.role==='engineer'&&projects.some(p=>p.leader_user_id===me.user_id)}
+function syncLeaderTabAccess(){
+ const available=isProjectLeader();$('leaderReviewTabs').hidden=!available;
+ if(!available){teamApprovalMode='mine';$('ownApprovalContent').hidden=false;$('teamApprovalContent').hidden=true}
+}
+function showLeaderReview(mode){
+ teamApprovalMode=(mode==='team'&&isProjectLeader())?'team':'mine';
+ $('ownApprovalContent').hidden=teamApprovalMode==='team';$('teamApprovalContent').hidden=teamApprovalMode!=='team';
+ $('leaderOwnTab').classList.toggle('active',teamApprovalMode==='mine');
+ $('leaderTeamTab').classList.toggle('active',teamApprovalMode==='team');
+ $('leaderOwnTab').setAttribute('aria-pressed',String(teamApprovalMode==='mine'));
+ $('leaderTeamTab').setAttribute('aria-pressed',String(teamApprovalMode==='team'));
+ if(teamApprovalMode==='team')run(loadTeamApprovals);
+}
+$('leaderOwnTab').onclick=()=>showLeaderReview('mine');
+$('leaderTeamTab').onclick=()=>showLeaderReview('team');
+$('teamApprovalMonth').onchange=()=>run(loadTeamApprovals);
+$('teamApprovalRefresh').onclick=()=>run(loadTeamApprovals);
+for(const id of ['teamApprovalProject','teamApprovalEngineer','teamApprovalState'])$(id).onchange=renderTeamApprovals;
+
+async function loadTeamApprovals(){
+ if(teamApprovalMode!=='team'||!isProjectLeader())return;
+ const month=$('teamApprovalMonth').value||$('month').value||today().slice(0,7);
+ $('teamApprovalMonth').value=month;teamLoading=true;
+ $('teamApprovalSummary').textContent=tr('جاري تحميل اعتمادات الفريق…');
+ try{
+  const response=await checked(db.rpc('sf_team_approval_data',{p_month:month}));
+  if(teamApprovalMode!=='team')return;
+  teamApprovalData={projects:response?.projects||[],members:response?.members||[],records:response?.records||[]};
+  const selects=[['teamApprovalProject',teamApprovalData.projects,'جميع مشاريعي','name','id'],['teamApprovalEngineer',teamApprovalData.members,'كل المهندسين','name','user_id']];
+  for(const [id,items,all,label,key] of selects){
+   const select=$(id),previous=select.value;
+   select.innerHTML=`<option value="all">${esc(tr(all))}</option>`+items.map(it=>`<option value="${esc(it[key])}">${esc(it[label])}</option>`).join('');
+   select.value=items.some(it=>String(it[key])===String(previous))?previous:'all';
+  }
+ }finally{teamLoading=false;renderTeamApprovals()}
+}
+function renderTeamApprovals(){
+ const root=$('teamApprovalRows');if(!root)return;
+ if(teamLoading){root.innerHTML='';return;}
+ const project=$('teamApprovalProject').value,engineer=$('teamApprovalEngineer').value,state=$('teamApprovalState').value;
+ const items=teamApprovalData.records.filter(r=>(project==='all'||String(r.project_id)===project)&&(engineer==='all'||r.user_id===engineer));
+ const grouped=new Map();
+ for(const row of items){const key=row.user_id+'|'+(row.period_id||row.id);
+  if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(row)}
+ teamGroups=[...grouped.entries()].map(([key,rows])=>{
+  const review=groupReview(rows);return {key,rows,review,from:rows[0].period_from||rows[0].day,to:rows[0].period_to||rows.at(-1).day,
+   project_id:rows[0].project_id,user_id:rows[0].user_id,note:rows.find(r=>r.review_note)?.review_note||''};
+ }).filter(g=>state==='all'||g.review===state||(state==='pending'&&g.review==='mixed'))
+ .sort((a,b)=>a.from.localeCompare(b.from)||a.user_id.localeCompare(b.user_id));
+ $('teamApprovalSummary').textContent=tr('الفترات المعروضة')+': '+teamGroups.length+' · '+tr('بانتظار الاعتماد')+': '+teamGroups.filter(g=>g.review==='pending').length;
+ const L=v=>` data-label="${esc(tr(v))}"`;
+ root.innerHTML=teamGroups.map((g,i)=>{
+  const person=teamApprovalData.members.find(m=>m.user_id===g.user_id);
+  const project=teamApprovalData.projects.find(p=>String(p.id)===String(g.project_id));
+  const canReview=g.review==='pending';
+  const actions=canReview&&teamRejectKey===g.key?
+   `<div class="reject-box"><textarea id="teamRejectReason" maxlength="500" placeholder="${esc(tr('اكتب سبب الرفض'))}"></textarea><div class="actions"><button type="button" data-team-reject-confirm="${i}">${esc(tr('تأكيد الرفض'))}</button><button type="button" class="secondary" data-team-reject-cancel>${esc(tr('إلغاء'))}</button></div></div>`:
+   canReview?`<div class="actions"><button type="button" data-team-approve="${i}">${esc(tr('اعتماد الفترة'))}</button><button type="button" class="secondary" data-team-reject="${i}">${esc(tr('رفض'))}</button></div>`:'—';
+  return `<tr><td${L('المهندس / الفترة')}><b>${esc(person?.name||'')}</b><span class="period-dates">${esc(g.from)} → ${esc(g.to)}</span>${g.to>today()?`<small class="review-note previous">${esc(tr('تشمل أيامًا لم تأتِ بعد'))}</small>`:''}</td>`+
+   `<td${L('المشروع')}>${esc(project?.name||g.project_id)}</td>`+
+   `<td${L('الأيام')}>${g.rows.length}</td>`+
+   `<td${L('الاعتماد')}><span class="status-badge ${esc(g.review)}">${esc(tr(labels[g.review]||'حالات اعتماد مختلفة'))}</span>${g.note?`<small class="review-note">${esc(g.note)}</small>`:''}</td>`+
+   `<td${L('الإجراءات')}>${actions}</td></tr>`;
+ }).join('')||`<tr><td colspan="5" class="empty-state">${esc(tr('لا توجد فترات لفريقك مطابقة للاختيارات.'))}</td></tr>`;
+}
+$('teamApprovalRows').onclick=e=>run(async()=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.teamRejectCancel!==undefined){teamRejectKey='';renderTeamApprovals();return}
+ const index=b.dataset.teamApprove??b.dataset.teamRejectConfirm??b.dataset.teamReject;
+ const g=teamGroups[Number(index)];if(!g)return;
+ if(b.dataset.teamReject!==undefined){teamRejectKey=g.key;renderTeamApprovals();$('teamRejectReason')?.focus();return}
+ const approving=b.dataset.teamApprove!==undefined;
+ const note=approving?null:$('teamRejectReason')?.value.trim();
+ if(!approving&&!note){message('اكتب سبب الرفض.');return}
+ if(approving&&!confirm(tr('اعتماد الفترة')+' '+g.from+' → '+g.to+'؟'))return;
+ b.disabled=true;
+ try{await checked(db.rpc('sf_leader_review_period',{p_rows:g.rows.map(r=>({id:r.id,revision:r.period_revision})),p_review:approving?'approved':'rejected',p_note:note||null}))}
+ catch(error){if(String(error?.message||'').includes('PERIOD_STALE')){teamRejectKey='';await loadTeamApprovals()}throw periodReviewError(error)}
+ teamRejectKey='';await loadTeamApprovals();await refresh({quiet:true});
+ if(window.sfEmbeddedReviewChanged)window.sfEmbeddedReviewChanged();
+});
+Object.assign(translations,{'قائد المشروع':'Project leader','بدون قائد — تعتمد الإدارة':'No leader — admin approval',
+ 'حالة التايم شيت الخاصة بي':'My timesheet status','اعتماد فريق المشروع':'Team approvals',
+ 'اعتماد التايم شيت لفريق المشروع':'Project team timesheet approvals','جميع مشاريعي':'All my projects',
+ 'كل المهندسين':'All engineers','جاري تحميل اعتمادات الفريق…':'Loading team approvals…',
+ 'الفترات المعروضة':'Displayed periods','لا توجد فترات لفريقك مطابقة للاختيارات.':'No matching team periods.',
+ 'تحديث اعتمادات الفريق':'Refresh team approvals','تم حفظ المشاريع وقادة المشاريع المختارين.':'Saved project settings and leaders.'});
 function setAttendanceView(view,updateHash=true){
  const panels=['dailySection','expenseSection','monthlySection','admin','engineersSection'];
  if(!panels.includes(view)||(['admin','engineersSection'].includes(view)&&me?.role!=='admin'))view='dailySection';
@@ -660,9 +758,11 @@ window.sfReloadAttendanceProjects=async function(){
   const id=row.dataset.projectRow,on=row.querySelector('.pc-check').checked,loc=projectRowLocation(row),p=before.get(id);
   if(!p)continue;
   const v={};if(on!==savedOn.has(id))v.on=on;if(loc!==(p.location||''))v.loc=loc;
+  const leader=row.querySelector('.pc-leader-select')?.value||'';
+  if(leader!==(p.leader_user_id||''))v.leader=leader;
   if(Object.keys(v).length)pending.set(id,v);
  }
- projects=latest;
+ projects=latest;syncLeaderTabAccess();
  if(visibility!==null){selectedProjectIds=new Set(visibility.map(r=>String(r.project_id)));projectVisibilityReady=true;$('saveProjectChoices').disabled=false;}
  const added=projects.filter(p=>!before.has(String(p.id))).map(p=>String(p.id));
  const renamed=projects.filter(p=>before.has(String(p.id))&&before.get(String(p.id)).name!==p.name).length;
@@ -672,6 +772,7 @@ window.sfReloadAttendanceProjects=async function(){
    const row=document.querySelector(`#projectChoices [data-project-row="${CSS.escape(id)}"]`);if(!row)continue;
    if('on' in v)row.querySelector('.pc-check').checked=v.on;
    if('loc' in v)row.querySelectorAll('.pc-loc input').forEach(r=>{r.checked=r.value===v.loc});
+   if('leader' in v&&row.querySelector('.pc-leader-select'))row.querySelector('.pc-leader-select').value=v.leader;
   }
   for(const id of added){const row=document.querySelector(`#projectChoices [data-project-row="${CSS.escape(id)}"]`);if(row){row.classList.add('pc-new');row.querySelector('.pc-main').insertAdjacentHTML('beforeend',`<em class="pc-new-badge">${esc(tr('جديد'))}</em>`)}}
   filterProjectChoices();updateProjectCount();
