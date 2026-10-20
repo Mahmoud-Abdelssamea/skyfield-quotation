@@ -3,8 +3,9 @@
 'use strict';
 const A=id=>document.getElementById(id),T=(ar,en)=>language==='en'?en:ar;
 let items=[],request=0,busy=false,loading=false,accountBusy=false,stale=false,timer=0,channel=null,opened=false,editing=null,identity='',exportBusy=false;
-const statuses={awaiting:['بانتظار التجهيز','Awaiting preparation'],preparing:['جاري التجهيز','Preparing'],ready:['جاهز للصرف','Ready for payment'],paid:['تم السداد','Paid']};
-const status=s=>T(...(statuses[s]||[s,s]));
+const statuses={awaiting:['بانتظار السداد','Awaiting payment'],preparing:['جاري التجهيز','Preparing'],ready:['جاهز للصرف','Ready for payment'],paid:['تم السداد','Paid']};
+const status=s=>s==='paid'?T('تم السداد','Paid'):T('بانتظار السداد','Awaiting payment');
+const historyStatus=s=>T(...(statuses[s]||[s,s]));
 const permitted=()=>typeof me!=='undefined'&&me&&['admin','accountant'].includes(me.role);
 const visible=()=>opened&&permitted()&&document.visibilityState==='visible'&&!A('accountingSection').hidden;
 function note(s,error=false){A('acctMessage').textContent=s;A('acctMessage').classList.toggle('error',error)}
@@ -16,12 +17,12 @@ function errorText(e){
  return m;
 }
 function filtered(){const state=A('acctState').value,term=A('acctSearch').value.trim().toLocaleLowerCase(),project=A('acctProject').value;
- return items.filter(r=>(!project||project==='all'||(r.project_id||'general')===project)&&(state==='all'||r.status===state)&&(!term||[r.engineer_name,r.engineer_id,r.project_name,r.description,r.payment_reference,r.expense_id].join(' ').toLocaleLowerCase().includes(term)))}
+ return items.filter(r=>(!project||project==='all'||(r.project_id||'general')===project)&&(state==='all'||(state==='awaiting'?r.status!=='paid':r.status===state))&&(!term||[r.engineer_name,r.engineer_id,r.project_name,r.description,r.payment_reference,r.expense_id].join(' ').toLocaleLowerCase().includes(term)))}
 function projectOptions(){const select=A('acctProject'),old=select.value,projects=new Map(items.map(r=>[r.project_id||'general',r.project_name||T('مصروف عام','General expense')]));
  select.innerHTML=`<option value="all">${esc(T('كل المشاريع','All projects'))}</option>`+[...projects].sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');select.value=projects.has(old)?old:'all';}
 function render(){
  const list=filtered();A('acctSummary').textContent=T(`${list.length} مصروف · الإجمالي ${money(list.reduce((s,r)=>s+Number(r.amount),0))} ريال`,`${list.length} expenses · Total SAR ${money(list.reduce((s,r)=>s+Number(r.amount),0))}`);
- A('acctRows').innerHTML=list.map(r=>`<tr><td><b>${esc(r.engineer_name)}</b><small>${esc(r.engineer_id)} · ${esc(r.day)}</small></td><td>${esc(r.project_name||T('مصروف عام','General expense'))}<small>${esc(tr(labels[r.category]||r.category))} · ${esc(r.description)}</small><small dir="ltr">${esc(r.expense_id)}</small></td><td>${money(r.amount)}</td><td><span class="status-badge ${r.status==='paid'?'approved':'pending'}">${esc(status(r.status))}</span>${r.payment_date?`<small>${esc(r.payment_date)} · ${esc(r.payment_reference)}</small>`:''}${r.updated_by_name?`<small>${esc(r.updated_by_name)}</small>`:''}</td><td><div class="actions"><button type="button" class="secondary" data-acct-action="receipt" data-id="${esc(r.expense_id)}">${esc(T('الفاتورة','Invoice'))}</button><button type="button" class="secondary" data-acct-action="print" data-id="${esc(r.expense_id)}">${esc(T('طباعة سند','Print voucher'))}</button><button type="button" class="secondary" data-acct-action="history" data-id="${esc(r.expense_id)}">${esc(T('السجل','History'))}</button>${r.payment_proof_path?`<button type="button" class="secondary" data-acct-action="proof" data-id="${esc(r.expense_id)}">${esc(T('إثبات السداد','Payment proof'))}</button>`:''}${r.status!=='paid'?`<button type="button" data-acct-action="edit" data-id="${esc(r.expense_id)}" ${stale||busy?'disabled':''}>${esc(T('تجهيز / سداد','Prepare / pay'))}</button>`:''}</div></td></tr>`).join('')||`<tr><td colspan="5">${esc(T('لا توجد مصروفات معتمدة مطابقة.','No matching approved expenses.'))}</td></tr>`;
+ A('acctRows').innerHTML=list.map(r=>`<tr><td><b>${esc(r.engineer_name)}</b><small>${esc(r.engineer_id)} · ${esc(r.day)}</small></td><td>${esc(r.project_name||T('مصروف عام','General expense'))}<small>${esc(tr(labels[r.category]||r.category))} · ${esc(r.description)}</small><small dir="ltr">${esc(r.expense_id)}</small></td><td>${money(r.amount)}</td><td><span class="status-badge ${r.status==='paid'?'approved':'pending'}">${esc(status(r.status))}</span>${r.payment_date?`<small>${esc(r.payment_date)} · ${esc(r.payment_reference)}</small>`:''}${r.updated_by_name?`<small>${esc(r.updated_by_name)}</small>`:''}</td><td><div class="actions"><button type="button" class="secondary" data-acct-action="receipt" data-id="${esc(r.expense_id)}">${esc(T('الفاتورة','Invoice'))}</button><button type="button" class="secondary" data-acct-action="print" data-id="${esc(r.expense_id)}">${esc(T('طباعة سند','Print voucher'))}</button><button type="button" class="secondary" data-acct-action="history" data-id="${esc(r.expense_id)}">${esc(T('السجل','History'))}</button>${r.payment_proof_path?`<button type="button" class="secondary" data-acct-action="proof" data-id="${esc(r.expense_id)}">${esc(T('إثبات السداد','Payment proof'))}</button>`:''}${r.status!=='paid'?`<button type="button" data-acct-action="edit" data-id="${esc(r.expense_id)}" ${stale||busy?'disabled':''}>${esc(T('تعديل حالة السداد','Update payment status'))}</button>`:''}</div></td></tr>`).join('')||`<tr><td colspan="5">${esc(T('لا توجد مصروفات معتمدة مطابقة.','No matching approved expenses.'))}</td></tr>`;
  A('acctExport').disabled=A('acctPrintAll').disabled=!list.length||stale;
  A('acctPrintList').disabled=!list.length||stale;A('acctReceiptsZip').disabled=!list.length||stale||exportBusy;
 }
@@ -108,17 +109,20 @@ function printList(){
 function openEditor(r){
  if(stale||busy)return;editing={...r};const f=A('acctPaymentForm');f.reset();
  A('acctEditTitle').textContent=r.engineer_name+' · '+money(r.amount)+' '+T('ريال','SAR');
- A('acctNextStatus').value={awaiting:'preparing',preparing:'ready',ready:'paid'}[r.status];
- A('acctNextLabel').textContent=status(A('acctNextStatus').value);
+ A('acctNextStatus').value=r.status==='paid'?'paid':'awaiting';
  f.elements.payment_date.value=today();f.elements.payment_date.max=today();f.elements.note.value=r.note||'';
- const paying=r.status==='ready';A('acctPaymentFields').hidden=!paying;
- for(const key of ['payment_date','reference','proof'])f.elements[key].required=paying;
+ updatePaymentFields();
  A('acctEditPanel').hidden=false;A('acctEditPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function updatePaymentFields(){
+ const paying=A('acctNextStatus').value==='paid',f=A('acctPaymentForm');A('acctPaymentFields').hidden=!paying;
+ for(const key of ['payment_date','reference','proof'])f.elements[key].required=paying;
 }
 function closeEditor(){editing=null;A('acctEditPanel').hidden=true;A('acctPaymentForm').reset()}
 async function savePayment(e){
  e.preventDefault();if(!editing||busy||!permitted())return;const row={...editing},user=me.user_id,f=e.target;
  const next=A('acctNextStatus').value;if(next==='paid'&&!confirm(T(`تأكيد تسجيل سداد ${money(row.amount)} ريال إلى ${row.engineer_name}؟ لا ينفّذ النظام تحويلًا بنكيًا.`,`Record payment of SAR ${money(row.amount)} to ${row.engineer_name}? No bank transfer will be executed.`)))return;
+ if(!['awaiting','paid'].includes(next)){note(T('اختر حالة سداد صحيحة.','Choose a valid payment status.'),true);return;}
  const payment={date:f.elements.payment_date.value,reference:f.elements.reference.value.trim(),note:f.elements.note.value.trim()||null,file:f.elements.proof.files[0]};
  busy=true;let completion='',failed=false;const button=A('acctSavePayment');button.disabled=true;
  try{
@@ -138,7 +142,7 @@ async function savePayment(e){
  finally{busy=false;button.disabled=false;if(me?.user_id===user){render();if(!editing)await refreshQueue();if(completion)note(completion,failed)}}
 }
 async function history(r){const rows=await checked(db.rpc('sf_accounting_history',{p_id:r.expense_id}));
- A('acctHistory').hidden=false;A('acctHistoryRows').innerHTML=rows.map(h=>`<tr><td>${esc(status(h.action))}</td><td>${esc(h.actor||'')}</td><td>${esc(new Date(h.at).toLocaleString(language==='en'?'en-GB':'ar-SA',{timeZone:'Asia/Riyadh'}))}</td><td>${esc(h.note||h.reference||'')}</td></tr>`).join('')||`<tr><td colspan="4">${esc(T('لا توجد إجراءات حسابات بعد.','No accounting actions yet.'))}</td></tr>`;
+ A('acctHistory').hidden=false;A('acctHistoryRows').innerHTML=rows.map(h=>`<tr><td>${esc(historyStatus(h.action))}</td><td>${esc(h.actor||'')}</td><td>${esc(new Date(h.at).toLocaleString(language==='en'?'en-GB':'ar-SA',{timeZone:'Asia/Riyadh'}))}</td><td>${esc(h.note||h.reference||'')}</td></tr>`).join('')||`<tr><td colspan="4">${esc(T('لا توجد إجراءات حسابات بعد.','No accounting actions yet.'))}</td></tr>`;
  A('acctHistoryTitle').textContent=r.engineer_name+' · '+r.expense_id;A('acctHistory').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function action(e){const b=e.target.closest('[data-acct-action]');if(!b)return;const r=items.find(x=>x.expense_id===b.dataset.id);if(!r)return;
@@ -150,7 +154,7 @@ function renderAccounts(){
 }
 const accountingTranslations={"الحسابات": "Accounts", "حسابات مصروفات المهندسين": "Engineers’ expense accounting", "تظهر فواتير ومصروفات المهندسين هنا بعد اعتماد الإدارة تلقائيًا. القائمة الافتراضية تشمل كل غير المسدد من جميع الشهور. حدّد شهرًا لعرض سجله بما فيه المسدد. يتم التحديث المباشر عند توفره، مع فحص تلقائي كل 15 ثانية أثناء فتح القسم.": "Approved engineers’ invoices appear here automatically. The default list includes unpaid expenses from every month. Choose a month to include its paid items. Live updates are used when available, with a check every 15 seconds while this section is open.", "شهر المصروف — اختياري": "Expense month — optional", "كل غير المسدد": "All unpaid", "حالة الحسابات": "Accounting status", "بانتظار التجهيز": "Awaiting preparation", "جاري التجهيز": "Preparing", "جاهز للصرف": "Ready for payment", "تم السداد": "Paid", "بحث باسم المهندس أو المشروع": "Search engineer or project", "طباعة سندات المعروض": "Print displayed vouchers", "الحالة التالية:": "Next status:", "بيانات السداد": "Payment details", "تاريخ السداد": "Payment date", "مرجع التحويل / السند": "Payment / voucher reference", "إثبات التحويل — PDF / JPG / PNG حتى 5MB": "Payment proof — PDF / JPG / PNG up to 5MB", "سجّل السداد بعد تنفيذ التحويل الفعلي. النظام لا ينفّذ تحويلًا بنكيًا.": "Record payment after the actual transfer. The system does not execute a bank transfer.", "ملاحظات الحسابات": "Accounting note", "حفظ الحالة": "Save status", "المشروع / البيان": "Project / description", "بواسطة": "By", "إغلاق": "Close", "إدارة حسابات المحاسبين": "Manage accountant accounts", "يرى المحاسب المصروفات المعتمدة ومرفقاتها فقط، ويطبعها ويسجل تجهيزها وسدادها. لا يغيّر المبلغ أو الاعتماد ولا يرى الرواتب أو فواتير العملاء أو إعدادات الإدارة.": "Accountants see approved expenses and attachments, print them and record preparation and payment. They cannot change amounts or approvals or access payroll, customer invoices or administration.", "اسم المحاسب": "Accountant name", "البريد الإلكتروني": "Email", "كلمة مرور مؤقتة — 8 أحرف على الأقل": "Temporary password — at least 8 characters", "إنشاء حساب محاسب": "Create accountant account", "الاسم": "Name", "تغيير كلمة المرور": "Change password", "كلمة المرور الجديدة — 8 أحرف على الأقل": "New password — at least 8 characters", "حفظ كلمة المرور": "Save password"};
 window.sfAccountingInit=function(){
- Object.assign(translations,accountingTranslations,{'كل المشاريع':'All projects','تنزيل الكشف والفواتير ZIP':'Download list & invoices ZIP','طباعة كشف المصروفات':'Print expense list'});translateUI();
+ Object.assign(translations,accountingTranslations,{'تظهر المصروفات المعتمدة تلقائيًا. اختر حالة السداد من القائمة، وعند اختيار تم السداد أدخل التاريخ والمرجع وإثبات التحويل. القائمة الافتراضية تعرض غير المسدد من جميع الشهور.':'Approved expenses appear automatically. Select payment status; for Paid, enter the date, reference and transfer proof. The default list shows unpaid expenses from all months.','حالة السداد':'Payment status','بانتظار السداد':'Awaiting payment','تعديل حالة السداد':'Update payment status','كل المشاريع':'All projects','تنزيل الكشف والفواتير ZIP':'Download list & invoices ZIP','طباعة كشف المصروفات':'Print expense list'});translateUI();
  if(identity!==me?.user_id){window.sfAccountingClose();items=[];identity=me?.user_id||'';editing=null;stale=true;A('acctEditPanel').hidden=true;A('acctHistory').hidden=true}
  A('tabAccounting').hidden=!permitted();renderAccounts();
  if(me?.role==='accountant')for(const b of A('attendanceTabs').querySelectorAll('[data-attendance-view]'))b.hidden=b.id!=='tabAccounting';
@@ -164,6 +168,7 @@ window.sfAccountingClose=function(){opened=false;++request;loading=false;clearIn
 A('acctRows').onclick=action;A('acctRefresh').onclick=()=>void refreshQueue();
 A('acctMonth').onchange=()=>{if(editing&&!confirm(T('لديك بيانات سداد لم تحفظ. هل تريد تركها؟','Discard the unsaved payment details?'))){A('acctMonth').value=A('acctMonth').dataset.previous||'';return}closeEditor();A('acctMonth').dataset.previous=A('acctMonth').value;A('acctHistory').hidden=true;void refreshQueue()};
 A('acctState').onchange=render;A('acctProject').onchange=render;A('acctSearch').oninput=render;
+A('acctNextStatus').onchange=updatePaymentFields;
 A('acctAllUnpaid').onclick=()=>{A('acctMonth').value='';A('acctMonth').dispatchEvent(new Event('change'))};
 A('acctExport').onclick=exportCsv;A('acctPrintAll').onclick=()=>{try{printRows(filtered())}catch(e){note(errorText(e),true)}};
 A('acctPrintList').onclick=()=>{try{printList()}catch(e){note(errorText(e),true)}};A('acctReceiptsZip').onclick=downloadReceipts;
@@ -179,7 +184,7 @@ document.addEventListener('visibilitychange',()=>{if(visible())void refreshQueue
 window.addEventListener('online',()=>{if(visible())void refreshQueue({automatic:true})});
 window.addEventListener('beforeunload',e=>{if(editing){e.preventDefault();e.returnValue=''}});
 window.sfAccountingHasDraft=()=>!!editing;
-window.sfAccountingLanguageChanged=()=>{if(opened){render();renderAccounts();if(editing)A('acctNextLabel').textContent=status(A('acctNextStatus').value)}};
+window.sfAccountingLanguageChanged=()=>{if(opened){render();renderAccounts()}};
 window.sfAccountingDiscardDraft=closeEditor;
 // Expose pure renderers for the local regression harness only through source extraction, not production globals.
 })();
