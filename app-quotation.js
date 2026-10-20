@@ -424,7 +424,7 @@ function clrCat(){
   buildTasks();buildCatList();recalc();renderQuot();
 }
 function clearAll(){
-  selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';conditionLanguage='en';
+  selActs={};selEq={};actQty={};eqQty={};customSOW=[];customSOWLabel='';conditionType='testing';conditionLanguage='en';conditionTypeDrafts.clear();
   paymentMethod='bank_transfer';lcApplicable=false;lcAdvancePct=30;lcType='irrevocable_at_sight';lcAdvanceDays=7;lcOpenDays=10;lcDocumentDays=14;
   lcPaymentBasis='monthly_progress';lcCurrency='SAR';lcCalculationBasis='before_vat';lcBeneficiary='Sky Field Company Limited';lcBankCharges='shared';lcRules='UCP 600';lcAcceptableBank='';lcValidityDays=30;
   lcDocuments={commercial_invoice:true,delivery_note:true,progress_certificate:true,timesheet:false};paymentConditionOverrideEn='';paymentConditionOverrideAr='';
@@ -635,9 +635,10 @@ function conditionDisplayNumbers(list=conds){
   });
 }
 
+function conditionTypeKey(type){return Object.prototype.hasOwnProperty.call(QUOTATION_CONDITION_TYPES,type)?type:'testing'}
+function conditionTypeInfo(type=conditionType){return QUOTATION_CONDITION_TYPES[conditionTypeKey(type)]}
 function conditionTemplate(type){
-  const source=type==='engineer_rental' ? ENGINEER_RENTAL_CONDS : TESTING_CONDS;
-  const sourceAr=type==='engineer_rental' ? ENGINEER_RENTAL_CONDS_AR : TESTING_CONDS_AR;
+  const info=conditionTypeInfo(type),source=info.conds,sourceAr=info.ar;
   const list=source
     .map(([text,cat,enabled],i)=>cat==='Payment – Bank'
       ? {text:paymentBankConditionText('en'),textAr:paymentBankConditionText('ar'),cat,enabled}
@@ -648,14 +649,24 @@ function conditionTemplate(type){
   if(idx>=0) list.splice(idx,0,pay); else list.unshift(pay);
   return normalizeConditionMetadata(list,type);
 }
+// Drafts belong to the current quotation only; switching templates never silently loses edits.
+let conditionTypeDrafts=new Map();
 function setConditionType(type, preserveCustom=false){
-  const next = type==='engineer_rental' ? 'engineer_rental' : 'testing';
-  if(next===conditionType && conds.length) return;
-  const custom = preserveCustom ? conds.filter(c=>c.cat==='Custom') : [];
-  conditionType = next;
-  conds = normalizeConditionMetadata(conditionTemplate(next).concat(custom),next);
-  const sel=document.getElementById('condition-type'); if(sel) sel.value=next;
-  buildConds();renderQuot();
+  const next=conditionTypeKey(type),sel=document.getElementById('condition-type');
+  if(next===conditionType&&conds.length)return;
+  if(conds.length&&!confirm(sfUiLanguage==='ar'
+    ?'تغيير نوع العرض سيعرض شروط النوع الجديد. ستبقى تعديلات النوع الحالي محفوظة عند الرجوع إليه في هذا العرض. هل تريد المتابعة؟'
+    :'Switch quotation type? The new type has its own terms. Your current edits will be restored when you switch back in this quotation.')){
+    if(sel)sel.value=conditionType;return false;
+  }
+  conditionTypeDrafts.set(conditionType,JSON.parse(JSON.stringify(conds)));
+  const custom=preserveCustom?conds.filter(c=>c.custom||c.cat==='Custom'):[];
+  conditionType=next;
+  conds=normalizeConditionMetadata(conditionTypeDrafts.has(next)
+    ?JSON.parse(JSON.stringify(conditionTypeDrafts.get(next)))
+    :conditionTemplate(next).concat(custom),next);
+  if(sel)sel.value=next;
+  buildConds();renderQuot();return true;
 }
 function sfNumberWithDigits(value,lang='en'){
   const n=Math.max(0,parseInt(value)||0),words=lang==='ar'?SF_AR_NUMBER_WORDS:SF_EN_NUMBER_WORDS;
@@ -665,10 +676,14 @@ function isConditionEmphasized(cat=''){
   return cat==='Payment – Selected' || cat==='General – Extension Rates' || cat==='General – Mobilization & Demobilization';
 }
 function durationConditionText(lang='en'){
-  if(lang==='ar')return conditionType==='engineer_rental'
+  if(conditionTypeKey(conditionType)==='equipment_rental')return lang==='ar'
+    ? `مدة التأجير: مدة تأجير الأجهزة بموجب هذا العرض هي ${projectDuration||'[تُحدد لاحقًا]'}، وتبدأ من تاريخ تسليم الأجهزة للعميل أو شحنها.`
+    : `Rental Duration: the equipment rental period under this offer is ${projectDuration||'[TBD]'}, commencing from the date the equipment is handed over to the Client or dispatched.`;
+  const engineerRental=!!conditionTypeInfo().engineerRental;
+  if(lang==='ar')return engineerRental
     ? `مدة المهمة: مدة تأجير المهندس بموجب هذا العرض هي ${projectDuration||'[تُحدد لاحقًا]'}، وتبدأ من تاريخ التعبئة أو البدء المؤكد.`
     : `مدة المشروع: المدة الإجمالية لتنفيذ نطاق العمل بموجب هذا العرض هي ${projectDuration||'[تُحدد لاحقًا]'}، وتبدأ من تاريخ التعبئة ما لم يتم تمديدها باتفاق كتابي متبادل.`;
-  return conditionType==='engineer_rental'
+  return engineerRental
     ? `Assignment Duration: the engineer rental period under this offer is ${projectDuration||'[TBD]'}, commencing from the confirmed mobilization/start date.`
     : `Project Duration: the total duration for execution of the Scope of Work under this offer is ${projectDuration||'[TBD]'}, commencing from the mobilization date, unless otherwise extended by mutual written agreement.`;
 }
@@ -684,7 +699,7 @@ function buildConds(){
     h.className='cond-sec-hdr';
     h.innerHTML=`<span>${escHtml(conditionSectionLabel(sec))}</span><button type="button" class="cond-sec-add" onclick='openSectionConditionEditor(${JSON.stringify(sec)})'>+ Add Condition</button>`;
     el.appendChild(h);
-    if((conditionType==='testing' && sec==='Scope & Responsibilities') || (conditionType==='engineer_rental' && sec==='Rental Basis')){
+    if(sec===conditionTypeInfo().durationSection){
       const d=document.createElement('div');
       d.className='cond-item';
       const durationCond={text:durationConditionText('en'),textAr:durationConditionText('ar'),cat:'Duration'};
@@ -1328,7 +1343,7 @@ function applyQuotationSnapshot(snap){
   actQty=deepClone(snap.actQty||{}); eqQty=deepClone(snap.eqQty||{});
   customSOW=deepClone(snap.customSOW||[]); normalizeCustomSOWHierarchy(); customSOWLabel=snap.customSOWLabel||'';
   sowSeq=snap.sowSeq || (customSOW.length+1);
-  conditionType=snap.conditionType||'testing';
+  conditionTypeDrafts.clear();conditionType=conditionTypeKey(snap.conditionType||'testing');
   // v6 keeps English as the mandatory base language. Legacy Arabic-only
   // quotations are migrated to bilingual output so no translation is lost.
   conditionLanguage=(snap.conditionLanguage==='both'||snap.conditionLanguage==='ar')?'both':'en';

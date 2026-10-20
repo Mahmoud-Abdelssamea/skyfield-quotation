@@ -2,11 +2,13 @@
 // One navigation and authentication shell; attendance modules share this verified session.
 let sfUnifiedProfile=null,sfAttendanceOnly=false,sfUnifiedRoute='',sfUnifiedFrameReady=false,sfUnifiedReviewTimer=0;
 let sfUnifiedDesired=location.hash.slice(1)||localStorage.getItem('sfLastModule')||'dashboard';
-const sfUnifiedRoutes={engineers:['Engineers','إدارة المهندسين','engineersSection'],attendance:['Attendance','Record attendance by period.','dailySection'],expenses:['Field Expenses','Engineers’ expense receipts and requests.','expenseSection'],timesheets:['Timesheets & Approvals','Attendance and expense approvals, history, and Excel export.','monthlySection'],attendancesettings:['Attendance Settings','Projects available to engineers for attendance.','admin']};
+const sfUnifiedRoutes={accounting:['Accounts','Approved engineers’ invoices and payment preparation.','accountingSection'],engineers:['Engineers','إدارة المهندسين','engineersSection'],attendance:['Attendance','Record attendance by period.','dailySection'],expenses:['Field Expenses','Engineers’ expense receipts and requests.','expenseSection'],timesheets:['Timesheets & Approvals','Attendance and expense approvals, history, and Excel export.','monthlySection'],attendancesettings:['Attendance Settings','Projects available to engineers for attendance.','admin']};
 const sfUnifiedNativeTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','analytics','engineers','payroll','costsettings'];
 const sfUnifiedBaseShow=showTab,sfUnifiedBaseUnlock=sfUnlockApp,sfUnifiedBaseLock=sfLockApp,sfUnifiedBaseAuth=sfHandleAuthState,sfUnifiedBaseAccess=sfApplyRoleAccess,sfUnifiedBaseLanguage=sfSetInterfaceLanguage,sfUnifiedBasePull=sfCloudPullAll;
 function sfUnifiedCanManage(){return sfUnifiedProfile?.role==='admin'&&(sfAttendanceOnly||sfHasAccess('engineers'))}
 function sfUnifiedAllowed(route){
+ if(sfUnifiedProfile?.role==='accountant')return route==='accounting';
+ if(route==='accounting')return sfUnifiedProfile?.role==='admin';
  if(route==='engineers')return sfUnifiedCanManage();
  if(route==='attendancesettings')return sfUnifiedProfile?.role==='admin';
  if(['attendance','expenses','timesheets'].includes(route))return !!sfUnifiedProfile;
@@ -23,8 +25,9 @@ function sfUnifiedApplyAccess(){
 function sfUnifiedRefreshNavGroups(){for(const label of document.querySelectorAll('.side-nav .side-nav-label')){let el=label.nextElementSibling,any=false;while(el&&!el.classList.contains('side-nav-label')){if(el.classList.contains('side-nav-btn')&&el.style.display!=='none'&&!el.hidden)any=true;el=el.nextElementSibling}label.style.display=any?'':'none'}}
 sfApplyRoleAccess=function(){if(!sfAttendanceOnly)sfUnifiedBaseAccess();sfUnifiedApplyAccess()};
 showTab=function(name,button){
+ if(sfUnifiedRoute==='accounting'&&name!=='accounting'){const f=document.getElementById('sf-unified-frame')?.contentWindow;if(f?.sfAccountingHasDraft?.()){if(!confirm(sfUiLanguage==='ar'?'لديك بيانات سداد لم تحفظ. هل تريد تركها؟':'Discard the unsaved payment details?'))return;f.sfAccountingDiscardDraft?.()}}
  if(!sfAuthReady){sfUnifiedDesired=location.hash.slice(1)||sfUnifiedDesired;return;}
- if(!sfUnifiedAllowed(name))name=sfAttendanceOnly?'attendance':'dashboard';
+ if(!sfUnifiedAllowed(name))name=sfUnifiedProfile?.role==='accountant'?'accounting':sfAttendanceOnly?'attendance':'dashboard';
  sfUnifiedRoute=name;sfUnifiedDesired=name;
  if(sfUnifiedRoutes[name]){
   for(const tab of sfUnifiedNativeTabs){const el=document.getElementById('tab-'+tab);if(el)el.style.display='none'}
@@ -45,7 +48,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261019-project-leader-v16';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261020-accounting-final';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }
@@ -92,9 +95,9 @@ sfUnlockApp=function(user){
   const profile=sfUnifiedProfile;document.getElementById('side-account').classList.add('show');document.getElementById('side-account-name').textContent=profile?.name||'';document.getElementById('side-account-email').textContent=profile?.engineer_id||'';document.getElementById('side-account-avatar').textContent=profile?.name?.[0]||'SF';
   sfLoadUserInterfaceLanguage(user);setCloudStatus('','Secure cloud connected');
  }else{sfUnifiedBaseUnlock(user);void sfRefreshAttendanceRoster();}
- sfUnifiedApplyAccess();showTab(sfUnifiedAllowed(sfUnifiedDesired)?sfUnifiedDesired:sfAttendanceOnly?'attendance':'dashboard');
+ sfUnifiedApplyAccess();showTab(sfUnifiedAllowed(sfUnifiedDesired)?sfUnifiedDesired:sfUnifiedProfile?.role==='accountant'?'accounting':sfAttendanceOnly?'attendance':'dashboard');
 };
-sfSetInterfaceLanguage=function(lang,persist=true){sfUnifiedBaseLanguage(lang,persist);if(sfUnifiedFrameReady&&sfUnifiedRoutes[sfUnifiedRoute])sfUnifiedOpenModule()};
+sfSetInterfaceLanguage=function(lang,persist=true){sfUnifiedBaseLanguage(lang,persist);if(sfUnifiedFrameReady)document.getElementById('sf-unified-frame')?.contentWindow?.sfAccountingLanguageChanged?.();if(sfUnifiedFrameReady&&sfUnifiedRoutes[sfUnifiedRoute])sfUnifiedOpenModule()};
 sfCloudPullAll=async function(){if(sfAttendanceOnly)return [];return sfUnifiedBasePull()};
 window.addEventListener('hashchange',()=>{if(sfAuthReady)showTab(location.hash.slice(1))});
 // Keep employment and salary fields in the same edit form as the attendance identity.

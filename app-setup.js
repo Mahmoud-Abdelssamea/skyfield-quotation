@@ -203,20 +203,124 @@ const ENGINEER_RENTAL_CONDS_AR = [
   "تمنح التأخيرات أو قيود السفر أو الإجراءات الحكومية أو ظروف الموقع غير الآمنة أو أحداث القوة القاهرة الخارجة عن السيطرة المعقولة لشركة سماء الميدان الشركة تمديدًا معقولًا وتعويضًا عن التكاليف الإضافية الناتجة."
 ];
 
+// Test engineer rental and equipment rental (added 2026-10-19). Arabic arrays mirror the English
+// positions and are ordered by section, so the printed clause numbers run 1, 2, 3… (optional clauses that start unticked come last) Rental – LOA Holder keeps the id 'engineer_rental' so saved quotations open unchanged.
+const TEST_ENGINEER_RENTAL_CONDS = [
+  ["Prices are exclusive of 15% VAT, which will be added in accordance with the applicable Saudi tax regulations.","VAT",true],
+  ["This quotation is valid for 30 days from the date of issue and is subject to confirmation of the engineer's availability at the time of Purchase Order issuance.","Validity",true],
+  ["If an invoice remains unpaid after 30 days, Sky Field Company may issue a formal payment follow-up. If payment remains outstanding beyond 45 days, Sky Field Company may suspend or demobilize the engineer after reasonable prior written notice.","Payment – Late",true],
+  ["All bank transfer charges and Letter of Credit amendment fees, where applicable, shall be borne by the Client.","Payment – Bank",true],
+  ["The Client's Purchase Order must include complete invoicing details and must reference this quotation number.","Payment – PO",true],
+  ["This quotation is for the rental of a qualified testing and commissioning engineer at the daily or monthly rate stated in the commercial offer. It is a manpower rental and not a lump-sum testing and commissioning project.","Rental Basis",true],
+  ["The rental period shall start from the agreed mobilization date of the engineer and continue until the confirmed demobilization date. All days within this period, including idle, waiting, or standby days, shall be considered chargeable.","Rental Start",true],
+  ["For monthly rentals, any additional period beyond one completed month, up to 15 calendar days, shall be calculated using the applicable daily rate. Any additional period exceeding 15 calendar days shall be charged as one full additional month.","Additional Days",true],
+  ["Transportation and accommodation for the rental engineer shall be arranged and borne by Sky Field Company, unless otherwise stated in the commercial offer.","Accommodation",true],
+  ["A monthly timesheet shall be prepared and submitted to the Client for signature. The signed timesheet will be the basis for invoicing and shall be returned without unreasonable delay.","Timesheet",true],
+  ["Sky Field Company may replace the assigned engineer with another suitably qualified engineer when reasonably necessary, subject to applicable project approval requirements.","Replacement",true],
+  ["The engineer shall perform the testing activities under the direction and supervision of the Client. The Client remains responsible for the overall testing program, test sequence, acceptance of results, and project completion.","Supervision",true],
+  ["The Client shall provide safe site access, the permit holder (PTW/LOA receiver), isolations and shutdowns, work permits, gate passes, inductions, approved drawings, settings, and test formats, and all coordination required for the engineer to perform the assigned testing activities.","Client Responsibilities",true],
+  ["The engineer shall perform only the agreed role and testing scope stated in the quotation. Any change in role, location, shift pattern, or scope requires Sky Field Company's prior written approval and may be subject to revised pricing.","Scope",true],
+  ["Either party may request demobilization by giving reasonable written notice. Charges shall remain applicable through the engineer's confirmed demobilization date, including any applicable additional-day or monthly charge.","Demobilization",true],
+  ["Standard working hours are 8 hours per day, 6 days per week. Ramadan working hours and official holidays shall follow applicable Saudi regulations.","Working Hours",true],
+  ["Overtime beyond standard working hours shall be charged at 1.5 times the normal hourly rate. Work on Fridays and official public holidays shall be charged at 2 times the normal hourly rate, unless otherwise agreed.","Overtime",true],
+  ["Any idle day, waiting day, site stoppage, or day during which the engineer is available but cannot work for reasons not attributable to Sky Field Company shall be counted as a chargeable day.","Idle Time",true],
+  ["Delays, travel restrictions, government actions, unsafe site conditions, or force majeure events beyond Sky Field Company's reasonable control shall entitle Sky Field Company to a reasonable extension and reimbursement of resulting additional costs.","Force Majeure",true],
+  ["Testing equipment is not included in this rental unless it is listed in the commercial offer. Any equipment required for the work shall be provided by the Client or quoted separately by Sky Field Company.","Testing Equipment",true],
+  ["The engineer remains an employee of Sky Field Company. The Client shall not directly recruit, solicit, or employ the engineer during the assignment and for 2 years after completion without prior written agreement.","Non-Solicit",true],
+  ["Sky Field Company shall not be liable for indirect, consequential, or special losses, including loss of production, revenue, use, or delay costs, nor for damage resulting from the Client's instructions, settings, drawings, or the condition of the equipment under test.","Liability",true]
+];
+const TEST_ENGINEER_RENTAL_CONDS_AR = [
+  "الأسعار لا تشمل ضريبة القيمة المضافة بنسبة 15%، وتُضاف الضريبة وفق الأنظمة الضريبية السعودية السارية.",
+  "يسري عرض السعر لمدة 30 يومًا من تاريخ إصداره، ويخضع لتأكيد توافر المهندس عند إصدار أمر الشراء.",
+  "إذا ظلت الفاتورة غير مسددة بعد 30 يومًا، فيجوز لشركة سماء الميدان إصدار متابعة رسمية للسداد. وإذا استمر عدم السداد لأكثر من 45 يومًا، فيجوز للشركة تعليق عمل المهندس أو سحبه بعد إشعار كتابي مسبق معقول.",
+  "يتحمل العميل جميع رسوم التحويلات البنكية ورسوم تعديل الاعتماد المستندي، عند انطباقها.",
+  "يجب أن يتضمن أمر شراء العميل جميع بيانات الفوترة وأن يشير إلى رقم عرض السعر هذا.",
+  "هذا العرض مخصص لتأجير مهندس اختبارات وتشغيل مؤهل بالسعر اليومي أو الشهري المحدد في العرض التجاري، وهو تأجير لكوادر فنية وليس مشروع اختبارات وتشغيل بسعر مقطوع.",
+  "تبدأ مدة التأجير من تاريخ التعبئة المتفق عليه للمهندس وتستمر حتى تاريخ السحب المؤكد، وتُعد جميع الأيام خلال هذه المدة، بما فيها أيام التوقف أو الانتظار أو الاستعداد، أيامًا مستحقة الدفع.",
+  "في حالة التأجير الشهري، تُحسب أي مدة إضافية بعد إتمام شهر واحد وحتى 15 يومًا تقويميًا وفق السعر اليومي المطبق، أما أي مدة إضافية تتجاوز 15 يومًا تقويميًا فتُحتسب شهرًا إضافيًا كاملًا.",
+  "تتولى شركة سماء الميدان ترتيب وتحمل تكاليف نقل وسكن المهندس المؤجر، ما لم ينص العرض التجاري على خلاف ذلك.",
+  "يُعد كشف ساعات شهري ويُقدم إلى العميل للتوقيع، ويكون الكشف الموقع أساس إصدار الفاتورة، ويلتزم العميل بإعادته دون تأخير غير مبرر.",
+  "يجوز لشركة سماء الميدان استبدال المهندس المعين بمهندس آخر مؤهل بصورة مناسبة عند الحاجة المعقولة، مع مراعاة متطلبات اعتماد المشروع المطبقة.",
+  "يؤدي المهندس أعمال الاختبار تحت توجيه العميل وإشرافه، ويظل العميل مسؤولًا عن برنامج الاختبارات وتسلسلها واعتماد النتائج وإنجاز المشروع.",
+  "يلتزم العميل بتوفير الدخول الآمن للموقع، وحامل التصريح (مستلم تصريح العمل / LOA)، وأعمال العزل والفصل، وتصاريح العمل وتصاريح الدخول، والتعريف بالموقع، والرسومات والإعدادات ونماذج الاختبار المعتمدة، وجميع أعمال التنسيق اللازمة لأداء المهندس لأعمال الاختبار المكلف بها.",
+  "يؤدي المهندس الدور ونطاق الاختبارات المتفق عليهما في العرض فقط. وأي تغيير في الدور أو الموقع أو نظام الورديات أو نطاق العمل يتطلب موافقة كتابية مسبقة من شركة سماء الميدان، وقد يخضع لتسعير معدل.",
+  "يجوز لأي من الطرفين طلب سحب المهندس بعد توجيه إشعار كتابي معقول. وتظل الرسوم مستحقة حتى تاريخ السحب المؤكد، بما في ذلك أي رسوم مطبقة للأيام الإضافية أو الشهر الإضافي.",
+  "ساعات العمل القياسية هي 8 ساعات يوميًا ولمدة 6 أيام أسبوعيًا، وتخضع ساعات العمل في رمضان والعطلات الرسمية للأنظمة السعودية المطبقة.",
+  "تُحتسب ساعات العمل الإضافية بعد ساعات العمل القياسية بمعدل 1.5 من سعر الساعة العادي، ويُحتسب العمل أيام الجمعة والعطلات الرسمية بمعدل ضعفي سعر الساعة العادي ما لم يُتفق على خلاف ذلك.",
+  "يُحتسب أي يوم توقف أو انتظار أو تعطل بالموقع أو أي يوم يكون فيه المهندس متاحًا ولا يستطيع العمل لأسباب لا تُنسب إلى شركة سماء الميدان يومًا مستحق الدفع.",
+  "تمنح التأخيرات أو قيود السفر أو الإجراءات الحكومية أو ظروف الموقع غير الآمنة أو أحداث القوة القاهرة الخارجة عن السيطرة المعقولة لشركة سماء الميدان الشركة تمديدًا معقولًا وتعويضًا عن التكاليف الإضافية الناتجة.",
+  "لا يشمل هذا التأجير أجهزة الاختبار ما لم تُذكر في العرض التجاري، ويتولى العميل توفير أي أجهزة لازمة للعمل أو تُسعّرها شركة سماء الميدان بشكل منفصل.",
+  "يظل المهندس موظفًا لدى شركة سماء الميدان، ولا يجوز للعميل توظيفه أو استقطابه أو تشغيله مباشرةً أثناء المهمة ولمدة سنتين بعد اكتمالها دون موافقة كتابية مسبقة.",
+  "لا تتحمل شركة سماء الميدان المسؤولية عن الخسائر غير المباشرة أو التبعية أو الخاصة، بما في ذلك فقدان الإنتاج أو الإيرادات أو الانتفاع أو تكاليف التأخير، ولا عن أي ضرر ناتج عن تعليمات العميل أو إعداداته أو رسوماته أو حالة المعدات محل الاختبار."
+];
+const EQUIPMENT_RENTAL_CONDS = [
+  ["Prices are exclusive of 15% VAT, which will be added in accordance with the applicable Saudi tax regulations.","VAT",true],
+  ["This quotation is valid for 30 days from the date of issue and is subject to confirmation of the equipment's availability at the time of Purchase Order issuance.","Validity",true],
+  ["If an invoice remains unpaid after 30 days, Sky Field Company may issue a formal payment follow-up. If payment remains outstanding beyond 45 days, Sky Field Company may recall the equipment after reasonable prior written notice, and the Client shall allow its collection from site.","Payment – Late",true],
+  ["All bank transfer charges and Letter of Credit amendment fees, where applicable, shall be borne by the Client.","Payment – Bank",true],
+  ["The Client's Purchase Order must include complete invoicing details and must reference this quotation number.","Payment – PO",true],
+  ["This quotation is for the rental of testing equipment only, at the daily, weekly, or monthly rate stated in the commercial offer. Operation of the equipment by a Sky Field Company engineer is not included unless stated in the commercial offer.","Equipment Rental Basis",true],
+  ["The rental period shall start on the date the equipment is handed over to the Client or dispatched from Sky Field Company's premises, and shall end on the date it is returned to Sky Field Company's premises complete and in good condition. All days within this period, including Fridays, public holidays, and idle or standby days, shall be chargeable.","Rental Period",true],
+  ["The minimum rental period is 7 calendar days unless otherwise stated in the commercial offer. For monthly rentals, any additional period beyond one completed month, up to 15 calendar days, shall be charged at the daily rate, and any additional period exceeding 15 calendar days shall be charged as one full additional month.","Minimum Rental",true],
+  ["Transportation of the equipment to and from site, including loading and unloading, shall be at the Client's cost and responsibility unless included in the commercial offer.","Delivery & Collection",true],
+  ["The equipment shall be handed over with a delivery note listing each item, its accessories, serial numbers, and condition, signed by both parties. On return, the equipment shall be checked against the same delivery note and shall be clean and complete with all accessories, cables, cases, and documents. Missing accessories shall be charged at their replacement cost.","Handover & Return",true],
+  ["The equipment shall be supplied with valid calibration certificates. Any re-calibration required due to misuse, impact, or improper handling during the rental period shall be charged to the Client.","Calibration",true],
+  ["The equipment shall be operated only by qualified and trained personnel, in accordance with the manufacturer's instructions and applicable safety procedures. Sky Field Company shall not be responsible for test results, settings, or any damage arising from operation of the equipment by the Client's personnel.","Qualified Operator",true],
+  ["Any malfunction shall be reported to Sky Field Company in writing immediately. Sky Field Company shall repair or replace the faulty equipment as soon as reasonably practicable, and days during which the equipment is out of service due to a fault not caused by the Client shall not be charged.","Equipment Fault",true],
+  ["The equipment remains the property of Sky Field Company. From handover until return, the Client shall be responsible for its safe use and storage and its protection against weather, dust, moisture, and theft, and shall not open, repair, modify, sub-rent, or move the equipment to another site without Sky Field Company's prior written approval; otherwise, Sky Field Company may recall the equipment.","Equipment Care",true],
+  ["Any loss, theft, or damage to the equipment during the rental period, other than normal wear and tear, shall be charged to the Client at the cost of repair or the current replacement value, including calibration and transportation costs. Rental charges shall continue until the equipment is returned or its replacement value has been paid.","Damage & Loss",true],
+  ["Sky Field Company shall not be liable for indirect, consequential, or special losses, including loss of production, revenue, use, or delay costs arising from equipment downtime. Sky Field Company's total liability under this rental shall not exceed the rental charges paid for the affected equipment.","Liability",true],
+  ["Delays, travel restrictions, shipping or customs delays, government actions, or force majeure events beyond Sky Field Company's reasonable control shall entitle Sky Field Company to a reasonable extension of the delivery date.","Delays & Force Majeure",true],
+  ["The Client shall insure the equipment against loss and damage for its full replacement value for the entire rental period.","Insurance",false],
+  ["Sky Field Company may require a refundable security deposit, as stated in the commercial offer, before dispatching the equipment. The deposit shall be refunded after the equipment is returned complete and in good condition, less any amounts due.","Security Deposit",false]
+];
+const EQUIPMENT_RENTAL_CONDS_AR = [
+  "الأسعار لا تشمل ضريبة القيمة المضافة بنسبة 15%، وتُضاف الضريبة وفق الأنظمة الضريبية السعودية السارية.",
+  "يسري عرض السعر لمدة 30 يومًا من تاريخ إصداره، ويخضع لتأكيد توافر الأجهزة عند إصدار أمر الشراء.",
+  "إذا ظلت الفاتورة غير مسددة بعد 30 يومًا، فيجوز لشركة سماء الميدان إصدار متابعة رسمية للسداد. وإذا استمر عدم السداد لأكثر من 45 يومًا، فيجوز للشركة استرداد الأجهزة بعد إشعار كتابي مسبق معقول، ويلتزم العميل بتمكينها من استلامها من الموقع.",
+  "يتحمل العميل جميع رسوم التحويلات البنكية ورسوم تعديل الاعتماد المستندي، عند انطباقها.",
+  "يجب أن يتضمن أمر شراء العميل جميع بيانات الفوترة وأن يشير إلى رقم عرض السعر هذا.",
+  "هذا العرض مخصص لتأجير أجهزة الاختبار فقط بالسعر اليومي أو الأسبوعي أو الشهري المحدد في العرض التجاري، ولا يشمل تشغيل الأجهزة بواسطة مهندس من شركة سماء الميدان ما لم يُذكر ذلك في العرض التجاري.",
+  "تبدأ مدة التأجير من تاريخ تسليم الأجهزة للعميل أو شحنها من مقر شركة سماء الميدان، وتنتهي بتاريخ إعادتها إلى مقر الشركة كاملة وبحالة جيدة. وتُعد جميع الأيام خلال هذه المدة، بما فيها أيام الجمعة والعطلات الرسمية وأيام التوقف أو الانتظار، أيامًا مستحقة الدفع.",
+  "الحد الأدنى لمدة التأجير 7 أيام تقويمية ما لم ينص العرض التجاري على خلاف ذلك. وفي حالة التأجير الشهري، تُحسب أي مدة إضافية بعد إتمام شهر واحد وحتى 15 يومًا تقويميًا وفق السعر اليومي، وتُحتسب أي مدة إضافية تتجاوز 15 يومًا تقويميًا شهرًا إضافيًا كاملًا.",
+  "يتحمل العميل تكاليف ومسؤولية نقل الأجهزة إلى الموقع ومنه، بما في ذلك التحميل والتنزيل، ما لم يكن النقل مشمولًا في العرض التجاري.",
+  "تُسلَّم الأجهزة بموجب محضر تسليم يبين كل جهاز وملحقاته وأرقامه التسلسلية وحالته، ويوقعه الطرفان. وعند الإعادة تُطابق الأجهزة مع محضر التسليم نفسه، وتُعاد نظيفة وكاملة بجميع الملحقات والكابلات والحقائب والمستندات، ويُحتسب أي ملحق مفقود بتكلفة استبداله.",
+  "تُورَّد الأجهزة بشهادات معايرة سارية، ويتحمل العميل تكلفة أي إعادة معايرة تلزم بسبب سوء الاستخدام أو الصدمات أو المناولة غير السليمة خلال مدة التأجير.",
+  "لا تُشغَّل الأجهزة إلا بواسطة أفراد مؤهلين ومدربين وفق تعليمات الشركة المصنعة وإجراءات السلامة المطبقة، ولا تتحمل شركة سماء الميدان المسؤولية عن نتائج الاختبارات أو الإعدادات أو أي ضرر ناتج عن تشغيل الأجهزة بواسطة أفراد العميل.",
+  "يُبلَّغ عن أي عطل كتابيًا لشركة سماء الميدان فور حدوثه، وتتولى الشركة إصلاح الجهاز المعطل أو استبداله في أقرب وقت ممكن عمليًا، ولا تُحتسب الأيام التي يكون فيها الجهاز خارج الخدمة بسبب عطل لا يُنسب إلى العميل.",
+  "تظل الأجهزة ملكًا لشركة سماء الميدان. ويكون العميل مسؤولًا من تاريخ التسليم حتى الإعادة عن استخدامها وتخزينها بشكل آمن وحمايتها من الأحوال الجوية والغبار والرطوبة والسرقة، ولا يجوز له فتحها أو إصلاحها أو تعديلها أو تأجيرها للغير أو نقلها إلى موقع آخر دون موافقة كتابية مسبقة من الشركة، وإلا جاز للشركة استرداد الأجهزة.",
+  "يتحمل العميل تكلفة أي فقد أو سرقة أو تلف يلحق بالأجهزة خلال مدة التأجير، عدا الاستهلاك العادي، بقيمة الإصلاح أو قيمة الاستبدال الحالية، بما في ذلك تكاليف المعايرة والنقل. وتستمر رسوم التأجير حتى إعادة الأجهزة أو سداد قيمة استبدالها.",
+  "لا تتحمل شركة سماء الميدان المسؤولية عن الخسائر غير المباشرة أو التبعية أو الخاصة، بما في ذلك فقدان الإنتاج أو الإيرادات أو الانتفاع أو تكاليف التأخير الناتجة عن توقف الأجهزة، ولا تتجاوز مسؤوليتها الإجمالية بموجب هذا التأجير رسوم التأجير المدفوعة عن الجهاز المعني.",
+  "تمنح التأخيرات أو قيود السفر أو تأخيرات الشحن والجمارك أو الإجراءات الحكومية أو أحداث القوة القاهرة الخارجة عن السيطرة المعقولة لشركة سماء الميدان الشركة تمديدًا معقولًا لموعد التسليم.",
+  "يلتزم العميل بالتأمين على الأجهزة ضد الفقد والتلف بكامل قيمة استبدالها طوال مدة التأجير.",
+  "يجوز لشركة سماء الميدان طلب تأمين نقدي مسترد، وفق ما ينص عليه العرض التجاري، قبل شحن الأجهزة. ويُرد التأمين بعد إعادة الأجهزة كاملة وبحالة جيدة، بعد خصم أي مبالغ مستحقة."
+];
+const QUOTATION_CONDITION_TYPES = {
+  testing:{conds:TESTING_CONDS,ar:TESTING_CONDS_AR,durationSection:'Scope & Responsibilities'},
+  engineer_rental:{conds:ENGINEER_RENTAL_CONDS,ar:ENGINEER_RENTAL_CONDS_AR,durationSection:'Rental Basis',engineerRental:true},
+  test_engineer_rental:{conds:TEST_ENGINEER_RENTAL_CONDS,ar:TEST_ENGINEER_RENTAL_CONDS_AR,durationSection:'Rental Basis',engineerRental:true},
+  equipment_rental:{conds:EQUIPMENT_RENTAL_CONDS,ar:EQUIPMENT_RENTAL_CONDS_AR,durationSection:'Equipment Rental Basis'}
+};
+
 const DEFAULT_CONDS = TESTING_CONDS;
 
-const COND_SECTION_ORDER = ['Commercial & Payment','Rental Basis','Scope & Responsibilities','Site Readiness & Mobilization','Working Hours & Schedule','Equipment, Standards & Reporting','Exclusions','Liability & General'];
+const COND_SECTION_ORDER = ['Commercial & Payment','Rental Basis','Equipment Rental Basis','Scope & Responsibilities','Site Readiness & Mobilization','Working Hours & Schedule','Equipment, Standards & Reporting','Equipment Care & Liability','Exclusions','Liability & General'];
 const COND_SECTION_AR = {
   'Commercial & Payment':'الشروط التجارية والدفع','Rental Basis':'أساس تأجير المهندس','Scope & Responsibilities':'النطاق والمسؤوليات',
   'Site Readiness & Mobilization':'جاهزية الموقع والتعبئة','Working Hours & Schedule':'ساعات العمل والبرنامج',
-  'Equipment, Standards & Reporting':'الأجهزة والمعايير والتقارير','Exclusions':'الاستثناءات','Liability & General':'المسؤولية والشروط العامة'
+  'Equipment, Standards & Reporting':'الأجهزة والمعايير والتقارير','Exclusions':'الاستثناءات','Liability & General':'المسؤولية والشروط العامة',
+  'Equipment Rental Basis':'أساس تأجير الأجهزة','Equipment Care & Liability':'العناية بالأجهزة والمسؤولية عنها'
 };
 const COND_CATEGORY_AR = {
   'Payment':'الدفع','Payment – Selected':'شروط الدفع المختارة','Payment – Late':'تأخر السداد','Payment – Bank':'الرسوم البنكية','Payment – PO':'أمر الشراء','VAT':'ضريبة القيمة المضافة','Validity':'صلاحية العرض',
   'Rental Basis':'أساس التأجير','LOA Start Date':'تاريخ بدء LOA','Additional Days':'الأيام الإضافية','Accommodation':'السكن والنقل','Timesheet':'كشف الساعات','Replacement':'الاستبدال',
   'Scope':'نطاق العمل','Client Responsibilities':'مسؤوليات العميل','Site Readiness':'جاهزية الموقع','Exclusions – Permits':'استثناءات التصاريح','Mobilization':'التعبئة','Demobilization':'سحب الموارد',
   'Working Hours':'ساعات العمل','Overtime':'العمل الإضافي','Idle Time':'التوقف والانتظار','Force Majeure':'القوة القاهرة','Calibration':'المعايرة','Standards':'المعايير','Repetition':'إعادة الاختبارات',
-  'Exclusions – Material':'استثناء المواد','Liability':'المسؤولية','Non-Solicit':'عدم الاستقطاب','Custom':'شرط مخصص'
+  'Exclusions – Material':'استثناء المواد','Liability':'المسؤولية','Non-Solicit':'عدم الاستقطاب','Custom':'شرط مخصص',
+  'Rental Start':'بدء مدة التأجير','Supervision':'الإشراف','Testing Equipment':'أجهزة الاختبار',
+  'Equipment Rental Basis':'أساس تأجير الأجهزة','Rental Period':'مدة التأجير','Minimum Rental':'الحد الأدنى للتأجير','Delivery & Collection':'النقل',
+  'Handover & Return':'التسليم والإعادة','Qualified Operator':'التشغيل بأفراد مؤهلين','Equipment Fault':'أعطال الأجهزة','Equipment Care':'العناية بالأجهزة',
+  'Damage & Loss':'التلف والفقد','Insurance':'التأمين على الأجهزة','Security Deposit':'التأمين النقدي','Delays & Force Majeure':'التأخير والقوة القاهرة'
 };
 const CAT_SECTION = {
   'Payment':'Commercial & Payment','Payment – Selected':'Commercial & Payment','Payment – Late':'Commercial & Payment','Payment – Bank':'Commercial & Payment','Payment – PO':'Commercial & Payment','VAT':'Commercial & Payment','Validity':'Commercial & Payment',
@@ -226,7 +330,12 @@ const CAT_SECTION = {
   'Working Hours':'Working Hours & Schedule','Overtime':'Working Hours & Schedule','Idle Time':'Working Hours & Schedule','Force Majeure':'Working Hours & Schedule',
   'Equipment':'Equipment, Standards & Reporting','Calibration':'Equipment, Standards & Reporting','Standards':'Equipment, Standards & Reporting','Reporting':'Equipment, Standards & Reporting',
   'Repetition':'Exclusions','Exclusions – Material':'Exclusions',
-  'Liability':'Liability & General','Non-Solicit':'Liability & General'
+  'Liability':'Liability & General','Non-Solicit':'Liability & General',
+  'Rental Start':'Rental Basis','Supervision':'Scope & Responsibilities','Testing Equipment':'Equipment, Standards & Reporting',
+  'Equipment Rental Basis':'Equipment Rental Basis','Rental Period':'Equipment Rental Basis','Minimum Rental':'Equipment Rental Basis','Delivery & Collection':'Equipment Rental Basis','Handover & Return':'Equipment Rental Basis',
+  'Qualified Operator':'Equipment, Standards & Reporting','Equipment Fault':'Equipment, Standards & Reporting',
+  'Equipment Care':'Equipment Care & Liability','Damage & Loss':'Equipment Care & Liability',
+  'Delays & Force Majeure':'Liability & General','Insurance':'Liability & General','Security Deposit':'Liability & General'
 };
 
 let activeCat = Object.keys(ACTS)[0];

@@ -20,6 +20,7 @@ function toggleSOWMenu(){
   const hidden=menu.classList.toggle('sow-hidden');
   btn.textContent = hidden ? 'Show Scope of Work Menu' : 'Hide Scope of Work Menu';
   btn.classList.toggle('active-toggle', hidden);
+  btn.setAttribute('aria-expanded',String(!hidden));
 }
 function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

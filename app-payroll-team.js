@@ -194,7 +194,7 @@ function renderCostLibrary(){
 }
 
 
-function addCostManpowerRow(){sfCurrentCostPlan.manpower.push({id:sfUid('mp'),engineerId:'',label:'',qty:1,duration:1,basis:conditionType==='engineer_rental'?'monthly':'daily',rate:0});renderCostPlan();}
+function addCostManpowerRow(){sfCurrentCostPlan.manpower.push({id:sfUid('mp'),engineerId:'',label:'',qty:1,duration:1,basis:conditionTypeInfo().engineerRental?'monthly':'daily',rate:0});renderCostPlan();}
 
 function addCostOtherRow(description='',amount=0){sfCurrentCostPlan.other.push({id:sfUid('oth'),description,amount:sfNum(amount)});renderCostPlan();}
 function removeCostPlanRow(group,id){sfCurrentCostPlan[group]=(sfCurrentCostPlan[group]||[]).filter(x=>x.id!==id);renderCostPlan();}
