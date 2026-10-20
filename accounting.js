@@ -59,7 +59,7 @@ function printable(rows){
  .brand{padding-bottom:3mm}.brand img{height:14mm}.title-line{margin:4mm 0 3mm}.amount{padding:2.5mm 4mm;margin-bottom:3mm}h2{margin:3mm 0 1.5mm}th,td{padding:1.8mm 2.5mm}.signatures{margin-top:6mm}.ref{margin-top:3mm}
  </style></head><body><button onclick="window.print()">${cell(T('طباعة السند','Print voucher'))}</button>`+rows.map(r=>`<article class="voucher">
  <header class="brand"><img src="${cell(logo)}" alt="SKY FIELD"><div class="brand-copy"><strong>SKY FIELD COMPANY LIMITED</strong><span>${cell(T('شركة سماء الميدان المحدودة','Finance & Accounting'))}</span></div></header>
- <div class="title-line"><div><h1>${cell(T('سند صرف','Payment voucher'))}</h1><div class="subtitle" style="letter-spacing:0;line-height:1.6"><span lang="ar" dir="rtl">قسم الاختبارات</span><br><span lang="en" dir="ltr">Testing and Commissioning Department</span></div></div><span class="badge ${r.status==='paid'?'paid':''}">${cell(status(r.status))}</span></div>
+ <div class="title-line"><div><h1>${cell(T('سند صرف','Payment voucher'))}</h1><div class="subtitle" style="letter-spacing:0;line-height:1.6"><span lang="ar" dir="rtl">قسم الاختبارات</span><br><span lang="en" dir="ltr">Testing and Commissioning Department</span></div></div><span class="badge ${r.status==='paid'?'paid':''}">${cell(r.status==='paid'?T('تم السداد','Paid'):T('بانتظار السداد','Awaiting payment'))}</span></div>
  <div class="amount"><span class="amount-label">${cell(T('قيمة المصروف','Expense amount'))}</span><span class="amount-value">${cell(money(r.amount))} <small>SAR</small></span></div>
  <h2>${cell(T('بيانات المصروف','Expense details'))}</h2><table><tbody>
  ${full(T('المهندس','Engineer'),r.engineer_name)}
