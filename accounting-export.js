@@ -52,11 +52,11 @@ function workbook(sheets,rtl){ // rtl applies per sheet (sheetView); workbookVie
  sheets.forEach((s,i)=>files[`xl/worksheets/sheet${i+1}.xml`]=enc(sheetXml(s.rows,s.widths,{rtl,filterTo:s.filterTo})));
  return fflate.zipSync(files);
 }
-function status(text){const p=$('acctStatus');p.textContent=text;p.hidden=!text}
+function status(text){const p=$('acctXStatus');p.textContent=text;p.hidden=!text}
 
 async function exportForAccounting(){
- const month=$('acctMonth').value;if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw Error(tr('اختر الشهر'));
- const engineer=$('acctEngineer').value,unsettledOnly=$('acctUnsettled').checked,rtl=language!=='en';
+ const month=$('acctXMonth').value;if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw Error(tr('اختر الشهر'));
+ const engineer=$('acctXEngineer').value,unsettledOnly=$('acctXUnsettled').checked,rtl=language!=='en';
  const [y,n]=month.split('-').map(Number),end=`${n===12?y+1:y}-${String(n===12?1:n+1).padStart(2,'0')}-01`;
  status(T('جاري تحميل المصروفات…','Loading expenses…'));
  const scope=(await allRows('sf_daily_expenses',month+'-01',end)).filter(r=>engineer==='all'||r.user_id===engineer);
@@ -108,17 +108,17 @@ async function exportForAccounting(){
 
 // Panel next to the timesheet export, shown to administrators only.
 const anchor=document.getElementById('timesheetExportPanel');if(!anchor)return;
-anchor.insertAdjacentHTML('afterend',`<details id="accountingExportPanel" class="range-box" hidden><summary><b>تصدير المصروفات للحسابات</b></summary><p><small>ملف ZIP فيه Excel بالمصروفات المعتمدة وكل الإيصالات، وكل إيصال يحمل رقم سطره في الملف. فك الضغط أولًا ثم افتح Excel لتعمل روابط الإيصالات.</small></p><div class="grid"><label>الشهر<input id="acctMonth" type="month"></label><label>المهندس<select id="acctEngineer"></select></label><label class="weekend-option"><input id="acctUnsettled" type="checkbox"> غير المصفّاة فقط</label></div><div class="toolbar"><button type="button" id="acctExport">تنزيل ملف الحسابات ZIP</button></div><p id="acctStatus" class="acct-status" hidden></p></details>`);
+anchor.insertAdjacentHTML('afterend',`<details id="accountingExportPanel" class="range-box" hidden><summary><b>تصدير المصروفات للحسابات</b></summary><p><small>ملف ZIP فيه Excel بالمصروفات المعتمدة وكل الإيصالات، وكل إيصال يحمل رقم سطره في الملف. فك الضغط أولًا ثم افتح Excel لتعمل روابط الإيصالات.</small></p><div class="grid"><label>الشهر<input id="acctXMonth" type="month"></label><label>المهندس<select id="acctXEngineer"></select></label><label class="weekend-option"><input id="acctXUnsettled" type="checkbox"> غير المصفّاة فقط</label></div><div class="toolbar"><button type="button" id="acctXExport">تنزيل ملف الحسابات ZIP</button></div><p id="acctXStatus" class="acct-status" hidden></p></details>`);
 const panel=document.getElementById('accountingExportPanel');let monthTouched=false;
-$('acctMonth').addEventListener('change',()=>{monthTouched=true});
+$('acctXMonth').addEventListener('change',()=>{monthTouched=true});
 window.sfAccountingExportSync=function(){
  const admin=typeof me!=='undefined'&&me&&me.role==='admin';panel.hidden=!admin;if(!admin)return;
- const select=$('acctEngineer'),old=select.value||'all';
+ const select=$('acctXEngineer'),old=select.value||'all';
  select.innerHTML=`<option value="all">${esc(tr('كل المهندسين'))}</option>`+members.map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');
  select.value=members.some(m=>m.user_id===old)?old:'all';
- if(!monthTouched||!$('acctMonth').value)$('acctMonth').value=$('month').value;
+ if(!monthTouched||!$('acctXMonth').value)$('acctXMonth').value=$('month').value;
 };
-panel.addEventListener('toggle',()=>{if(panel.open&&!monthTouched)$('acctMonth').value=$('month').value});
-$('acctExport').onclick=()=>run(async()=>{const b=$('acctExport');b.disabled=true;try{await exportForAccounting()}catch(e){status('');throw e}finally{b.disabled=false}});
+panel.addEventListener('toggle',()=>{if(panel.open&&!monthTouched)$('acctXMonth').value=$('month').value});
+$('acctXExport').onclick=()=>run(async()=>{const b=$('acctXExport');b.disabled=true;try{await exportForAccounting()}catch(e){status('');throw e}finally{b.disabled=false}});
 window.sfAccountingExportSync();
 })();
