@@ -11,6 +11,7 @@ const L=(en,a)=>ar()?a:en;
 const sar=n=>typeof fmtSAR==='function'?fmtSAR(n):'SAR '+Math.round(n).toLocaleString('en-US');
 const esc=s=>typeof escHtml==='function'?escHtml(s):String(s??'');
 const daysSince=d=>{const t=Date.parse(String(d||'').slice(0,10)+'T00:00:00');return Number.isFinite(t)?Math.floor((Date.now()-t)/86400000):null};
+const daysUntil=d=>{const s=daysSince(d);return s===null?null:-s};
 const names=list=>esc(list.slice(0,3).join(L(', ','، ')))+(list.length>3?L(` and ${list.length-3} more`,` و${list.length-3} غيرها`):'');
 const attendanceAdmin=()=>typeof sfUnifiedProfile!=='undefined'&&sfUnifiedProfile?.role==='admin'&&!(typeof sfAttendanceOnly!=='undefined'&&sfAttendanceOnly)&&typeof sfDb!=='undefined'&&!!sfDb;
 
@@ -41,6 +42,8 @@ function attendanceItems(d){
  if(d.periods)out.push({sev:'mid',title:L(`${d.periods} attendance period${d.periods>1?'s':''} awaiting approval`,`${d.periods} فترة حضور بانتظار الاعتماد`),detail:L(`${d.days} day${d.days>1?'s':''} from ${d.engineers} engineer${d.engineers>1?'s':''}. Payroll only counts approved days.`,`${d.days} يوم من ${d.engineers} مهندس. الرواتب لا تحسب إلا الأيام المعتمدة.`),go:'timesheets',btn:L('Review','مراجعة')});
  if(d.pendingExp)out.push({sev:'mid',title:L(`${d.pendingExp} expense${d.pendingExp>1?'s':''} awaiting approval`,`${d.pendingExp} مصروف بانتظار الاعتماد`),detail:L(`${sar(d.pendingAmt)} in total.`,`بإجمالي ${sar(d.pendingAmt)}.`),go:'timesheets',btn:L('Review','مراجعة')});
  if(d.unsettled)out.push({sev:'info',title:L(`${d.unsettled} approved expense${d.unsettled>1?'s':''} not settled`,`${d.unsettled} مصروف معتمد لم يُصفَّ`),detail:L(`${sar(d.unsettledAmt)} owed to engineers. Export them for accounting from Timesheets & Approvals.`,`${sar(d.unsettledAmt)} مستحقة للمهندسين. صدّرها للحسابات من التايم شيت والاعتمادات.`),go:'timesheets',btn:L('Open','فتح')});
+ if(d.secCards&&d.secCards.length){const n=d.secCards.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
+  out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office: ','ذكّرهم بإرسال البطاقة إلى مكتب القصيم: ')+names(d.secCards.map(c=>`${c.name} (${label(c.days)})`)),go:'engineers',btn:L('Open engineers','فتح المهندسين')});}
  if(d.noLocation&&d.noLocation.length)out.push({sev:'high',title:L(`${d.noLocation.length} project${d.noLocation.length>1?'s':''} without a location`,`${d.noLocation.length} مشروع بلا موقع`),detail:L('Engineers cannot record site days on: ','لا يستطيع المهندسون تسجيل أيام موقع على: ')+names(d.noLocation),go:'attendancesettings',btn:L('Set location','تحديد الموقع')});
  return out;
 }
@@ -56,8 +59,14 @@ async function loadAttendance(){
   const [vis,prj]=await Promise.all([all(sfDb.from('sf_daily_project_visibility').select('project_id')),all(sfDb.from('sf_daily_projects').select('id,name,location'))]);
   const shown=new Set(vis.map(v=>String(v.project_id)));noLocation=prj.filter(p=>shown.has(String(p.id))&&!p.location).map(p=>p.name||p.id);
  }catch(_){}
+ let secCards=null;
+ try{ // needs 24-sec-card-reminders.sql; quietly skipped before it is run
+  const limit=new Date(Date.now()+15*86400000).toISOString().slice(0,10);
+  const cards=await all(sfDb.from('sf_daily_members').select('name,sec_card_expiry').eq('role','engineer').eq('is_active',true).not('sec_card_expiry','is',null).lte('sec_card_expiry',limit).order('sec_card_expiry'));
+  secCards=cards.map(c=>({name:c.name,days:daysUntil(c.sec_card_expiry)})).filter(c=>c.days!==null&&c.days<=15);
+ }catch(_){}
  return{periods:new Set(records.map(r=>r.user_id+'|'+(r.period_id||r.day))).size,days:records.length,engineers:new Set(records.map(r=>r.user_id)).size,
-  pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation};
+  pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation,secCards};
 }
 function draw(){
  const root=document.getElementById('dash-attention');if(!root)return;

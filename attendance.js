@@ -26,6 +26,17 @@ let lastAllowedDay=null;
 async function loadAllowedDay(){try{const d=String(await checked(db.rpc('sf_attendance_last_allowed_day'))||'');lastAllowedDay=/^\d{4}-\d{2}-\d{2}$/.test(d)?d:null}catch(error){lastAllowedDay=null}}
 function allowedUntil(){const t=today();return lastAllowedDay&&lastAllowedDay>t&&lastAllowedDay.slice(0,7)===t.slice(0,7)?lastAllowedDay:t}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+// SEC ID card reminder shown to the engineer from 15 days before expiry (red from 10 days and after expiry).
+function secCardNotice(expiry,day=today()){
+ if(!expiry)return null;const days=Math.round((Date.parse(expiry+'T00:00:00Z')-Date.parse(day+'T00:00:00Z'))/86400000);
+ if(!Number.isFinite(days)||days>15)return null;
+ const date=new Date(expiry+'T00:00:00Z').toLocaleDateString(language==='en'?'en-GB':'ar-SA-u-nu-latn',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+ const text=language==='en'
+  ?(days<0?`Your SEC ID card expired on ${date}. Please send it to the Qassim office for renewal now.`:days===0?`Your SEC ID card expires today (${date}). Please send it to the Qassim office for renewal.`:`Your SEC ID card expires on ${date} (in ${days} day${days===1?'':'s'}). Please send it to the Qassim office for renewal.`)
+  :(days<0?`انتهت بطاقة SEC الخاصة بك في ${date}. يرجى إرسالها إلى مكتب القصيم للتجديد الآن.`:days===0?`تنتهي بطاقة SEC الخاصة بك اليوم (${date}). يرجى إرسالها إلى مكتب القصيم للتجديد.`:`تنتهي بطاقة SEC الخاصة بك في ${date} (بعد ${days} ${days===1?'يوم':'أيام'}). يرجى إرسالها إلى مكتب القصيم للتجديد.`);
+ return {days,urgent:days<=10,text};
+}
+function renderSecCardBanner(){const el=$('secCardBanner');if(!el)return;const notice=me?.role==='engineer'?secCardNotice(me.sec_card_expiry):null;el.hidden=!notice;el.textContent=notice?notice.text:'';el.classList.toggle('urgent',!!notice?.urgent)}
 function showPortal(ready){$('login').hidden=ready;$('app').hidden=!ready;document.body.classList.toggle('signed-out',!ready);}
 async function load(){
  showPortal(false);me=null;
@@ -41,7 +52,7 @@ async function load(){
  members=await checked(db.from('sf_daily_members').select('*'));projects=await checked(db.from('sf_daily_projects').select('*').order('name'));
  syncLeaderTabAccess();
  $('who').textContent=me.name;$('tabAdmin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';
- await loadProjectVisibility();showPortal(true);setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
+ await loadProjectVisibility();showPortal(true);renderSecCardBanner();setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
  const form=$('expenseForm');form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form);
  $('month').value=today().slice(0,7);
  window.sfAccountingInit?.();renderEngineerList();
@@ -298,7 +309,7 @@ function setupApprovalFilters(){
   'اترك الإيصال فارغًا للإبقاء على الإيصال الحالي، أو اختر ملفًا لاستبداله.':'Leave the receipt empty to keep the current one, or choose a file to replace it.','اكتب سبب الرفض ليراه المهندس ويصحح المصروف':'Write the reason; the engineer will see it and correct the expense',
   'سحب هذا المصروف؟ سيُحذف الطلب ولن يُراجع.':'Withdraw this expense? The request will be removed and not reviewed.','تم سحب المصروف.':'Expense withdrawn.','غير متاح':'unavailable',
   'شغّل ملف 10-attendance-expense-review-v11.sql في Supabase لتفعيل سبب الرفض والتعديل والسحب.':'Run 10-attendance-expense-review-v11.sql in Supabase to enable rejection reasons, edits and withdrawals.',
-  'تغيّر هذا المصروف بعد تحميل الصفحة (عُدّل أو سُحب). اضغط تحديث.':'This expense changed after the page loaded (edited or withdrawn). Click Refresh.','لا يمكن تعديل أو سحب مصروف معتمد أو مصفّى.':'Approved or settled expenses cannot be edited or withdrawn.','ملف الفاتورة مستخدم في مصروف آخر. ارفع فاتورة مختلفة، أو عدّل المصروف الأصلي بدل إضافة مصروف جديد.':'This invoice file is already used by another expense. Upload a different invoice, or edit the original expense instead of adding a new one.','البيان لا يتجاوز 1000 حرف.':'The description is limited to 1000 characters.','المبلغ يجب ألا يتجاوز 1,000,000 ريال وبحد أقصى رقمين عشريين.':'The amount must be at most SAR 1,000,000 with no more than two decimals.','المصروف مصفّى ولا يمكن تغيير اعتماده.':'This expense is settled; its approval cannot change.',
+  'تغيّر هذا المصروف بعد تحميل الصفحة (عُدّل أو سُحب). اضغط تحديث.':'This expense changed after the page loaded (edited or withdrawn). Click Refresh.','لا يمكن تعديل أو سحب مصروف معتمد أو مصفّى.':'Approved or settled expenses cannot be edited or withdrawn.','أدخل بريدًا إلكترونيًا صحيحًا للتذكير.':'Enter a valid reminder email address.','ملف الفاتورة مستخدم في مصروف آخر. ارفع فاتورة مختلفة، أو عدّل المصروف الأصلي بدل إضافة مصروف جديد.':'This invoice file is already used by another expense. Upload a different invoice, or edit the original expense instead of adding a new one.','البيان لا يتجاوز 1000 حرف.':'The description is limited to 1000 characters.','المبلغ يجب ألا يتجاوز 1,000,000 ريال وبحد أقصى رقمين عشريين.':'The amount must be at most SAR 1,000,000 with no more than two decimals.','المصروف مصفّى ولا يمكن تغيير اعتماده.':'This expense is settled; its approval cannot change.',
   'المهندس / الفترة':'Engineer / period','الأيام':'Days','البدل':'Allowance','الإضافي':'Overtime','حصة الراتب':'Salary share','الإجمالي على المشروع':'Total to project','الاعتماد':'Approval','عرض الأيام':'Show days','س':'h','ساعة':'h',
   'اعتماد الفترة':'Approve period','تأكيد الرفض':'Confirm rejection','إلغاء':'Cancel','سبب الرفض':'Rejection reason','أُعيد إرسالها بعد رفض':'Resubmitted after rejection','اكتب سبب الرفض ليراه المهندس ويعدّل الفترة':'Write the reason; the engineer will see it and edit the period','اكتب سبب الرفض.':'Write the rejection reason.',
   'تكلفة معتمدة على المشاريع':'Approved project cost','البدلات':'Allowances','ريال':'SAR','يوم':'days','لا توجد فترات مطابقة للاختيارات.':'No periods match your filters.','مرفوضة — لا تُحمّل':'Rejected — not charged',
@@ -328,6 +339,8 @@ submit($('memberForm'),async f=>{
  const v=Object.fromEntries(new FormData(f));if(!activeEngineer(v.user_id))throw Error(tr('اختر مهندسًا نشطًا.'));
  const updates={name:v.name.trim()};if(!updates.name)throw Error(tr('اسم المهندس مطلوب'));
  for(const k of ['inside_rate','outside_rate','overtime_rate']){updates[k]=Number(v[k]);if(!Number.isFinite(updates[k])||updates[k]<0)throw Error(tr('أدخل قيمًا صحيحة للبدلات.'));}
+ updates.sec_card_no=(v.sec_card_no||'').trim()||null;updates.sec_card_expiry=v.sec_card_expiry||null;updates.contact_email=(v.contact_email||'').trim().toLowerCase()||null;
+ if(updates.contact_email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(updates.contact_email))throw Error(tr('أدخل بريدًا إلكترونيًا صحيحًا للتذكير.'));
  const updated=await checked(db.from('sf_daily_members').update(updates).eq('user_id',v.user_id).eq('role','engineer').eq('is_active',true).select('user_id'));
  if(!updated?.length)throw Error(tr('المهندس غير متاح للتعديل. حدّث القائمة.'));
  if(window.sfSaveSupplemental)await window.sfSaveSupplemental(v.user_id,updates);
@@ -601,7 +614,7 @@ $('cancelEditEngineer').onclick=()=>{$('engineerPasswordForm').reset();$('editEn
 $('members').onclick=e=>{
  const edit=e.target.closest('[data-edit-member]'),remove=e.target.closest('[data-remove-member]');
  if(edit){const member=activeEngineer(edit.dataset.editMember);if(!member)return;
-  for(const k of ['user_id','engineer_id','name','inside_rate','outside_rate','overtime_rate'])$('memberForm').elements[k].value=member[k];
+  for(const k of ['user_id','engineer_id','name','inside_rate','outside_rate','overtime_rate','sec_card_no','sec_card_expiry','contact_email'])$('memberForm').elements[k].value=member[k]??'';
   $('engineerPasswordForm').reset();$('engineerPasswordPanel').open=false;$('editEngineerTitle').textContent=tr('تعديل بيانات المهندس والبدلات')+' — '+member.name;
   if(window.sfLoadSupplemental)run(()=>window.sfLoadSupplemental(member));
   $('editEngineerPanel').hidden=false;$('editEngineerPanel').scrollIntoView({behavior:'smooth',block:'start'});$('memberForm').elements.name.focus({preventScroll:true});
