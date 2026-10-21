@@ -204,6 +204,9 @@ function expenseError(error){
  if(text.includes('EXPENSE_STALE'))return Error(tr('تغيّر هذا المصروف بعد تحميل الصفحة (عُدّل أو سُحب). اضغط تحديث.'));
  if(text.includes('EXPENSE_LOCKED'))return Error(tr('لا يمكن تعديل أو سحب مصروف معتمد أو مصفّى.'));
  if(text.includes('EXPENSE_SETTLED'))return Error(tr('المصروف مصفّى ولا يمكن تغيير اعتماده.'));
+ if(text.includes('RECEIPT_ALREADY_USED'))return Error(tr('ملف الفاتورة مستخدم في مصروف آخر. ارفع فاتورة مختلفة، أو عدّل المصروف الأصلي بدل إضافة مصروف جديد.'));
+ if(text.includes('DESCRIPTION_TOO_LONG'))return Error(tr('البيان لا يتجاوز 1000 حرف.'));
+ if(text.includes('INVALID_AMOUNT'))return Error(tr('المبلغ يجب ألا يتجاوز 1,000,000 ريال وبحد أقصى رقمين عشريين.'));
  if(text.includes('REVIEW_NOTE_REQUIRED'))return Error(tr('اكتب سبب الرفض.'));
  return error;
 }
@@ -295,7 +298,7 @@ function setupApprovalFilters(){
   'اترك الإيصال فارغًا للإبقاء على الإيصال الحالي، أو اختر ملفًا لاستبداله.':'Leave the receipt empty to keep the current one, or choose a file to replace it.','اكتب سبب الرفض ليراه المهندس ويصحح المصروف':'Write the reason; the engineer will see it and correct the expense',
   'سحب هذا المصروف؟ سيُحذف الطلب ولن يُراجع.':'Withdraw this expense? The request will be removed and not reviewed.','تم سحب المصروف.':'Expense withdrawn.','غير متاح':'unavailable',
   'شغّل ملف 10-attendance-expense-review-v11.sql في Supabase لتفعيل سبب الرفض والتعديل والسحب.':'Run 10-attendance-expense-review-v11.sql in Supabase to enable rejection reasons, edits and withdrawals.',
-  'تغيّر هذا المصروف بعد تحميل الصفحة (عُدّل أو سُحب). اضغط تحديث.':'This expense changed after the page loaded (edited or withdrawn). Click Refresh.','لا يمكن تعديل أو سحب مصروف معتمد أو مصفّى.':'Approved or settled expenses cannot be edited or withdrawn.','المصروف مصفّى ولا يمكن تغيير اعتماده.':'This expense is settled; its approval cannot change.',
+  'تغيّر هذا المصروف بعد تحميل الصفحة (عُدّل أو سُحب). اضغط تحديث.':'This expense changed after the page loaded (edited or withdrawn). Click Refresh.','لا يمكن تعديل أو سحب مصروف معتمد أو مصفّى.':'Approved or settled expenses cannot be edited or withdrawn.','ملف الفاتورة مستخدم في مصروف آخر. ارفع فاتورة مختلفة، أو عدّل المصروف الأصلي بدل إضافة مصروف جديد.':'This invoice file is already used by another expense. Upload a different invoice, or edit the original expense instead of adding a new one.','البيان لا يتجاوز 1000 حرف.':'The description is limited to 1000 characters.','المبلغ يجب ألا يتجاوز 1,000,000 ريال وبحد أقصى رقمين عشريين.':'The amount must be at most SAR 1,000,000 with no more than two decimals.','المصروف مصفّى ولا يمكن تغيير اعتماده.':'This expense is settled; its approval cannot change.',
   'المهندس / الفترة':'Engineer / period','الأيام':'Days','البدل':'Allowance','الإضافي':'Overtime','حصة الراتب':'Salary share','الإجمالي على المشروع':'Total to project','الاعتماد':'Approval','عرض الأيام':'Show days','س':'h','ساعة':'h',
   'اعتماد الفترة':'Approve period','تأكيد الرفض':'Confirm rejection','إلغاء':'Cancel','سبب الرفض':'Rejection reason','أُعيد إرسالها بعد رفض':'Resubmitted after rejection','اكتب سبب الرفض ليراه المهندس ويعدّل الفترة':'Write the reason; the engineer will see it and edit the period','اكتب سبب الرفض.':'Write the rejection reason.',
   'تكلفة معتمدة على المشاريع':'Approved project cost','البدلات':'Allowances','ريال':'SAR','يوم':'days','لا توجد فترات مطابقة للاختيارات.':'No periods match your filters.','مرفوضة — لا تُحمّل':'Rejected — not charged',
@@ -320,7 +323,7 @@ db.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'){window.sfAccountingCl
 
 function submit(form,fn){form.onsubmit=e=>{e.preventDefault();run(async()=>{const b=form.querySelector('button');b.disabled=true;try{await fn(form);message(form.id==='memberForm'?'تم حفظ بيانات المهندس.':'تم الحفظ وإرسال الطلب للاعتماد.');await refresh()}finally{b.disabled=false}})}}
 submit($('expenseForm'),async f=>{const v=Object.fromEntries(new FormData(f)),file=v.receipt;delete v.receipt;v.project_id=v.project_id||null;v.amount=Number(v.amount);assertProjectAllowed(v.project_id);if(!file?.size&&!editingExpense)throw Error(tr('الفاتورة مطلوبة'));if(file?.size){if(file.size>5242880||!['image/jpeg','image/png','application/pdf'].includes(file.type))throw Error('نوع أو حجم الإيصال غير مسموح');v.receipt_path=me.user_id+'/'+crypto.randomUUID();await checked(db.storage.from('sf-receipts').upload(v.receipt_path,file,{contentType:file.type}));}if(editingExpense){const editing=editingExpense;try{await checked(db.rpc('sf_resubmit_expense',{p_id:editing.id,p_day:v.day,p_project_id:v.project_id,p_category:v.category,p_amount:v.amount,p_description:v.description,p_receipt_path:v.receipt_path||editing.receipt_path}))}catch(error){throw expenseError(error)}editingExpense=null;renderExpenseEditBanner();}
- else await checked(db.from('sf_daily_expenses').insert(v));f.elements.amount.value='';f.elements.description.value='';f.elements.receipt.value='';});
+ else try{await checked(db.from('sf_daily_expenses').insert(v))}catch(error){throw expenseError(error)}f.elements.amount.value='';f.elements.description.value='';f.elements.receipt.value='';});
 submit($('memberForm'),async f=>{
  const v=Object.fromEntries(new FormData(f));if(!activeEngineer(v.user_id))throw Error(tr('اختر مهندسًا نشطًا.'));
  const updates={name:v.name.trim()};if(!updates.name)throw Error(tr('اسم المهندس مطلوب'));

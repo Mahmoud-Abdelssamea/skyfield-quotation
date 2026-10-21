@@ -5,7 +5,7 @@ const A=id=>document.getElementById(id),T=(ar,en)=>language==='en'?en:ar;
 let items=[],request=0,busy=false,loading=false,accountBusy=false,stale=false,timer=0,channel=null,opened=false,editing=null,identity='',exportBusy=false;
 const statuses={awaiting:['بانتظار السداد','Awaiting payment'],preparing:['جاري التجهيز','Preparing'],ready:['جاهز للصرف','Ready for payment'],paid:['تم السداد','Paid']};
 Object.assign(statuses,{comment:['تعليق للمهندس','Comment to engineer'],changes_requested:['مطلوب تعديل','Changes requested'],cancelled:['ملغاة','Cancelled'],closed:['أُغلقت بعد التصحيح أو السحب','Closed after correction or withdrawal']});
-Object.assign(statuses,{reopened:['بانتظار اعتماد الإدارة','Awaiting admin approval'],undo_cancelled:['تراجع عن الإلغاء','Cancellation reversed'],undo_changes_requested:['تراجع عن طلب التعديل','Correction request reversed']});
+Object.assign(statuses,{reopened:['بانتظار اعتماد الإدارة','Awaiting admin approval'],undo_cancelled:['تراجع عن الإلغاء','Cancellation reversed'],undo_changes_requested:['تراجع عن طلب التعديل','Correction request reversed'],admin_rejected:['رفضتها الإدارة','Rejected by administrator']});
 const status=s=>T(...(statuses[['preparing','ready'].includes(s)?'awaiting':s]||statuses.awaiting));
 let feedback=null,detail=null,detailDirty=false,returnFocus=null,hostOverflow=null,panelRequest=0;
 const payable=r=>['awaiting','preparing','ready'].includes(r.status);
