@@ -634,6 +634,15 @@ function conditionDisplayNumbers(list=conds){
     return `${base}${conditionAlpha(counts[sec])}`;
   });
 }
+// Printed terms are grouped by section and numbered 1, 2, 3… in the order they appear.
+// coreNumber stays the internal key for saved company wording and the editor list.
+function conditionPrintGroups(activeList){
+  const groups={};
+  activeList.forEach(c=>{const sec=condSection(c.cat,c);(groups[sec]=groups[sec]||[]).push(c)});
+  let number=0;
+  return COND_SECTION_ORDER.filter(sec=>groups[sec]&&groups[sec].length)
+    .map(sec=>({section:sec,items:groups[sec].map(condition=>({condition,number:String(++number)}))}));
+}
 
 function conditionTypeKey(type){return Object.prototype.hasOwnProperty.call(QUOTATION_CONDITION_TYPES,type)?type:'testing'}
 function conditionTypeInfo(type=conditionType){return QUOTATION_CONDITION_TYPES[conditionTypeKey(type)]}
@@ -1100,17 +1109,10 @@ function showExport(docType='quotation'){
     eqTableRows+=`<tr class="total-row">${totCells}</tr>`;
   }
 
-  const condGroups={},conditionNumbers=conditionDisplayNumbers(conds);
-  activeConds.forEach(c=>{
-    const sec=condSection(c.cat,c),index=conds.indexOf(c);
-    (condGroups[sec]=condGroups[sec]||[]).push({condition:c,number:conditionNumbers[index]||''});
-  });
-  const condRows = COND_SECTION_ORDER
-    .filter(sec=>condGroups[sec]&&condGroups[sec].length)
-    .map(sec=>`<div class="doc-cond-sec-hdr">${escHtml(conditionSectionLabel(sec))}</div>${condGroups[sec].map(item=>`<div class="doc-cond${isConditionEmphasized(item.condition.cat)?' doc-cond-emphasis':''}" data-cond-no="${escHtml(item.number)}">${conditionCopyHtml(item.condition,true)}</div>`).join('')}`)
+  const condRows = conditionPrintGroups(activeConds)
+    .map(group=>`<div class="doc-cond-sec-hdr">${escHtml(conditionSectionLabel(group.section))}</div>${group.items.map(item=>`<div class="doc-cond${isConditionEmphasized(item.condition.cat)?' doc-cond-emphasis':''}" data-cond-no="${escHtml(item.number)}">${conditionCopyHtml(item.condition,true)}</div>`).join('')}`)
     .join('');
-  // Duration remains customer-facing but deliberately does not increment the
-  // T&C counter, so the canonical legacy clauses keep their original numbers.
+  // Duration remains customer-facing but is an unnumbered note above the T&C list.
   const durationCond={text:durationConditionText('en'),textAr:durationConditionText('ar'),cat:'Duration'};
   const condLeadRows = projectDuration
     ? `<div class="doc-cond-note doc-cond-emphasis">${conditionCopyHtml(durationCond,true)}</div>`
