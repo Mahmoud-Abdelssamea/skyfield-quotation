@@ -276,8 +276,8 @@ const css=`
 .an-controls select,.an-controls input{padding:6px 8px;border:1px solid var(--gray-300,#d1d5db);border-radius:6px;font:inherit;font-weight:400;font-size:12px;background:#fff}
 .an-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0;border:none;margin:0 0 12px}
 .an-table{min-width:860px}
-#an-profit .an-table th,#an-profit .an-table td{text-align:center;vertical-align:middle}
-#an-profit .an-table .an-link,#an-profit .an-table .an-sub,#an-profit .an-table .an-flag{text-align:center}
+.an-sec .an-table th,.an-sec .an-table td{text-align:center;vertical-align:middle}
+.an-sec .an-table .an-link,.an-sec .an-table .an-sub,.an-sec .an-table .an-flag{text-align:center}
 #an-profit .an-cost{justify-content:center}
 .an-notes{min-width:220px}
 .an-table td:first-child{min-width:150px}
