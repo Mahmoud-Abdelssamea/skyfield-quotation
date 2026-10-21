@@ -1,3 +1,63 @@
 #accountingSection{padding-block:10px}#accountingSection .acct-intro{color:#53677c;max-width:80ch;line-height:1.8}#accountingSection small{display:block;margin-top:5px;font-size:12px;color:#53677c;overflow-wrap:anywhere}#accountingSection td{vertical-align:middle;text-align:center}#accountingSection th{text-align:center}#accountingSection .actions{justify-content:center;flex-wrap:wrap;gap:7px}#accountingSection .actions button{font-size:12px;white-space:normal}#accountingSection .acct-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-block:16px}#accountingSection .acct-toolbar label{min-width:170px;flex:1}#accountingSection .acct-toolbar button{width:auto;margin:0}#accountingSection .acct-summary{font-weight:700;font-size:16px}#accountingSection .acct-editor{border:2px solid #2f6988;border-radius:12px;padding:20px;margin-block:18px;background:#f4f8fa}#accountingSection .acct-note{padding:10px 0;color:#15503c}#accountingSection .acct-note.error{color:#a51e27}#accountingSection details{border:1px solid #d4dee7;border-radius:10px;padding:15px;margin-top:20px}#accountingSection summary{font-weight:700;cursor:pointer}#acctUpdated{font-size:12px;color:#53677c}#acctRows td:nth-child(2){min-width:190px}#acctRows td:last-child{min-width:200px}#accountingSection [hidden]{display:none!important}@media(max-width:640px){#accountingSection .acct-toolbar label{min-width:100%}#accountingSection .acct-toolbar button{flex:1}#accountingSection .acct-editor{padding:12px}#accountingSection table{font-size:12px}}
 
 #accountingSection #acctInvoiceDialog{position:fixed;inset:0;margin:auto;width:min(900px,94vw);max-height:90vh;overflow:auto;border:0;border-radius:16px;padding:24px;color:#203652;background:white;box-shadow:0 18px 65px #10263c55}#acctInvoiceDialog::backdrop{background:#10263c88}#accountingSection .acct-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #d4dee7;padding-bottom:12px}#accountingSection .acct-dialog-head button{width:auto;margin:0}#accountingSection .acct-dialog-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-block:18px}#accountingSection .acct-dialog-tabs button{width:auto;margin:0}#acctInvoiceSummary{line-height:1.9;padding-block:12px;overflow-wrap:anywhere}#acctDialogMessage{color:#15503c;white-space:pre-wrap}#acctDialogMessage.error{color:#a51e27}#acctInvoiceDialog .acct-editor{margin-block:12px}body:has(#acctInvoiceDialog[open]){overflow:hidden}@media(max-width:640px){#accountingSection #acctInvoiceDialog{width:96vw;padding:14px;max-height:94vh}#accountingSection .acct-dialog-tabs button{flex:1 1 42%}}
+
+/* Accounts — compact layout: summary cards, status tabs, one action per row, phone cards. */
+#accountingSection .acct-intro{margin:4px 0 12px}
+#accountingSection .acct-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-block:12px}
+#accountingSection .acct-card{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #d4dee7;border-radius:10px;background:#fff;text-align:start}
+#accountingSection .acct-card:hover,#accountingSection .acct-card:focus-visible{border-color:#2f6988;box-shadow:0 0 0 3px #2f698822}
+#accountingSection .acct-card span{font-size:12px;color:#53677c}#accountingSection .acct-card b{font-size:20px;color:#173b65;direction:ltr;unicode-bidi:isolate}#accountingSection .acct-card small{margin:0;font-size:11px}
+#accountingSection .acct-card.warn{border-inline-start:4px solid #e8a33c}#accountingSection .acct-card.alert{border-inline-start:4px solid #c2413b}#accountingSection .acct-card.ok{border-inline-start:4px solid #3b8a5a}
+#accountingSection .acct-chips{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #d4dee7;padding-bottom:8px}
+#accountingSection .acct-chips button{width:auto;min-width:0;margin:0;padding:7px 12px;border-radius:999px;background:#eef3f8;color:#203652;font-weight:600;font-size:13px}
+#accountingSection .acct-chips button span{display:inline-block;min-width:18px;margin-inline-start:4px;padding:0 6px;border-radius:999px;background:#fff;font-size:11px}
+#accountingSection .acct-chips button.active{background:#173b65;color:#fff}#accountingSection .acct-chips button.active span{color:#173b65}
+#accountingSection .acct-toolbar{margin-block:12px}#accountingSection .acct-toolbar label{min-width:150px}#accountingSection .acct-toolbar .acct-search{flex:2}
+#accountingSection .acct-toolbar button{min-width:0;margin:0;padding:10px 16px}
+#accountingSection .acct-state-select{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0;pointer-events:none}
+#accountingSection .acct-listbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-block:6px 10px}#accountingSection .acct-listbar .acct-summary{margin:0}
+#accountingSection .acct-export{position:relative;margin-inline-start:auto;border:0;padding:0;margin-top:0}
+#accountingSection .acct-export>summary,#accountingSection .acct-menu>summary{list-style:none;cursor:pointer;user-select:none}
+#accountingSection .acct-export>summary::-webkit-details-marker,#accountingSection .acct-menu>summary::-webkit-details-marker{display:none}
+#accountingSection .acct-export>summary{padding:8px 14px;border-radius:7px;background:#eaf0f7;color:#173b65;font-weight:700;font-size:13px}
+#accountingSection .acct-menu-list{position:absolute;inset-inline-end:0;top:calc(100% + 4px);z-index:5;display:flex;flex-direction:column;gap:4px;min-width:230px;padding:6px;background:#fff;border:1px solid #d4dee7;border-radius:10px;box-shadow:0 10px 30px #10263c26}
+#accountingSection .acct-menu-list button{width:100%;min-width:0;margin:0;padding:8px 10px;text-align:start;font-size:13px;font-weight:600}
+#accountingSection .acct-table table{width:100%}#accountingSection .acct-table th{font-size:12px;color:#53677c;white-space:nowrap}
+#acctRows td{padding:9px 8px;text-align:start;vertical-align:middle}#acctRows td:nth-child(2){min-width:0}#acctRows td:last-child{min-width:0}
+#acctRows tr[data-row]{cursor:pointer}#acctRows tr[data-row]:hover{background:#f6f9fc}
+#acctRows td small{margin-top:2px}#acctRows .acct-desc small{max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#acctRows .acct-amount{font-weight:700;white-space:nowrap;direction:ltr;text-align:end}
+#acctRows .acct-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+#acctRows .acct-row-actions>button{width:auto;min-width:0;margin:0;padding:7px 14px;font-size:13px;white-space:nowrap}
+#acctRows .acct-primary{background:var(--orange,#e8610a);color:#fff}
+#acctRows .acct-menu{position:relative;border:0;padding:0;margin:0}#acctRows .acct-menu>summary{padding:4px 10px;border-radius:7px;font-size:18px;line-height:1.2;color:#173b65;background:#eef3f8}
+#acctRows .acct-empty{text-align:center;padding:24px;color:#53677c}
+#accountingSection .acct-dialog-tabs button{background:#eef3f8;color:#173b65}#accountingSection .acct-dialog-tabs button.active{background:var(--orange,#e8610a);color:#fff}
+@media(max-width:640px){
+ #accountingSection .acct-cards{grid-template-columns:1fr 1fr}#accountingSection .acct-card b{font-size:16px}
+ #accountingSection .acct-export{margin-inline-start:0}
+ #accountingSection .acct-table thead{display:none}#accountingSection .acct-table table,#acctRows,#acctRows tr,#acctRows td{display:block;width:auto}
+ #acctRows tr[data-row]{border:1px solid #d4dee7;border-radius:10px;padding:10px 12px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+ #acctRows tr[data-row] td{padding:2px 0;border:0}#acctRows td.acct-desc{grid-column:1/-1}#acctRows .acct-desc small{max-width:none;white-space:normal}
+ #acctRows td.acct-amount{grid-row:1;grid-column:2;font-size:16px}#acctRows td.acct-actions-cell{grid-column:1/-1;margin-top:6px}#acctRows .acct-row-actions{justify-content:stretch}#acctRows .acct-row-actions>button{flex:1}
+}
+#accountingSection .acct-table table{min-width:0}#acctRows .status-badge{white-space:nowrap;padding:4px 8px;font-size:12px}
+#acctRows td:first-child{min-width:150px}#acctRows td:first-child small{white-space:nowrap}
+#acctRows td.acct-desc{width:100%;max-width:0}#acctRows .acct-desc small,#acctRows .acct-desc span{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){#acctRows td.acct-desc{max-width:none;width:auto}#acctRows .acct-desc small{white-space:normal}}
+/* Bulk payment */
+#accountingSection .acct-sr,#acctRows .acct-check-label span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#accountingSection th.acct-check-col,#acctRows td.acct-check{width:34px;min-width:34px!important;padding-inline:6px;text-align:center}
+#acctRows .acct-check-label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;min-width:28px;min-height:28px}
+#acctRows .acct-check input{width:18px;height:18px;margin:0;cursor:pointer;accent-color:#173b65}#acctRows .acct-check input:disabled{cursor:not-allowed;opacity:.35}
+#accountingSection .acct-bulkbar{position:sticky;bottom:8px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-block:8px;padding:10px 14px;border-radius:10px;background:#173b65;color:#fff;box-shadow:0 8px 24px #10263c40}
+#accountingSection .acct-bulkbar #acctBulkInfo{font-weight:700;margin-inline-end:auto}
+#accountingSection .acct-bulkbar button{width:auto;min-width:0;margin:0;padding:8px 14px;font-size:13px}
+#accountingSection .acct-batch-list{max-height:220px;overflow:auto;border:1px solid #d4dee7;border-radius:8px;margin-block:8px 12px;background:#fff}
+#accountingSection .acct-batch-list table{min-width:0;width:100%;font-size:13px}#accountingSection .acct-batch-list td{padding:6px 8px;border-bottom:1px solid #eef3f8;text-align:start}
+@media(max-width:640px){#acctRows td.acct-check{grid-column:1/-1;width:auto;text-align:start;padding:0}#acctRows .acct-check-label span{position:static;width:auto;height:auto;clip:auto;margin-inline-start:6px;font-size:12px;color:#53677c}#accountingSection .acct-bulkbar button{flex:1}}
+@media(max-width:640px){#acctRows td.acct-amount{grid-row:2}#acctRows td.acct-check:empty{display:none}}
+#acctRows td.acct-check+td{min-width:150px}#acctRows td.acct-check+td small{white-space:nowrap}
+#accountingSection .acct-batch-list td:first-child{white-space:nowrap}
+@media(max-width:640px){#accountingSection .acct-bulkbar #acctBulkInfo{flex-basis:100%}#accountingSection .acct-bulkbar button{flex:1 1 40%}#accountingSection .acct-bulkbar #acctBulkPay{flex-basis:100%;order:3}}
