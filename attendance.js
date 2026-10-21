@@ -127,7 +127,7 @@ function renderPeriodApprovalTable(){
  const L=t=>` data-label="${esc(tr(t))}"`;
  $('rows').innerHTML=approvalGroups.map((g,i)=>{
   const project=projects.find(p=>String(p.id)===String(g.first.project_id))?.name,status=periodStatusLabel(g.first);
-  const daysList=g.rows.map(r=>`<li><span class="period-dates">${esc(r.day)}</span> · ${esc(tr(labels[r.status]))} · ${money(r.allowance)}${Number(r.overtime)?` · ${Number(r.overtime)} ${esc(tr('س'))}`:''} · ${esc(tr(labels[r.review]))}</li>`).join('');
+  const daysList=g.rows.map(r=>`<li><span class="period-dates">${esc(r.day)}</span> · ${esc(tr(labels[r.status]))} · ${money(r.allowance)}${Number(r.overtime)?` · ${Number(r.overtime)} ${esc(tr('س'))}`:''} · ${esc(r.accounting_action==='changes_requested'?(language==='en'?'Changes requested':'مطلوب تعديل'):tr(labels[r.review]))}</li>`).join('');
   const salaryCell=g.salary!==null
    ?`<b>${money(g.salary)}</b><small class="calc">${money(g.pkg)} ÷ ${g.std} × ${g.rows.length}${g.factor<1?` × ${g.factor.toFixed(4)}`:''}</small>${g.factor<1?`<small>${esc(tr('سقف الشهر: لا يتجاوز الراتب الشهري'))}</small>`:''}`
    :`—${g.salaryNote?`<small>${esc(tr(g.salaryNote))}</small>`:''}`;
@@ -224,14 +224,14 @@ async function setExpenseReview(r,review,note){
  if(window.sfEmbeddedReviewChanged)window.sfEmbeddedReviewChanged();
 }
 function expenseRowHtml(r,i){
- const admin=me.role==='admin',own=r.user_id===me.user_id,open=!r.settled_at&&['pending','rejected'].includes(r.review);
+ const admin=me.role==='admin',own=r.user_id===me.user_id,open=r.accounting_action!=='cancelled'&&!r.settled_at&&['pending','rejected'].includes(r.review);
  const prev=r.review==='pending'?expenseHistory.find(h=>h.replaced_by===r.id):null;
- const status=`<span class="status-badge ${esc(r.review)}">${esc(tr(labels[r.review]))}</span>`
+ const status=(r.accounting_comment?`<small class="review-note">${esc(language==='en'?'Accounts comment':'تعليق الحسابات')}: ${esc(r.accounting_comment)}</small>`:'')+(r.accounting_action==='cancelled'?`<span class="status-badge rejected">${esc(language==='en'?'Cancelled':'ملغاة')}</span>`:'')+`<span class="status-badge ${esc(r.review)}">${esc(r.accounting_action==='changes_requested'?(language==='en'?'Changes requested':'مطلوب تعديل'):tr(labels[r.review]))}</span>`
   +(r.review==='rejected'&&r.review_note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(r.review_note)}</small>`:'')
   +(prev?`<small class="review-note previous">${esc(tr('أُعيد إرسالها بعد رفض'))}: ${esc(prev.note||'')}${prev.amount!=null&&Number(prev.amount)!==Number(r.amount)?` · ${esc(tr('المبلغ السابق'))} ${Number(prev.amount).toFixed(2)}`:''}</small>`:'');
  let actions=r.receipt_path?`<button data-receipt="${i}">${esc(tr('عرض الإيصال'))}</button>`:'';
  if(admin&&rejectingExpense===r.id)actions+=`<div class="reject-box"><textarea id="expenseRejectReason" maxlength="500" rows="3" placeholder="${esc(tr('اكتب سبب الرفض ليراه المهندس ويصحح المصروف'))}"></textarea><div class="actions"><button type="button" class="delete-period" data-expense-reject-confirm="${i}">${esc(tr('تأكيد الرفض'))}</button><button type="button" class="secondary" data-expense-reject-cancel>${esc(tr('إلغاء'))}</button></div></div>`;
- else if(admin&&!r.settled_at)actions+=`<div class="actions">${r.review!=='approved'?`<button data-review="${i}" data-value="approved">${esc(tr('اعتماد'))}</button>`:''}${r.review!=='rejected'?`<button class="secondary" data-expense-reject="${i}">${esc(tr('رفض'))}</button>`:''}</div>`;
+ else if(admin&&!r.settled_at&&!['cancelled','changes_requested'].includes(r.accounting_action))actions+=`<div class="actions">${r.review!=='approved'?`<button data-review="${i}" data-value="approved">${esc(tr('اعتماد'))}</button>`:''}${r.review!=='rejected'?`<button class="secondary" data-expense-reject="${i}">${esc(tr('رفض'))}</button>`:''}</div>`;
  if(own&&open&&rejectingExpense!==r.id)actions+=`<div class="actions"><button type="button" class="secondary" data-expense-edit="${i}">${esc(tr('تعديل وإعادة الإرسال'))}</button><button type="button" class="delete-period" data-expense-withdraw="${i}">${esc(tr('سحب'))}</button></div>`;
  return `<tr class="${rejectingExpense===r.id?'editing':''}"><td><b>${esc(members.find(m=>m.user_id===r.user_id)?.name)}</b><br>${esc(r.day)}</td><td>${esc(r.label)}<br><small>${esc(r.description||'')}</small></td><td>${esc(projects.find(p=>p.id===r.project_id)?.name||tr('عام'))}</td><td>${Number(r.amount).toFixed(2)}</td><td>${status}</td>`
   +`<td>${esc(tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'))}${admin&&r.review==='approved'&&!r.settled_at?`<button data-settle="${i}">${esc(tr('تصفية كاملة'))}</button>`:''}</td><td>${actions}</td></tr>`;
