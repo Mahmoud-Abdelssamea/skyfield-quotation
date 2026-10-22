@@ -11,7 +11,7 @@ window.sfSetEmbeddedView=function(panel,lang,userId){
  if(panel==='engineersSection'&&!sfHost.sfUnifiedCanManage())panel='dailySection';
  setAttendanceView(panel,false);document.body.dataset.embeddedView=panel==='engineersSection'?'engineers':panel;
  if(language!==lang)changeLanguage(lang);
- if(panel==='monthlySection'){$('timesheetExportPanel').open=true;}
+ if(panel==='monthlySection'){$('timesheetExportPanel').open=typeof me==='undefined'||me?.role!=='admin';}
  sfMeasureModule();
 };
 function sfEmbeddedNavigate(panel){sfHost.sfUnifiedNavigateFromModule(window,panel)}

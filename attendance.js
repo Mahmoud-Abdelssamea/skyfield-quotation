@@ -52,7 +52,7 @@ async function load(){
  members=await checked(db.from('sf_daily_members').select('*'));projects=await checked(db.from('sf_daily_projects').select('*').order('name'));
  syncLeaderTabAccess();
  $('who').textContent=me.name;$('tabAdmin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';
- await loadProjectVisibility();showPortal(true);renderSecCardBanner();setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
+ await loadProjectVisibility();showPortal(true);renderSecCardBanner();placeExportTools();setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
  const form=$('expenseForm');form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form);
  $('month').value=today().slice(0,7);
  window.sfAccountingInit?.();renderEngineerList();
@@ -60,8 +60,14 @@ async function load(){
 }
 async function allRows(table,start,end){let result=[];for(let offset=0;;offset+=500){const batch=await checked(db.from(table).select('*').gte('day',start).lt('day',end).order('day').order('id').range(offset,offset+499));result.push(...batch);if(batch.length<500)return result}}
 let approvalType='attendance',approvalFiltersReady=false,reviewRequest=0;
+// People shown in engineer lists: active engineers plus anyone with attendance this month (never accountants).
+function approvalPeople(){
+ const withDays=new Set(records.filter(r=>r.table==='sf_daily_records').map(r=>r.user_id));
+ return members.filter(m=>m.role!=='accountant'&&((m.role==='engineer'&&m.is_active!==false)||withDays.has(m.user_id))).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+}
 function renderApprovalFilters(){
- const select=$('approvalEngineer'),old=select.value,list=me.role==='admin'?members:members.filter(m=>m.user_id===me.user_id);
+ const select=$('approvalEngineer'),old=select.value,list=me.role==='admin'?approvalPeople():members.filter(m=>m.user_id===me.user_id);
+ const overviewTab=document.querySelector('[data-approval-type="overview"]');if(overviewTab)overviewTab.hidden=me.role!=='admin';
  select.innerHTML=(me.role==='admin'?`<option value="all">${esc(tr('كل المهندسين'))}</option>`:'')+list.map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');
  select.value=list.some(m=>m.user_id===old)?old:me.role==='admin'?'all':me.user_id;
  if(!approvalFiltersReady){$('approvalState').value=me.role==='admin'?'pending':'all';approvalFiltersReady=true;}
@@ -74,15 +80,87 @@ function filteredApprovalRecords(){
 }
 function syncApprovalExportEngineer(){const engineer=$('approvalEngineer').value;if(engineer&&engineer!=='all')$('timesheetEngineer').value=engineer;}
 function setApprovalType(type){
- approvalType=type==='expenses'?'expenses':'attendance';
+ approvalType=type==='expenses'||type==='overview'?type:'attendance';
  for(const button of document.querySelectorAll('[data-approval-type]'))button.setAttribute('aria-pressed',String(button.dataset.approvalType===approvalType));
+ const overview=approvalType==='overview';$('teamOverview').hidden=!overview;$('summary').hidden=overview;$('rows').closest('.scroll').hidden=overview;
+ const filters=document.querySelector('#monthlySection .approval-filters');if(filters)filters.hidden=overview;
  $('timesheetExportPanel').hidden=approvalType==='expenses';renderApprovalTable();
+}
+// ── Team overview: engineers × days of the month ───────────────────────────
+// approved / pending / rejected from the recorded day; a past working day without a record is missing.
+// Fridays and days still to come are never counted as missing.
+function teamOverview(people,days,month,todayIso){
+ const [y,n]=month.split('-').map(Number),count=new Date(Date.UTC(y,n,0)).getUTCDate();
+ const dates=Array.from({length:count},(_,i)=>{const d=new Date(Date.UTC(y,n-1,i+1));return{iso:d.toISOString().slice(0,10),day:i+1,friday:d.getUTCDay()===5}});
+ const byKey=new Map(days.map(r=>[r.user_id+'|'+r.day,r]));
+ const rows=people.map(person=>{const totals={approved:0,pending:0,rejected:0,missing:0};
+  const cells=dates.map(d=>{const r=byKey.get(person.user_id+'|'+d.iso);
+   if(r){const state=r.review==='approved'?'approved':r.review==='rejected'?'rejected':'pending';totals[state]++;return{...d,state,kind:r.status}}
+   if(d.iso>todayIso)return{...d,state:'future'};
+   if(d.friday)return{...d,state:'friday'};
+   totals.missing++;return{...d,state:'missing'}});
+  return{person,cells,totals}});
+ return{dates,rows,missingPeople:rows.filter(r=>r.totals.missing>0).length,missingDays:rows.reduce((t,r)=>t+r.totals.missing,0),pendingDays:rows.reduce((t,r)=>t+r.totals.pending,0)};
+}
+function renderTeamOverview(){
+ if(me?.role!=='admin')return;const month=$('month').value;if(!/^\d{4}-\d{2}$/.test(month))return;
+ const ov=teamOverview(approvalPeople(),records.filter(r=>r.table==='sf_daily_records'),month,today());
+ const letters=language==='en'?{inside:'S',outside:'S',office:'O',leave:'L',absent:'A'}:{inside:'م',outside:'م',office:'ك',leave:'ج',absent:'غ'};
+ const wd=language==='en'?['Su','Mo','Tu','We','Th','Fr','Sa']:['أح','إث','ثل','أر','خم','جم','سب'];
+ const state={approved:tr('معتمد'),pending:tr('بانتظار الاعتماد'),rejected:tr('مرفوض'),missing:tr('غير مسجّل'),friday:tr('جمعة'),future:tr('لم يأتِ بعد')};
+ $('teamOverviewSummary').textContent=language==='en'
+  ?`${ov.rows.length} engineers · ${ov.missingPeople} with missing days (${ov.missingDays} days) · ${ov.pendingDays} days awaiting approval`
+  :`${ov.rows.length} مهندس · ${ov.missingPeople} لديهم أيام غير مسجّلة (${ov.missingDays} يوم) · ${ov.pendingDays} يوم بانتظار الاعتماد`;
+ const head=`<thead><tr><th class="ov-name">${esc(tr('المهندس'))}</th>${ov.dates.map(d=>`<th class="${d.friday?'ov-fri':''}"><span>${d.day}</span><small>${esc(wd[new Date(d.iso+'T00:00:00Z').getUTCDay()])}</small></th>`).join('')}<th class="ov-total" title="${esc(tr('معتمد'))}">✓</th><th class="ov-total" title="${esc(tr('بانتظار الاعتماد'))}">…</th><th class="ov-total" title="${esc(tr('غير مسجّل'))}">✕</th></tr></thead>`;
+ const body=ov.rows.map(r=>`<tr><th class="ov-name"><button type="button" class="ov-person" data-ov-user="${esc(r.person.user_id)}" title="${esc(tr('عرض فترات هذا المهندس'))}">${esc(r.person.name)}</button><small>${esc(r.person.engineer_id)}</small></th>${r.cells.map(c=>`<td class="ov-cell ${c.state}" title="${esc(c.iso+' · '+state[c.state]+(c.kind?' · '+tr(labels[c.kind]||c.kind):''))}">${c.kind?esc(letters[c.kind]||''):''}</td>`).join('')}<td class="ov-total ok">${r.totals.approved}</td><td class="ov-total wait">${r.totals.pending}</td><td class="ov-total miss">${r.totals.missing}</td></tr>`).join('');
+ $('teamOverviewTable').innerHTML=head+`<tbody>${body||`<tr><td class="empty-state">${esc(tr('لا يوجد مهندسون.'))}</td></tr>`}</tbody>`;
+}
+// ── Summary cards above the approvals (administrators) ──
+function renderApprovalCards(){
+ const box=$('approvalCards');if(!box)return;box.hidden=me?.role!=='admin';if(box.hidden)return;
+ const days=records.filter(r=>r.table==='sf_daily_records'),pendingDays=days.filter(r=>r.review==='pending'),pendingExp=records.filter(r=>r.table==='sf_daily_expenses'&&r.review==='pending');
+ const periods=new Set(pendingDays.map(r=>r.user_id+'|'+(r.period_id||r.day))).size,month=$('month').value;
+ const ov=/^\d{4}-\d{2}$/.test(month)?teamOverview(approvalPeople(),days,month,today()):{missingPeople:0,missingDays:0};
+ const card=(key,label,value,sub,tone)=>`<button type="button" class="ap-card ${tone}" data-ap-card="${key}"><span>${esc(label)}</span><b>${esc(String(value))}</b><small>${esc(sub)}</small></button>`;
+ box.innerHTML=card('periods',tr('فترات بانتظار الاعتماد'),periods,language==='en'?`${pendingDays.length} days`:`${pendingDays.length} يوم`,periods?'warn':'')
+  +card('expenses',tr('مصروفات بانتظار الاعتماد'),pendingExp.length,`${money(pendingExp.reduce((t,r)=>t+Number(r.amount||0),0))} ${tr('ريال')}`,pendingExp.length?'warn':'')
+  +card('missing',tr('أيام غير مسجّلة'),ov.missingDays,language==='en'?`${ov.missingPeople} engineers · Fridays not counted`:`${ov.missingPeople} مهندس · بدون أيام الجمعة`,ov.missingDays?'alert':'');
+}
+// ── Export tools: below the list for administrators, closed until needed ──
+function placeExportTools(){
+ const box=$('exportTools');if(!box||me?.role!=='admin')return;
+ for(const id of ['timesheetExportPanel','accountingExportPanel']){const panel=document.getElementById(id);if(panel&&panel.parentElement!==box){box.appendChild(panel);panel.open=false}}
+ box.hidden=false;
 }
 // ── Timesheet approval by period ───────────────────────────────────────────
 // Administrators review the periods engineers submitted, not individual days. Each period shows the money it
 // adds to its project: site allowance + overtime as recorded, and the salary share computed with the same
 // formula as the project-cost sync (package ÷ standard days × site days, capped per engineer and month).
-let salaryInfo=null,reviewHistory=[],approvalGroups=[],rejectingPeriod='';
+let salaryInfo=null,reviewHistory=[],approvalGroups=[],rejectingPeriod='',selectedPeriods=new Set(),bulkApproving=false;
+// Bulk approval: pending periods only; each period is approved on its own with the same change check.
+const bulkSelectable=g=>g&&(g.review==='pending'||g.review==='mixed');
+function renderPeriodBulkBar(){
+ const bar=$('periodBulkBar');if(!bar)return;const admin=me?.role==='admin'&&approvalType==='attendance';
+ for(const key of [...selectedPeriods])if(!approvalGroups.some(g=>g.key===key&&bulkSelectable(g)))selectedPeriods.delete(key);
+ const chosen=approvalGroups.filter(g=>selectedPeriods.has(g.key));bar.hidden=!admin||!approvalGroups.some(bulkSelectable);if(bar.hidden)return;
+ const days=chosen.reduce((t,g)=>t+g.rows.length,0),total=chosen.filter(g=>g.costed).reduce((t,g)=>t+Number(g.total||0),0);
+ $('periodBulkInfo').textContent=chosen.length
+  ?(language==='en'?`${chosen.length} periods · ${days} days`:`${chosen.length} فترة · ${days} يوم`)+(salaryInfo?` · ${money(total)} ${tr('ريال')}`:'')
+  :tr('حدّد الفترات المطلوب اعتمادها، أو «تحديد كل المعروض».');
+ $('periodBulkApprove').disabled=!chosen.length||bulkApproving;$('periodBulkClear').disabled=!chosen.length||bulkApproving;$('periodBulkAll').disabled=bulkApproving;
+}
+async function approveSelectedPeriods(){
+ const groups=approvalGroups.filter(g=>selectedPeriods.has(g.key)&&bulkSelectable(g));if(!groups.length||bulkApproving)return;
+ const days=groups.reduce((t,g)=>t+g.rows.length,0),total=groups.filter(g=>g.costed).reduce((t,g)=>t+Number(g.total||0),0);
+ if(!confirm(language==='en'?`Approve ${groups.length} periods (${days} days)${salaryInfo?` — total to projects SAR ${money(total)}`:''}?`:`اعتماد ${groups.length} فترة (${days} يوم)${salaryInfo?` — الإجمالي على المشاريع ${money(total)} ريال`:''}؟`))return;
+ bulkApproving=true;renderPeriodBulkBar();let ok=0,changed=0;const failed=[];
+ try{for(const g of groups){
+  try{await checked(db.rpc('sf_review_attendance_period',{p_rows:g.rows.map(r=>({id:r.id,revision:r.period_revision})),p_review:'approved',p_note:null}));ok++;selectedPeriods.delete(g.key)}
+  catch(error){if(String(error?.message||'').includes('PERIOD_STALE'))changed++;else failed.push(periodReviewError(error).message)}
+ }}finally{bulkApproving=false}
+ await refresh();if(ok&&window.sfEmbeddedReviewChanged)window.sfEmbeddedReviewChanged();
+ message((language==='en'?`Approved ${ok} of ${groups.length} periods.`:`تم اعتماد ${ok} من ${groups.length} فترة.`)+(changed?(language==='en'?` ${changed} changed after the page loaded and were not approved; review them again.`:` ${changed} تغيّرت بعد تحميل الصفحة ولم تُعتمد؛ راجعها من جديد.`):'')+(failed.length?' '+failed[0]:''));
+}
 const money=n=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const round2=n=>Math.round((Number(n)||0)*100)/100;
 const isSiteRow=r=>['inside','outside'].includes(r.status)&&!!r.project_id;
@@ -128,7 +206,7 @@ function renderPeriodApprovalTable(){
  const admin=me.role==='admin',cost=!!salaryInfo;approvalGroups=buildApprovalGroups();
  $('rows').closest('table').className='period-table approval-periods';
  const heads=['المهندس / الفترة','المشروع / الحالة','الأيام','البدل','الإضافي',...(cost?['حصة الراتب','الإجمالي على المشروع']:[]),'الاعتماد','إجراءات'];
- $('approvalTableHead').innerHTML=heads.map(h=>`<th>${esc(tr(h))}</th>`).join('');
+ $('approvalTableHead').innerHTML=(admin?`<th class="pick-col"><span class="acct-sr">${esc(tr('تحديد'))}</span></th>`:'')+heads.map(h=>`<th>${esc(tr(h))}</th>`).join('');
  const sum=(list,f)=>round2(list.reduce((s,g)=>s+(f(g)||0),0));
  const approved=approvalGroups.filter(g=>g.review==='approved'),open=approvalGroups.filter(g=>g.review==='pending'||g.review==='mixed');
  const count=language==='en'?`${approvalGroups.length} periods`:`${approvalGroups.length} فترة`;
@@ -147,7 +225,8 @@ function renderPeriodApprovalTable(){
   if(admin&&rejectingPeriod===g.key)actions=`<div class="reject-box"><textarea id="rejectReason" maxlength="500" rows="3" placeholder="${esc(tr('اكتب سبب الرفض ليراه المهندس ويعدّل الفترة'))}"></textarea><div class="actions"><button type="button" class="delete-period" data-period-reject-confirm="${i}">${esc(tr('تأكيد الرفض'))}</button><button type="button" class="secondary" data-period-reject-cancel>${esc(tr('إلغاء'))}</button></div></div>`;
   else if(admin)actions=`<div class="actions">${g.review!=='approved'?`<button type="button" data-period-approve="${i}">${esc(tr('اعتماد الفترة'))}</button>`:''}${g.review!=='rejected'?`<button type="button" class="secondary" data-period-reject="${i}">${esc(tr('رفض'))}</button>`:''}</div>`;
   else actions=`<small>${esc(tr(g.review==='rejected'?'عدّل الفترة من شاشة الحضور ثم احفظها لإعادة إرسالها':'—'))}</small>`;
-  return `<tr class="${rejectingPeriod===g.key?'editing':''}"><td${L('المهندس / الفترة')}><b>${esc(members.find(m=>m.user_id===g.userId)?.name||'')}</b><span class="period-dates">${esc(g.from)} → ${esc(g.to)}</span>${g.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${g.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}<details class="period-days"><summary>${esc(tr('عرض الأيام'))} (${g.rows.length})</summary><ul>${daysList}</ul></details></td>`
+  const pick=admin?`<td class="pick">${bulkSelectable(g)?`<label class="pick-label"><input type="checkbox" data-period-select="${esc(g.key)}" ${selectedPeriods.has(g.key)?'checked':''} ${bulkApproving?'disabled':''} aria-label="${esc(tr('تحديد الفترة'))}"></label>`:''}</td>`:'';
+  return `<tr class="${rejectingPeriod===g.key?'editing':''}">${pick}<td${L('المهندس / الفترة')}><b>${esc(members.find(m=>m.user_id===g.userId)?.name||'')}</b><span class="period-dates">${esc(g.from)} → ${esc(g.to)}</span>${g.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${g.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}<details class="period-days"><summary>${esc(tr('عرض الأيام'))} (${g.rows.length})</summary><ul>${daysList}</ul></details></td>`
    +`<td${L('المشروع / الحالة')}><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${g.first.notes?`<small>${esc(g.first.notes)}</small>`:''}</td>`
    +`<td${L('الأيام')}>${g.rows.length}</td>`
    +`<td${L('البدل')}><b>${money(g.allowance)}</b>${g.rate!==null&&g.rate>0?`<small class="calc">${money(g.rate)} × ${g.rows.length}</small>`:''}</td>`
@@ -155,8 +234,8 @@ function renderPeriodApprovalTable(){
    +(cost?`<td${L('حصة الراتب')}>${salaryCell}</td><td${L('الإجمالي على المشروع')}>${totalCell}</td>`:'')
    +`<td${L('الاعتماد')}><span class="status-badge ${g.review}">${esc(tr(labels[g.review]||'حالات اعتماد مختلفة'))}</span>${g.review==='rejected'&&g.note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(g.note)}</small>`:''}${g.previous?`<small class="review-note previous">${esc(tr('أُعيد إرسالها بعد رفض'))}: ${esc(g.previous.note||'')}</small>`:''}${g.to>today()?`<small class="review-note previous">${esc(tr('تشمل أيامًا لم تأتِ بعد'))} (${esc(tr('حتى'))} <bdi dir="ltr">${esc(g.to)}</bdi>)${g.otHours>0?' — '+esc(tr('الإضافي فيها متوقع وليس فعليًا')):''}</small>`:''}</td>`
    +`<td${L('إجراءات')}>${actions}</td></tr>`;
- }).join('')||`<tr><td colspan="${heads.length}" class="empty-state">${esc(tr('لا توجد فترات مطابقة للاختيارات.'))}</td></tr>`;
- $('export').disabled=!approvalGroups.length;
+ }).join('')||`<tr><td colspan="${heads.length+(admin?1:0)}" class="empty-state">${esc(tr('لا توجد فترات مطابقة للاختيارات.'))}</td></tr>`;
+ $('export').disabled=!approvalGroups.length;renderPeriodBulkBar();
  if(rejectingPeriod&&$('rejectReason'))$('rejectReason').focus({preventScroll:false});
 }
 function periodReviewError(error){
@@ -287,7 +366,10 @@ async function handleExpenseAction(b){
  return false;
 }
 function renderApprovalTable(){
+ renderApprovalCards();
+ if(approvalType==='overview'){$('periodBulkBar').hidden=true;return renderTeamOverview()}
  if(approvalType!=='expenses')return renderPeriodApprovalTable();
+ $('periodBulkBar').hidden=true;
  $('rows').closest('table').className='';
  const expenses=approvalType==='expenses',list=filteredApprovalRecords(),total=list.reduce((sum,{r})=>sum+Number(r.amount),0);
  $('approvalTableHead').innerHTML=[tr('المهندس / التاريخ'),tr(expenses?'البند':'حالة اليوم'),tr('المشروع'),tr(expenses?'قيمة المصروف':'بدلات + إضافي'),tr('الحالة'),...(expenses?[tr('التصفية')]:[]),tr('إجراءات')].map(title=>`<th>${esc(title)}</th>`).join('');
@@ -321,6 +403,15 @@ function setupApprovalFilters(){
   'الفترة المرفوضة: عدّلها حسب سبب الرفض ثم احفظها لتُرسل للاعتماد من جديد.':'A rejected period: edit it according to the reason, then save it to resubmit.',
   'اعتماد التايم شيت':'Timesheet approvals','اعتماد المصروفات':'Expense approvals','كل المهندسين':'All engineers','كل الحالات':'All statuses','حالة الاعتماد':'Approval status','قيمة المصروف':'Expense amount','بدلات + إضافي':'Allowances + overtime','لا توجد سجلات مطابقة للاختيارات.':'No records match your filters.','تصدير المعروض CSV':'Export displayed CSV','اختر المهندس ونوع الطلب، ثم راجع واعتمد السجلات الظاهرة.':'Choose an engineer and request type, then review and approve the displayed records.'});
  $('approvalEngineer').onchange=()=>{syncApprovalExportEngineer();renderApprovalTable()};$('approvalState').onchange=renderApprovalTable;
+ $('rows').addEventListener('change',e=>{const c=e.target.closest?.('[data-period-select]');if(!c||bulkApproving)return;if(c.checked)selectedPeriods.add(c.dataset.periodSelect);else selectedPeriods.delete(c.dataset.periodSelect);renderPeriodBulkBar()});
+ $('periodBulkAll').onclick=()=>{for(const g of approvalGroups)if(bulkSelectable(g))selectedPeriods.add(g.key);renderApprovalTable()};
+ $('periodBulkClear').onclick=()=>{selectedPeriods.clear();renderApprovalTable()};
+ $('periodBulkApprove').onclick=()=>run(approveSelectedPeriods);
+ $('approvalCards').onclick=e=>{const b=e.target.closest('[data-ap-card]');if(!b)return;const k=b.dataset.apCard;
+  if(k==='missing')return setApprovalType('overview');
+  $('approvalEngineer').value='all';$('approvalState').value='pending';setApprovalType(k==='expenses'?'expenses':'attendance')};
+ $('teamOverview').onclick=e=>{const b=e.target.closest('[data-ov-user]');if(!b)return;$('approvalEngineer').value=b.dataset.ovUser;$('approvalState').value='all';syncApprovalExportEngineer();setApprovalType('attendance')};
+ Object.assign(translations,{'نظرة على الفريق':'Team overview','معتمد':'Approved','غير مسجّل':'Not recorded','جمعة':'Friday','لم يأتِ بعد':'Not yet','جمعة / لم يأتِ بعد':'Friday / not yet','المهندس':'Engineer','عرض فترات هذا المهندس':'Show this engineer’s periods','لا يوجد مهندسون.':'No engineers.','الحرف داخل اليوم: م موقع · ك مكتب · ج إجازة · غ غياب':'Letter in a day: S site · O office · L leave · A absent','فترات بانتظار الاعتماد':'Periods awaiting approval','مصروفات بانتظار الاعتماد':'Expenses awaiting approval','أيام غير مسجّلة':'Days not recorded','تحديد كل المعروض':'Select all shown','إلغاء التحديد':'Clear selection','اعتماد المحدد':'Approve selected','حدّد الفترات المطلوب اعتمادها، أو «تحديد كل المعروض».':'Select the periods to approve, or “Select all shown”.','تحديد الفترة':'Select period','تحديد':'Select','تصدير':'Export'});
  for(const button of document.querySelectorAll('[data-approval-type]'))button.onclick=()=>setApprovalType(button.dataset.approvalType);
  translateUI();
 }
@@ -360,6 +451,8 @@ function availableProjects(){return projects.filter(p=>selectedProjectIds.has(St
 function populateProjectSelect(form){const select=form.elements.project_id,previous=select.value;select.innerHTML=`<option value="">${esc(tr('بدون مشروع / مصروف عام'))}</option>`+availableProjects().map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selectedProjectIds.has(previous)?previous:'';}
 function assertProjectAllowed(id){if(id&&(!projectVisibilityReady||!selectedProjectIds.has(String(id))))throw Error(tr('حدد مشروعًا متاحًا من القائمة.'));}
 async function loadProjectVisibility(){projectVisibilityReady=false;try{const rows=await checked(db.from('sf_daily_project_visibility').select('project_id'));selectedProjectIds=new Set(rows.map(r=>String(r.project_id)));projectVisibilityReady=true;}catch(e){selectedProjectIds=new Set();message(language==='en'?'Project selection needs setup: run attendance-projects-v3.sql in Supabase.':'اختيار المشاريع يحتاج تفعيل: نفّذ attendance-projects-v3.sql في Supabase.');}$('saveProjectChoices').disabled=!projectVisibilityReady;}
+const projectFilter=()=>window.sfProjectFilter||(selectedProjectIds.size?'on':'all');
+function markProjectsDirty(on){const label=$('projectDirty');if(label)label.hidden=!on}
 function updateProjectCount(){
  const rows=[...$('projectChoices').querySelectorAll('.project-choice')],on=rows.filter(r=>r.querySelector('.pc-check').checked),missing=on.filter(r=>!projectRowLocation(r)).length;
  $('projectCount').textContent=(language==='en'?`${on.length} of ${projects.length} available`:`المتاح ${on.length} من ${projects.length}`)+(missing?(language==='en'?` · ${missing} without a location`:` · ${missing} بلا موقع`):'');
@@ -367,10 +460,10 @@ function updateProjectCount(){
  // Once nothing is missing a location, leave the "No location" view (it would stay empty).
  if(!missing&&window.sfProjectFilter==='missing'){window.sfProjectFilter='all';filterProjectChoices()}
  const counts={all:rows.length,on:on.length,off:rows.length-on.length,missing};
- for(const b of document.querySelectorAll('#projectFilters [data-filter]')){const n=b.querySelector('b');if(n)n.textContent=counts[b.dataset.filter];b.classList.toggle('active',(window.sfProjectFilter||'all')===b.dataset.filter);b.hidden=b.dataset.filter==='missing'&&!missing&&(window.sfProjectFilter||'all')!=='missing'}
+ for(const b of document.querySelectorAll('#projectFilters [data-filter]')){const n=b.querySelector('b');if(n)n.textContent=counts[b.dataset.filter];b.classList.toggle('active',projectFilter()===b.dataset.filter);b.hidden=b.dataset.filter==='missing'&&!missing&&projectFilter()!=='missing'}
 }
 function filterProjectChoices(){
- const term=$('projectSearch').value.trim().toLocaleLowerCase(),f=window.sfProjectFilter||'all';
+ const term=$('projectSearch').value.trim().toLocaleLowerCase(),f=projectFilter();
  for(const row of $('projectChoices').querySelectorAll('.project-choice')){
   const on=row.querySelector('.pc-check').checked,loc=projectRowLocation(row);
   const keep=f==='all'||(f==='on'&&on)||(f==='off'&&!on)||(f==='missing'&&on&&!loc);
@@ -386,13 +479,13 @@ function renderProjectChoices(){if(me?.role!=='admin')return;
  const loc=(p,v,label)=>`<label class="pc-loc-option"><input type="radio" name="loc-${esc(p.id)}" value="${v}" ${p.location===v?'checked':''}><span>${esc(tr(label))}</span></label>`;
  const leaderOptions=(p)=>`<label class="pc-leader">${esc(tr('قائد المشروع'))}<select class="pc-leader-select" aria-label="${esc(tr('قائد المشروع'))} — ${esc(p.name)}"><option value="">${esc(tr('بدون قائد — تعتمد الإدارة'))}</option>${members.filter(m=>m.role==='engineer'&&m.is_active!==false).sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(m=>`<option value="${esc(m.user_id)}" ${m.user_id===p.leader_user_id?'selected':''}>${esc(m.name)} (${esc(m.engineer_id)})</option>`).join('')}</select></label>`;
  $('projectChoices').innerHTML=list.map(p=>`<div class="project-choice" data-project-row="${esc(p.id)}"><label class="pc-main"><input class="pc-check" type="checkbox" name="project" value="${esc(p.id)}" ${selectedProjectIds.has(String(p.id))?'checked':''}><span class="pc-name" title="${esc(p.name)}">${esc(p.name)}</span></label><div class="pc-loc" role="radiogroup" aria-label="${esc(tr('موقع المشروع'))}">${loc(p,'inside','داخل الرياض')}${loc(p,'outside','خارج الرياض')}</div>${leaderOptions(p)}<span class="pc-missing">${esc(tr('حدد الموقع'))}</span></div>`).join('')||`<p class="pc-empty">${esc(tr('لا توجد مشاريع. زامن المشاريع من النظام الرئيسي أولًا.'))}</p>`;
- filterProjectChoices();updateProjectCount();}
+ filterProjectChoices();updateProjectCount();markProjectsDirty(false);}
 function projectRowLocation(row){return row.querySelector('.pc-loc input:checked')?.value||''}
 $('projectSearch').oninput=filterProjectChoices;
-$('projectChoices').onchange=()=>{updateProjectCount();if((window.sfProjectFilter||'all')!=='all')filterProjectChoices()};
+$('projectChoices').onchange=()=>{markProjectsDirty(true);updateProjectCount();if(projectFilter()!=='all')filterProjectChoices()};
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#projectFilters [data-filter]');if(!b)return;window.sfProjectFilter=b.dataset.filter;filterProjectChoices();updateProjectCount()});
-$('selectAllProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('.project-choice:not([hidden]) .pc-check'))field.checked=true;updateProjectCount();};
-$('clearProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('.project-choice:not([hidden]) .pc-check'))field.checked=false;updateProjectCount();};
+$('selectAllProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('.project-choice:not([hidden]) .pc-check'))field.checked=true;markProjectsDirty(true);updateProjectCount();};
+$('clearProjects').onclick=()=>{for(const field of $('projectChoices').querySelectorAll('.project-choice:not([hidden]) .pc-check'))field.checked=false;markProjectsDirty(true);updateProjectCount();};
 $('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.role!=='admin'||!projectVisibilityReady)return;const button=$('saveProjectChoices');button.disabled=true;try{const rows=[...$('projectChoices').querySelectorAll('.project-choice')],missing=rows.filter(r=>r.querySelector('.pc-check').checked&&!projectRowLocation(r)).map(r=>r.querySelector('.pc-name').textContent);
  if(missing.length){window.sfProjectFilter='missing';$('projectSearch').value='';filterProjectChoices();updateProjectCount();}
  if(missing.length)throw Error(tr('حدد موقع كل مشروع متاح للمهندسين (داخل أو خارج الرياض):')+' '+missing.join('، '));
@@ -405,7 +498,7 @@ $('projectVisibilityForm').onsubmit=e=>{e.preventDefault();run(async()=>{if(me?.
  await checked(db.rpc('sf_set_project_leaders',{p_assignments:assignments}));
  for(const item of assignments){const p=projects.find(x=>String(x.id)===String(item.id));if(p)p.leader_user_id=item.leader_user_id}
  await checked(db.rpc('sf_set_visible_projects',{project_ids:ids}));selectedProjectIds=new Set(ids);
- updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));message('تم حفظ المشاريع وقادة المشاريع المختارين.');}finally{button.disabled=false}})};
+ updateRangeControls();renderMonthEntries();populateProjectSelect($('expenseForm'));markProjectsDirty(false);message('تم حفظ المشاريع وقادة المشاريع المختارين.');}finally{button.disabled=false}})};
 
 
 
@@ -596,18 +689,32 @@ async function engineerAccountAction(body){
  if(result.error){let detail;try{detail=await result.error.context.json()}catch{}throw Error(detail?.error||result.error.message)}
  if(result.data?.error)throw Error(result.data.error);return result.data;
 }
+// Things to fix for an engineer: no allowances set, SEC card expired or expiring within 15 days, card without a reminder email.
+function engineerWarnings(m,day=today()){
+ const out=[];if(!Number(m.inside_rate)&&!Number(m.outside_rate)&&!Number(m.overtime_rate))out.push({tone:'warn',text:tr('البدلات غير محددة')});
+ if(m.sec_card_expiry){const days=Math.round((Date.parse(m.sec_card_expiry+'T00:00:00Z')-Date.parse(day+'T00:00:00Z'))/86400000);
+  if(days<0)out.push({tone:'alert',text:tr('بطاقة SEC منتهية')});else if(days<=15)out.push({tone:'alert',text:language==='en'?`SEC card expires in ${days} day${days===1?'':'s'}`:`بطاقة SEC تنتهي خلال ${days} يوم`});
+  if(!m.contact_email)out.push({tone:'info',text:tr('لا يوجد بريد للتذكير')});}
+ return out;
+}
+let engineerFilter='all';
 function renderEngineerList(){
  if(me?.role!=='admin'){$('members').innerHTML='';return;}
  const term=$('engineerSearch').value.trim().toLocaleLowerCase();
  const all=members.filter(m=>m.role==='engineer'&&m.is_active!==false).sort((a,b)=>String(a.engineer_id||'').localeCompare(String(b.engineer_id||''),'en',{numeric:true}));
- const list=all.filter(m=>(m.name+' '+m.engineer_id).toLocaleLowerCase().includes(term));
+ const attention=all.filter(m=>engineerWarnings(m).length);
+ for(const b of document.querySelectorAll('#engineerFilters [data-eng-filter]')){b.classList.toggle('active',b.dataset.engFilter===engineerFilter);const n=b.querySelector('b');if(n)n.textContent=b.dataset.engFilter==='attention'?attention.length:all.length}
+ const list=(engineerFilter==='attention'?attention:all).filter(m=>(m.name+' '+m.engineer_id).toLocaleLowerCase().includes(term));
  $('engineerCount').textContent=language==='en'?`${list.length} of ${all.length} active engineers`:`${list.length} من ${all.length} مهندس نشط`;
- $('members').innerHTML=list.map(m=>`<tr><td data-label="${esc(tr('كود الموظف'))}">${esc(m.engineer_id)}</td><td data-label="${esc(tr('اسم المهندس'))}"><b>${esc(m.name)}</b></td><td data-label="${esc(tr('بدل داخل الرياض / يوم'))}">${Number(m.inside_rate).toFixed(2)}</td><td data-label="${esc(tr('بدل خارج الرياض / يوم'))}">${Number(m.outside_rate).toFixed(2)}</td><td data-label="${esc(tr('سعر الساعة الإضافية'))}">${Number(m.overtime_rate).toFixed(2)}</td><td><div class="actions"><button type="button" class="secondary" data-edit-member="${esc(m.user_id)}">${esc(tr('تعديل'))}</button><button type="button" class="danger" data-remove-member="${esc(m.user_id)}">${esc(tr('حذف المهندس'))}</button></div></td></tr>`).join('')||`<tr><td colspan="6">${esc(tr('لا يوجد مهندسون مطابقون للبحث.'))}</td></tr>`;
+ const card=m=>{if(!m.sec_card_expiry)return '—';const w=engineerWarnings(m).find(x=>/SEC/.test(x.text));return `<span dir="ltr">${esc(m.sec_card_expiry)}</span>${w?`<small class="eng-flag ${w.tone}">${esc(w.text)}</small>`:''}`};
+ $('members').innerHTML=list.map(m=>`<tr><td data-label="${esc(tr('كود الموظف'))}">${esc(m.engineer_id)}</td><td data-label="${esc(tr('اسم المهندس'))}"><b>${esc(m.name)}</b>${engineerWarnings(m).filter(w=>!/SEC/.test(w.text)).map(w=>`<small class="eng-flag ${w.tone}">${esc(w.text)}</small>`).join('')}</td><td data-label="${esc(tr('بدل داخل الرياض / يوم'))}">${Number(m.inside_rate).toFixed(2)}</td><td data-label="${esc(tr('بدل خارج الرياض / يوم'))}">${Number(m.outside_rate).toFixed(2)}</td><td data-label="${esc(tr('سعر الساعة الإضافية'))}">${Number(m.overtime_rate).toFixed(2)}</td><td data-label="${esc(tr('بطاقة SEC'))}">${card(m)}</td><td><div class="eng-actions"><button type="button" class="secondary" data-edit-member="${esc(m.user_id)}">${esc(tr('تعديل'))}</button><details class="eng-menu"><summary aria-label="${esc(tr('إجراءات أخرى'))}">⋯</summary><div class="eng-menu-list"><button type="button" class="danger" data-remove-member="${esc(m.user_id)}">${esc(tr('حذف المهندس'))}</button></div></details></div></td></tr>`).join('')||`<tr><td colspan="7">${esc(tr('لا يوجد مهندسون مطابقون للبحث.'))}</td></tr>`;
 }
 async function reloadEngineerDirectory(){
  members=await checked(db.from('sf_daily_members').select('*'));renderEngineerList();renderProjectChoices();renderTimesheetControls();renderApprovalFilters();renderApprovalTable();
 }
 $('engineerSearch').oninput=renderEngineerList;
+$('engineerFilters').onclick=e=>{const b=e.target.closest('[data-eng-filter]');if(!b)return;engineerFilter=b.dataset.engFilter;renderEngineerList()};
+Object.assign(translations,{'يحتاج انتباه':'Needs attention','البدلات غير محددة':'Allowances not set','بطاقة SEC منتهية':'SEC card expired','لا يوجد بريد للتذكير':'No reminder email','بطاقة SEC':'SEC card','إجراءات أخرى':'More actions','تغييرات غير محفوظة':'Unsaved changes'});
 $('showCreateEngineer').onclick=()=>{$('createEngineerPanel').hidden=false;$('createAccountForm').elements.engineer_id.focus();$('createEngineerPanel').scrollIntoView({behavior:'smooth',block:'start'})};
 $('cancelCreateEngineer').onclick=()=>{$('createAccountForm').reset();$('createEngineerPanel').hidden=true};
 $('cancelEditEngineer').onclick=()=>{$('engineerPasswordForm').reset();$('editEngineerPanel').hidden=true};

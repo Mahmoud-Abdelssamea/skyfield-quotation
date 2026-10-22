@@ -114,7 +114,7 @@ $('acctXMonth').addEventListener('change',()=>{monthTouched=true});
 window.sfAccountingExportSync=function(){
  const admin=typeof me!=='undefined'&&me&&me.role==='admin';panel.hidden=!admin;if(!admin)return;
  const select=$('acctXEngineer'),old=select.value||'all';
- select.innerHTML=`<option value="all">${esc(tr('كل المهندسين'))}</option>`+members.map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');
+ select.innerHTML=`<option value="all">${esc(tr('كل المهندسين'))}</option>`+(typeof approvalPeople==='function'?approvalPeople():members).map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');
  select.value=members.some(m=>m.user_id===old)?old:'all';
  if(!monthTouched||!$('acctXMonth').value)$('acctXMonth').value=$('month').value;
 };

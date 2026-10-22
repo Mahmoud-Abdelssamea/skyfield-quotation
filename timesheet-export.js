@@ -46,12 +46,12 @@ function sfTimesheetFilename(member,month){return 'Timesheet_'+String(member.eng
 function sfTimesheetDownload(bytes,name,type){const url=URL.createObjectURL(new Blob([bytes],{type})),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000)}
 let sfSimpleListReady=false;
 function renderTimesheetControls(){
- if(!me)return;document.body.classList.toggle('sf-simple-timesheet',me.role!=='admin');$('timesheetExportPanel').open=true;if(me.role!=='admin'){$('monthlySection').querySelector('h2').textContent=language==='en'?'My Timesheet':'التايم شيت الخاص بي';$('tabReports').textContent=language==='en'?'My Timesheet':'التايم شيت الخاص بي';
+ if(!me)return;document.body.classList.toggle('sf-simple-timesheet',me.role!=='admin');$('timesheetExportPanel').open=me.role!=='admin';if(me.role!=='admin'){$('monthlySection').querySelector('h2').textContent=language==='en'?'My Timesheet':'التايم شيت الخاص بي';$('tabReports').textContent=language==='en'?'My Timesheet':'التايم شيت الخاص بي';
   // Engineers keep their own list of attendance and expenses (status, rejection reason, edit, resubmit, withdraw).
   const sw=document.querySelectorAll('[data-approval-type]');if(sw[0])sw[0].textContent=language==='en'?'My attendance':'حضوري';if(sw[1])sw[1].textContent=language==='en'?'My expenses':'مصروفاتي';
   const engFilter=$('approvalEngineer')?.closest('label');if(engFilter)engFilter.hidden=true;
   if(!sfSimpleListReady){sfSimpleListReady=true;$('approvalState').value='all';if(typeof renderApprovalTable==='function')renderApprovalTable();}
- }const list=me.role==='admin'?members:members.filter(m=>m.user_id===me.user_id),previous=$('timesheetEngineer').value;
+ }const list=me.role==='admin'?(typeof approvalPeople==='function'?approvalPeople():members):members.filter(m=>m.user_id===me.user_id),previous=$('timesheetEngineer').value;
  $('timesheetEngineer').innerHTML=list.map(m=>`<option value="${esc(m.user_id)}">${esc(m.name)} — ${esc(m.engineer_id)}</option>`).join('');$('timesheetEngineer').value=list.some(m=>m.user_id===previous)?previous:me.user_id;
  if(!$('timesheetEngineer').value&&list.length)$('timesheetEngineer').value=list[0].user_id;
  $('timesheetAll').hidden=me.role!=='admin';
