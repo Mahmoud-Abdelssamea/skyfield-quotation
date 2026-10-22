@@ -61,3 +61,6 @@
 #acctRows td.acct-check+td{min-width:150px}#acctRows td.acct-check+td small{white-space:nowrap}
 #accountingSection .acct-batch-list td:first-child{white-space:nowrap}
 @media(max-width:640px){#accountingSection .acct-bulkbar #acctBulkInfo{flex-basis:100%}#accountingSection .acct-bulkbar button{flex:1 1 40%}#accountingSection .acct-bulkbar #acctBulkPay{flex-basis:100%;order:3}}
+/* Comment under the description (one line), status column never squeezed */
+#acctRows .acct-desc small.acct-comment{color:#ae3737;font-weight:600}
+#acctRows td.acct-status{white-space:nowrap;min-width:110px}#acctRows td.acct-status small{white-space:nowrap}
