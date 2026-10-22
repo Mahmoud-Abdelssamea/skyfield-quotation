@@ -181,9 +181,16 @@ function setState(state){if(busy)return;A('acctState').value=state;
  // The default "all months" list holds open items only; paid and closed items need a period.
  if(['paid','done','all'].includes(state)&&A('acctPeriod').value==='all'){A('acctPeriod').value='month';A('acctPeriod').onchange();return}
  render()}
+// Bottom edge of the host page's sticky header bars above this frame, so the invoice window opens below them.
+function hostCover(host,rect){
+ let bottom=0;
+ try{for(const el of host.document.querySelectorAll('.page-header,.page-command-bar')){const r=el.getBoundingClientRect(),pos=host.getComputedStyle(el).position;
+  if((pos==='sticky'||pos==='fixed')&&r.height>0&&r.top<=host.innerHeight/3&&r.right>rect.left&&r.left<rect.right)bottom=Math.max(bottom,r.bottom)}}catch(_){}
+ return bottom;
+}
 function positionInvoice(){
  const frame=window.frameElement;if(!frame)return;
- const rect=frame.getBoundingClientRect(),host=window.parent,top=Math.max(0,-rect.top),height=Math.max(160,Math.min(rect.bottom,host.innerHeight)-Math.max(0,rect.top));
+ const rect=frame.getBoundingClientRect(),host=window.parent,visibleTop=Math.max(rect.top,hostCover(host,rect),0),top=visibleTop-rect.top,height=Math.max(160,Math.min(rect.bottom,host.innerHeight)-visibleTop);
  const d=A('acctInvoiceDialog');d.style.top=(top+12)+'px';d.style.bottom='auto';d.style.margin='0 auto';d.style.maxHeight=(height-24)+'px';
 }
 function showDialog(){const d=A('acctInvoiceDialog');if(!d.open){returnFocus=document.activeElement;positionInvoice();if(window.frameElement){hostOverflow=window.parent.document.body.style.overflow;window.parent.document.body.style.overflow='hidden'}d.showModal();A('acctInvoiceTitle').focus?.({preventScroll:true})}}
