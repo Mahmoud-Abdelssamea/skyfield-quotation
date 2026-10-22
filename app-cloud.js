@@ -343,8 +343,8 @@ function sfQuoteSyncPayloadKey(rec){
 async function sfHydrateQuotationsFromRemote(){
   if(!sfDb||!sfCurrentUser)return false;
   try{
-    const sfBefore=Array.isArray(savedQuotes)?savedQuotes.slice():[]; const {data,error}=await sfDb.rpc('sf_quote_list',{p_include_deleted:false}); if(error)throw error; savedQuotes=(data||[]).map(sfQuoteRecordFromRow);
-    sfQuoteSyncSnapshots=new Map(savedQuotes.map(r=>[r.id,sfQuoteSyncPayloadKey(r)]));
+    const sfBefore=Array.isArray(savedQuotes)?savedQuotes.slice():[],since=Date.now(); const {data,error}=await sfDb.rpc('sf_quote_list',{p_include_deleted:false}); if(error)throw error; const server=(data||[]).map(sfQuoteRecordFromRow);
+    const snapshots=new Map(server.map(r=>[r.id,sfQuoteSyncPayloadKey(r)]));savedQuotes=sfMergeTouched('quotes',server,savedQuotes,since,snapshots,sfQuoteSyncSnapshots);sfQuoteSyncSnapshots=snapshots;
     const wasPaused=sfSyncPaused;sfSyncPaused=true;
     try{localStorage.setItem('sfSavedQuotations',JSON.stringify(savedQuotes));} finally{sfSyncPaused=wasPaused;} sfKeepUnsavedRecords('quotes',sfBefore); return true; }catch(error){ console.warn('Quotation cloud list unavailable, keeping local cache.',error);
     return false;
@@ -399,6 +399,7 @@ async function sfSyncQuoteRecordNow(rec){
 }
 async function sfSyncQuoteDelete(rec){
   if(!sfDb||!sfCurrentUser||!rec||!rec.id)return {ok:false};
+  sfTouch('quotes',rec.id);
   try{
     const {data,error}=await sfDb.rpc('sf_quote_soft_delete',{
       p_id:String(rec.id),
@@ -461,13 +462,13 @@ function sfCachePerRecordCollection(key,records){
 async function sfHydrateProjectsFromRemote(){
   if(!sfDb||!sfCurrentUser)return false;
   try{
-    const sfBefore=Array.isArray(projects)?projects.slice():[]; const {data,error}=await sfDb.rpc('sf_project_list',{p_include_deleted:false});if(error)throw error; projects=(data||[]).map(sfSharedRecordFromRow).map(sfNormalizeProjectRecord); sfProjectSyncSnapshots=new Map(projects.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); sfCachePerRecordCollection('sfProjects',projects); sfKeepUnsavedRecords('projects',sfBefore); return true;
+    const sfBefore=Array.isArray(projects)?projects.slice():[],since=Date.now(); const {data,error}=await sfDb.rpc('sf_project_list',{p_include_deleted:false});if(error)throw error; const server=(data||[]).map(sfSharedRecordFromRow).map(sfNormalizeProjectRecord); const snapshots=new Map(server.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); projects=sfMergeTouched('projects',server,projects,since,snapshots,sfProjectSyncSnapshots); sfProjectSyncSnapshots=snapshots; sfCachePerRecordCollection('sfProjects',projects); sfKeepUnsavedRecords('projects',sfBefore); return true;
   }catch(error){console.warn('Project record sync is unavailable; keeping the local cache.',error);return false}
 }
 async function sfHydrateInvoicesFromRemote(){
   if(!sfDb||!sfCurrentUser)return false;
   try{
-    const sfBefore=Array.isArray(proformaInvoices)?proformaInvoices.slice():[]; const {data,error}=await sfDb.rpc('sf_invoice_list',{p_include_deleted:false});if(error)throw error; proformaInvoices=(data||[]).map(sfSharedRecordFromRow); sfInvoiceSyncSnapshots=new Map(proformaInvoices.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices); sfKeepUnsavedRecords('invoices',sfBefore); return true;
+    const sfBefore=Array.isArray(proformaInvoices)?proformaInvoices.slice():[],since=Date.now(); const {data,error}=await sfDb.rpc('sf_invoice_list',{p_include_deleted:false});if(error)throw error; const server=(data||[]).map(sfSharedRecordFromRow); const snapshots=new Map(server.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); proformaInvoices=sfMergeTouched('invoices',server,proformaInvoices,since,snapshots,sfInvoiceSyncSnapshots); sfInvoiceSyncSnapshots=snapshots; sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices); sfKeepUnsavedRecords('invoices',sfBefore); return true;
   }catch(error){console.warn('Proforma Invoice record sync is unavailable; keeping the local cache.',error);return false}
 }
 async function sfImportLegacyProjects(records){
@@ -520,6 +521,7 @@ async function sfSyncInvoiceRecordNow(record){
 }
 async function sfSyncProjectDelete(record){
   if(!sfDb||!sfCurrentUser||!record?.id)return {ok:false};
+  sfTouch('projects',record.id);
   try{
     const {data,error}=await sfDb.rpc('sf_project_soft_delete',{
       p_id:String(record.id),p_expected_revision:(record._syncRevision===undefined||record._syncRevision===null)?null:record._syncRevision
@@ -531,6 +533,7 @@ async function sfSyncProjectDelete(record){
 }
 async function sfSyncInvoiceDelete(record){
   if(!sfDb||!sfCurrentUser||!record?.id)return {ok:false};
+  sfTouch('invoices',record.id);
   try{
     const {data,error}=await sfDb.rpc('sf_invoice_soft_delete',{
       p_id:String(record.id),p_expected_revision:(record._syncRevision===undefined||record._syncRevision===null)?null:record._syncRevision
@@ -710,20 +713,16 @@ async function sfActivateUser(user){
     }
     sessionStorage.setItem(hydrationKey,localAfter);
     sfReloadApplicationStateFromLocal();
-    try{
-      const legacyQuotesSnapshot=legacyRecordCaches.quotations.length?legacyRecordCaches.quotations:(Array.isArray(savedQuotes)?JSON.parse(JSON.stringify(savedQuotes)):[]);
-      const legacyProjectsSnapshot=legacyRecordCaches.projects.length?legacyRecordCaches.projects:(Array.isArray(projects)?JSON.parse(JSON.stringify(projects)):[]);
-      const legacyInvoicesSnapshot=legacyRecordCaches.invoices.length?legacyRecordCaches.invoices:(Array.isArray(proformaInvoices)?JSON.parse(JSON.stringify(proformaInvoices)):[]);
-      // These imports are additive only. Existing shared IDs are not changed,
-      // while a record found only in an older/local browser cache is rescued
-      // even when the shared table already contains other records.
-      await sfImportLegacyQuotations(legacyQuotesSnapshot);
-      await sfImportLegacyProjects(legacyProjectsSnapshot);
-      await sfImportLegacyInvoices(legacyInvoicesSnapshot);
-      await sfHydrateQuotationsFromRemote(); await sfHydrateProjectsFromRemote(); await sfHydrateInvoicesFromRemote(); if(sfUnsavedCount()>0){sfShowUnsavedStatus(true);sfScheduleSyncRetry();setTimeout(()=>sfRetryUnsaved(),1500);}
-      renderSavedQuotations();updateQuoteBadge();renderProjects();renderProformas();updateProformaBadge();
-    }catch(hydrateError){console.warn('Commercial record hydration failed, using the local cache.',hydrateError);}
+    const copy=list=>Array.isArray(list)?JSON.parse(JSON.stringify(list)):[];
+    const legacy={
+      quotes:legacyRecordCaches.quotations.length?legacyRecordCaches.quotations:copy(savedQuotes),
+      projects:legacyRecordCaches.projects.length?legacyRecordCaches.projects:copy(projects),
+      invoices:legacyRecordCaches.invoices.length?legacyRecordCaches.invoices:copy(proformaInvoices)
+    };
+    // Open the app now from the saved copy; the shared lists are refreshed in the background.
     sfUnlockApp(user);
+    try{performance.mark('sf-unlocked')}catch(_){}
+    void sfRefreshCommercialRecords(user,dataUserId,legacy);
   })().catch(error=>{
     console.error('Secure activation failed',error);
     sfSetAuthMessage(error?.message||'Unable to open the secure workspace.','error');
@@ -733,6 +732,46 @@ async function sfActivateUser(user){
     sfActivationUserId='';
   });
   return sfActivationPromise;
+}
+
+// Shared quotations, projects and invoices after sign-in: the three lists download together, then only the
+// records that exist in this browser's older copy but were never on the server are imported (this used to
+// send every cached record on every sign-in). A record that has a server revision and is missing from the
+// list was deleted there, so it is not imported again. Edits made meanwhile are kept (sfMergeTouched).
+const SF_LEGACY_TRIED_PREFIX='legacyImportTried:'; // not an "sf" key, so never synced
+function sfLegacyTried(dataUserId,kind){try{return new Set(JSON.parse(localStorage.getItem(SF_LEGACY_TRIED_PREFIX+dataUserId+':'+kind)||'[]'))}catch(_){return new Set()}}
+function sfLegacyRemember(dataUserId,kind,records){const tried=sfLegacyTried(dataUserId,kind);records.forEach(r=>tried.add(String(r.id)));try{localStorage.setItem(SF_LEGACY_TRIED_PREFIX+dataUserId+':'+kind,JSON.stringify([...tried].slice(-2000)))}catch(_){}}
+function sfLegacyMissing(dataUserId,kind,records,serverList){
+  if(!Array.isArray(records)||!records.length)return [];
+  const have=new Set((serverList||[]).map(r=>String(r?.id))),tried=sfLegacyTried(dataUserId,kind),dirty=sfDirtyIds(kind);
+  return records.filter(r=>r&&r.id!=null&&(r._syncRevision===undefined||r._syncRevision===null)&&!have.has(String(r.id))&&!tried.has(String(r.id))&&!dirty.has(String(r.id)));
+}
+async function sfRefreshCommercialRecords(user,dataUserId,legacy){
+  const current=()=>sfCurrentUser?.id===user.id;
+  const renderLists=()=>{try{renderSavedQuotations();updateQuoteBadge();renderProjects();renderProformas();updateProformaBadge();updateSidebarCounts();renderDashboard()}catch(e){console.warn('List render after refresh failed',e)}};
+  const kinds=[
+    ['quotes',sfHydrateQuotationsFromRemote,sfImportLegacyQuotations,()=>savedQuotes],
+    ['projects',sfHydrateProjectsFromRemote,sfImportLegacyProjects,()=>projects],
+    ['invoices',sfHydrateInvoicesFromRemote,sfImportLegacyInvoices,()=>proformaInvoices]];
+  setCloudStatus('saving','Updating lists…');
+  try{
+    const loaded=await Promise.all(kinds.map(([,hydrate])=>hydrate()));
+    if(!current())return;
+    renderLists();
+    for(let i=0;i<kinds.length;i++){
+      const [kind,hydrate,importer,list]=kinds[i];
+      if(!loaded[i])continue; // the list could not be read: never import blindly
+      const missing=sfLegacyMissing(dataUserId,kind,legacy?.[kind],list());
+      if(!missing.length)continue;
+      const added=await importer(missing);if(!current())return;
+      sfLegacyRemember(dataUserId,kind,missing);
+      if(added>0){await hydrate();if(!current())return;renderLists()}
+    }
+    if(sfUnsavedCount()>0){sfShowUnsavedStatus(true);sfScheduleSyncRetry();setTimeout(()=>sfRetryUnsaved(),1500)}
+    else if(loaded.every(Boolean))setCloudStatus('','Secure cloud connected');
+    else setCloudStatus('error','Some lists could not be updated; showing the saved copy.');
+  }catch(error){console.warn('Commercial record refresh failed, using the local cache.',error);if(current())setCloudStatus('error','Lists could not be updated; showing the saved copy.')}
+  finally{try{performance.mark('sf-lists-ready')}catch(_){}}
 }
 
 async function sfHandleAuthState(event,session){

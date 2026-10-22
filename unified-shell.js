@@ -68,12 +68,16 @@ function sfUnifiedResize(frameWindow,height){
  if(Number.isFinite(height))document.getElementById('sf-unified-frame').style.height=Math.max(300,Math.min(12000,Math.ceil(height)+4))+'px';
 }
 function sfUnifiedClearFrame(){clearTimeout(sfUnifiedReviewTimer);const frame=document.getElementById('sf-unified-frame');frame.removeAttribute('src');frame.hidden=true;sfUnifiedFrameReady=false;document.getElementById('sf-unified-panel').hidden=true;}
-sfLockApp=function(clear){sfUnifiedClearFrame();sfUnifiedProfile=null;sfAttendanceOnly=false;sfUnifiedBaseLock(clear)};
+sfLockApp=function(clear){sfUnifiedClearFrame();sfUnifiedProfile=null;sfUnifiedProfileAt=0;sfUnifiedProfileUser='';sfAttendanceOnly=false;sfUnifiedBaseLock(clear)};
+let sfUnifiedProfileAt=0,sfUnifiedProfileUser='';
 sfHandleAuthState=async function(event,session){
  if(event==='PASSWORD_RECOVERY')return sfUnifiedBaseAuth(event,session);
  if(!session?.user)return sfUnifiedBaseAuth(event,session);
  try{
-  const {data:member,error}=await sfDb.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle();
+  // Token refreshes and repeated auth events reuse the profile read in the last 5 minutes (data access is still checked by the database).
+  const reuse=sfAuthReady&&sfCurrentUser?.id===session.user.id&&sfUnifiedProfileUser===session.user.id&&Date.now()-sfUnifiedProfileAt<300000;
+  let member=sfUnifiedProfile,error=null;
+  if(!reuse){({data:member,error}=await sfDb.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle());if(!error){sfUnifiedProfileAt=Date.now();sfUnifiedProfileUser=session.user.id}}
   const commercial=!!sfTeamMember(session.user.email);
   if(error&&!commercial)throw error;
   sfUnifiedProfile=!error&&member?.is_active!==false?member:null;
@@ -111,7 +115,7 @@ async function sfUnifiedGetDetails(frameWindow,userId){
 }
 async function sfUnifiedSaveDetails(frameWindow,userId,values,identity){
  if(frameWindow!==document.getElementById('sf-unified-frame').contentWindow||!sfUnifiedCanManage()||sfAttendanceOnly)throw Error('Access denied');
- await sfRefreshAttendanceRoster();const id='attendance_'+userId,old=sfEngineers.find(e=>e.id===id);
+ await sfRefreshAttendanceRoster(true);const id='attendance_'+userId,old=sfEngineers.find(e=>e.id===id);
  if(!old||!sfAttendanceRosterReady)throw Error('Engineer unavailable');
  const entry={...old,name:identity.name,overtime:Number(identity.overtime_rate),updatedAt:new Date().toISOString()};
  for(const [field,key] of Object.entries(sfExtraFields)){
@@ -140,7 +144,7 @@ async function sfUnifiedSalaryPackages(frameWindow){
  for(const e of [...sfAttendanceSupplemental.values(),...sfEngineers])if(String(e.id).startsWith('attendance_'))packages[String(e.id).slice(11)]=sfAttendancePackage(e);
  return {standardDays:SF_ATTENDANCE_STANDARD_DAYS,costingFrom:SF_ATTENDANCE_COSTING_FROM,packages};
 }
-function sfUnifiedRosterChanged(frameWindow){if(frameWindow===document.getElementById('sf-unified-frame').contentWindow&&!sfAttendanceOnly)void sfRefreshAttendanceRoster()}
+function sfUnifiedRosterChanged(frameWindow){if(frameWindow===document.getElementById('sf-unified-frame').contentWindow&&!sfAttendanceOnly)void sfRefreshAttendanceRoster(true)}
 
 // Language switcher: floating on the sign-in screen, inside the sidebar once signed in
 // (it used to cover the header on computers and the content on phones).

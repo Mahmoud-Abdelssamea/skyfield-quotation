@@ -156,7 +156,9 @@ payrollPostProjectExpense=function(sheet){
 // Attendance owns identities. The main workspace keeps supplemental cost data.
 let sfAttendanceRoster = [], sfAttendanceRosterReady = false;
 let sfAttendanceSupplemental = new Map(sfEngineers.filter(e=>String(e.id).startsWith('attendance_')).map(e=>[e.id,e]));
-let sfAttendanceRosterUser = '', sfAttendanceFetch = null, sfAttendanceFetchUser = '';
+let sfAttendanceRosterUser = '', sfAttendanceFetch = null, sfAttendanceFetchUser = '', sfAttendanceRosterAt = 0;
+// The roster is reused for a minute; callers that know it changed (or are about to save) pass force=true.
+const SF_ROSTER_FRESH_MS = 60000;
 function sfProjectAttendanceEngineers(saved, roster) {
  const details=new Map(saved.map(e=>[e.id,e]));
  return roster.map(e=>({nationality:'',iqama:'',profession:'',specialization:'Other',loa:'Non-LOA',employment:'Company Employee',status:'available',daily:0,monthly:0,overtime:0,housingTransport:0,siteAllowance:0,carAllowance:0,notes:'',...details.get(e.id),id:e.id,name:e.name,employeeNo:e.employee_no})).map(e=>({...e,daily:sfRound2(sfAttendancePackage(e)/30)}));
@@ -168,9 +170,10 @@ function sfApplyAttendanceRoster(){
 function sfAttendanceRosterStatus(text){
  const el=document.getElementById('sf-attendance-roster-status');if(el)el.textContent=text;
 }
-async function sfRefreshAttendanceRoster(){
+async function sfRefreshAttendanceRoster(force=false){
  if(!sfCurrentUser||!sfAuthReady||!sfDb||!sfHasAccess('engineers'))return;
  const user=sfCurrentUser.id;
+ if(!force&&sfAttendanceRosterReady&&sfAttendanceRosterUser===user&&Date.now()-sfAttendanceRosterAt<SF_ROSTER_FRESH_MS)return;
  if(sfAttendanceFetch&&sfAttendanceFetchUser===user)return sfAttendanceFetch;
  sfAttendanceFetchUser=user;
  const task=(async()=>{
@@ -178,7 +181,7 @@ async function sfRefreshAttendanceRoster(){
   try{
    const {data,error}=await sfDb.rpc('sf_get_attendance_engineers');if(error)throw error;
    if(sfCurrentUser?.id!==user||!sfAuthReady)return;
-   sfAttendanceRoster=data||[];sfAttendanceRosterReady=true;sfAttendanceRosterUser=user;
+   sfAttendanceRoster=data||[];sfAttendanceRosterReady=true;sfAttendanceRosterUser=user;sfAttendanceRosterAt=Date.now();
    sfApplyAttendanceRoster();renderEngineers();renderCostPlan();
    if(typeof payrollRender==='function')payrollRender();
    sfAttendanceRosterStatus('المصدر: إدارة الحضور · '+sfEngineers.length+' مهندس / Source: attendance administration');
@@ -277,7 +280,7 @@ async function sfPayrollFillFromAttendance({auto=false}={}){
  try{
   const {data:member,error:memberError}=await sfDb.from('sf_daily_members').select('role').eq('user_id',sfCurrentUser.id).maybeSingle();
   if(memberError)throw memberError;if(member?.role!=='admin')throw Error('يلزم حساب إدارة الحضور');
-  await sfRefreshAttendanceRoster();if(!sfAttendanceRosterReady)throw Error('تعذر تحميل بيانات رواتب المهندسين');
+  await sfRefreshAttendanceRoster(true);if(!sfAttendanceRosterReady)throw Error('تعذر تحميل بيانات رواتب المهندسين');
   const [y,m]=month.split('-').map(Number),end=`${m===12?y+1:y}-${String(m===12?1:m+1).padStart(2,'0')}-01`;
   const records=[];
   for(let o=0;;o+=1000){const {data,error}=await sfDb.from('sf_daily_records').select('user_id,day,status,leave_type,overtime,overtime_amount,allowance,review').gte('day',month+'-01').lt('day',end).order('day').order('id').range(o,o+999);if(error)throw error;records.push(...data);if(data.length<1000)break}

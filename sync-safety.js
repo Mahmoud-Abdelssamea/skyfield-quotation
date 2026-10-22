@@ -126,12 +126,29 @@ function sfKeepUnsavedRecords(kind,localBefore){
  if(kept){const wasPaused=sfSyncPaused;sfSyncPaused=true;try{localStorage.setItem(cfg.cache,JSON.stringify(list))}finally{sfSyncPaused=wasPaused}}
  return kept;
 }
+// Records saved or deleted on this page while a list download was in flight: for those the download is older,
+// so the page's own version wins and a deletion is not undone. Their sync snapshot stays the previous one,
+// so unsent changes are still uploaded and a real conflict is still detected.
+const sfTouched={quotes:new Map(),projects:new Map(),invoices:new Map()};
+function sfTouch(kind,id){if(sfTouched[kind]&&id!=null)sfTouched[kind].set(String(id),Date.now())}
+function sfMergeTouched(kind,serverList,localList,since,snapshots,prevSnapshots){
+ const ids=[...(sfTouched[kind]||new Map())].filter(([,at])=>at>=since).map(([id])=>id);
+ if(!ids.length)return serverList;
+ const out=serverList.slice(),local=Array.isArray(localList)?localList:[];
+ for(const id of ids){
+  const mine=local.find(r=>r&&String(r.id)===id),i=out.findIndex(r=>r&&String(r.id)===id);
+  if(mine){if(i>=0)out[i]=mine;else out.unshift(mine)}else if(i>=0)out.splice(i,1);
+  if(snapshots){if(prevSnapshots&&prevSnapshots.has(id))snapshots.set(id,prevSnapshots.get(id));else snapshots.delete(id)}
+ }
+ return out;
+}
 window.addEventListener('beforeunload',event=>{if(!window.sfSkipUnloadWarning&&sfUnsavedCount()>0){event.preventDefault();event.returnValue='';}});
 
 // Serialize writes of the same record and send the latest local version at dispatch.
 const sfRecordPushChains=new Map();
 function sfQueueRecordSave(kind,record,send){
  if(!record?.id)return Promise.resolve({ok:false});
+ sfTouch(kind,record.id);
  const key=kind+':'+record.id;
  const next=(sfRecordPushChains.get(key)||Promise.resolve()).catch(()=>{}).then(()=>{
   const latest=SF_RECORD_KINDS[kind].list().find(r=>String(r.id)===String(record.id));
