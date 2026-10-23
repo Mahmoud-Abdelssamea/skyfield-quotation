@@ -135,7 +135,7 @@ function renderApprovalCards(){
  const ov=/^\d{4}-\d{2}$/.test(month)?teamOverview(approvalPeople(),days,month,today()):{missingPeople:0,missingDays:0};
  const card=(key,label,value,sub,tone)=>`<button type="button" class="ap-card ${tone}" data-ap-card="${key}"><span>${esc(label)}</span><b>${esc(String(value))}</b><small>${esc(sub)}</small></button>`;
  box.innerHTML=card('periods',tr('فترات بانتظار الاعتماد'),periods,language==='en'?`${pendingDays.length} days`:`${pendingDays.length} يوم`,periods?'warn':'')
-  +card('expenses',tr('مصروفات بانتظار الاعتماد'),pendingExp.length,`${money(pendingExp.reduce((t,r)=>t+Number(r.amount||0),0))} ${tr('ريال')}`,pendingExp.length?'warn':'')
+  +card('expenses',tr('مصروفات بانتظار الاعتماد'),pendingExp.length,`${sar(pendingExp.reduce((t,r)=>t+Number(r.amount||0),0))}`,pendingExp.length?'warn':'')
   +card('missing',tr('أيام غير مسجّلة'),ov.missingDays,language==='en'?`${ov.missingPeople} engineers · Fridays not counted`:`${ov.missingPeople} مهندس · بدون أيام الجمعة`,ov.missingDays?'alert':'')
   +approvalElsewhere(month);
 }
@@ -163,7 +163,7 @@ function renderPeriodBulkBar(){
  const chosen=approvalGroups.filter(g=>selectedPeriods.has(g.key));bar.hidden=!admin||!approvalGroups.some(bulkSelectable);if(bar.hidden)return;
  const days=chosen.reduce((t,g)=>t+g.rows.length,0),total=chosen.filter(g=>g.costed).reduce((t,g)=>t+Number(g.total||0),0);
  $('periodBulkInfo').textContent=chosen.length
-  ?(language==='en'?`${chosen.length} periods · ${days} days`:`${chosen.length} فترة · ${days} يوم`)+(salaryInfo?` · ${money(total)} ${tr('ريال')}`:'')
+  ?(language==='en'?`${chosen.length} periods · ${days} days`:`${chosen.length} فترة · ${days} يوم`)+(salaryInfo?` · ${sar(total)}`:'')
   :tr('حدّد الفترات المطلوب اعتمادها، أو «تحديد كل المعروض».');
  $('periodBulkApprove').disabled=!chosen.length||bulkApproving;$('periodBulkClear').disabled=!chosen.length||bulkApproving;$('periodBulkAll').disabled=bulkApproving;
 }
@@ -180,6 +180,8 @@ async function approveSelectedPeriods(){
  message((language==='en'?`Approved ${ok} of ${groups.length} periods.`:`تم اعتماد ${ok} من ${groups.length} فترة.`)+(changed?(language==='en'?` ${changed} changed after the page loaded and were not approved; review them again.`:` ${changed} تغيّرت بعد تحميل الصفحة ولم تُعتمد؛ راجعها من جديد.`):'')+(failed.length?' '+failed[0]:''));
 }
 const money=n=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+// Amounts with the currency: "SAR 1,234.50" in English (as in the rest of the system), "1,234.50 ريال" in Arabic.
+const sar=n=>language==='en'?'SAR '+money(n):money(n)+' ريال';
 const round2=n=>Math.round((Number(n)||0)*100)/100;
 const isSiteRow=r=>['inside','outside'].includes(r.status)&&!!r.project_id;
 function groupReview(rows){const set=[...new Set(rows.map(r=>r.review))];return set.length===1?set[0]:'mixed'}
@@ -229,8 +231,8 @@ function renderPeriodApprovalTable(){
  const approved=approvalGroups.filter(g=>g.review==='approved'),open=approvalGroups.filter(g=>g.review==='pending'||g.review==='mixed');
  const count=language==='en'?`${approvalGroups.length} periods`:`${approvalGroups.length} فترة`;
  $('summary').textContent=cost
-  ?`${count} · ${tr('تكلفة معتمدة على المشاريع')}: ${money(sum(approved,g=>g.total))} · ${tr('بانتظار الاعتماد')}: ${money(sum(open,g=>g.total))} ${tr('ريال')}`
-  :`${count} · ${tr('البدلات')}: ${money(sum(approvalGroups,g=>g.allowance))} · ${tr('الإضافي')}: ${money(sum(approvalGroups,g=>g.otAmount))} ${tr('ريال')}`+(admin?' · '+tr('الرواتب تظهر لحساب الإدارة الذي لديه صلاحية الرواتب داخل الموقع الموحد.'):'');
+  ?`${count} · ${tr('تكلفة معتمدة على المشاريع')}: ${money(sum(approved,g=>g.total))} · ${tr('بانتظار الاعتماد')}: ${sar(sum(open,g=>g.total))}`
+  :`${count} · ${tr('البدلات')}: ${money(sum(approvalGroups,g=>g.allowance))} · ${tr('الإضافي')}: ${sar(sum(approvalGroups,g=>g.otAmount))}`+(admin?' · '+tr('الرواتب تظهر لحساب الإدارة الذي لديه صلاحية الرواتب داخل الموقع الموحد.'):'');
  const L=t=>` data-label="${esc(tr(t))}"`;
  $('rows').innerHTML=approvalGroups.map((g,i)=>{
   const project=projects.find(p=>String(p.id)===String(g.first.project_id))?.name,status=periodStatusLabel(g.first);
@@ -273,7 +275,7 @@ async function reviewPeriod(group,review,note){
 async function handlePeriodAction(b){
  if(b.dataset.periodApprove!==undefined){
   const g=approvalGroups[Number(b.dataset.periodApprove)];
-  if(g&&!confirm(tr('اعتماد الفترة')+` ${g.from} → ${g.to} (${g.rows.length} ${tr('يوم')})`+(g.costed?` — ${tr('الإجمالي على المشروع')}: ${money(g.total)} ${tr('ريال')}`:'')+'؟'))return true;
+  if(g&&!confirm(tr('اعتماد الفترة')+` ${g.from} → ${g.to} (${g.rows.length} ${tr('يوم')})`+(g.costed?` — ${tr('الإجمالي على المشروع')}: ${sar(g.total)}`:'')+'؟'))return true;
   b.disabled=true;try{await reviewPeriod(g,'approved')}finally{b.disabled=false}return true;
  }
  if(b.dataset.periodReject!==undefined){rejectingPeriod=approvalGroups[Number(b.dataset.periodReject)]?.key||'';renderApprovalTable();return true}
@@ -392,7 +394,7 @@ function renderApprovalTable(){
  $('rows').closest('table').className='';
  const expenses=approvalType==='expenses',list=filteredApprovalRecords(),total=list.reduce((sum,{r})=>sum+Number(r.amount),0);
  $('approvalTableHead').innerHTML=[tr('المهندس / التاريخ'),tr(expenses?'البند':'حالة اليوم'),tr('المشروع'),tr(expenses?'قيمة المصروف':'بدلات + إضافي'),tr('الحالة'),...(expenses?[tr('التصفية')]:[]),tr('إجراءات')].map(title=>`<th>${esc(title)}</th>`).join('');
- $('summary').textContent=language==='en'?`${list.length} matching ${expenses?'expenses':'attendance entries'} · Displayed total: ${total.toFixed(2)} SAR${expenses?'':' (allowances + overtime only; no base salary)'}`:`${list.length} ${expenses?'مصروف':'سجل حضور'} مطابق · إجمالي المعروض: ${total.toFixed(2)} ريال${expenses?'':' (بدلات وإضافي فقط؛ بدون الراتب الأساسي)'}`;
+ $('summary').textContent=language==='en'?`${list.length} matching ${expenses?'expenses':'attendance entries'} · Displayed total: SAR ${total.toFixed(2)}${expenses?'':' (allowances + overtime only; no base salary)'}`:`${list.length} ${expenses?'مصروف':'سجل حضور'} مطابق · إجمالي المعروض: ${total.toFixed(2)} ريال${expenses?'':' (بدلات وإضافي فقط؛ بدون الراتب الأساسي)'}`;
  $('rows').innerHTML=list.map(({r,i})=>expenseRowHtml(r,i)).join('')||`<tr><td colspan="${expenses?7:6}">${esc(tr('لا توجد سجلات مطابقة للاختيارات.'))}</td></tr>`;
  $('export').disabled=!list.length;
 }

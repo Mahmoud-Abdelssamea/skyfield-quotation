@@ -81,9 +81,9 @@ function renderProfit(){
       <label>Sort<select id="an-sort" onchange="sfAnalyticsSet('sort',this.value)">${opt('margin','Lowest margin first',S.sort)}${opt('profit','Highest expected profit',S.sort)}${opt('contract','Largest contract',S.sort)}${opt('cost','Most cost used',S.sort)}</select></label></div></div>
     <div class="proj-fin-summary an-strip">
       <div class="pfs-card"><div class="pfs-lbl">Contracts before VAT</div><div class="pfs-val">${fmtSAR(t.contract)}</div><div class="pfs-sub">${rows.length} project(s)</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Expected profit</div><div class="pfs-val" style="color:${t.exp<0?'#fca5a5':'#4ade80'}">${fmtSAR(t.exp)}</div><div class="pfs-sub">Margin ${pct(margin)}${t.noEst?` · ${t.noEst} project(s) without estimate not included`:''}</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Cash profit to date</div><div class="pfs-val" style="color:${t.cash<0?'#fca5a5':'#bfdbfe'}">${fmtSAR(t.cash)}</div><div class="pfs-sub">Received before VAT ${fmtSAR(t.received)}</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Need attention</div><div class="pfs-val" style="color:${attention?'#fb923c':'#4ade80'}">${attention}</div><div class="pfs-sub">Loss, over estimate or under-invoiced</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Expected profit</div><div class="pfs-val ${t.exp<0?'tone-alert':'tone-ok'}">${fmtSAR(t.exp)}</div><div class="pfs-sub">Before VAT · margin ${pct(margin)}${t.noEst?` · ${t.noEst} project(s) without estimate not included`:''}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Cash profit to date</div><div class="pfs-val ${t.cash<0?'tone-alert':''}">${fmtSAR(t.cash)}</div><div class="pfs-sub">Received before VAT ${fmtSAR(t.received)}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Need attention</div><div class="pfs-val ${attention?'tone-warn':'tone-ok'}">${attention}</div><div class="pfs-sub">Loss, over estimate or under-invoiced</div></div>
     </div>
     <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Project</th><th>Contract</th><th>Estimated cost</th><th>Actual cost</th><th>Cost used</th><th>Commission</th><th>Expected profit</th><th>Cash profit</th><th>Notes</th></tr></thead>
       <tbody>${body}</tbody>${rows.length?`<tfoot><tr><td>Total</td><td class="an-num">${fmtSAR(t.contract)}</td><td class="an-num">${fmtSAR(t.est)}</td><td class="an-num">${fmtSAR(t.actual)}</td><td></td><td class="an-num">${fmtSAR(t.comm)}</td><td class="an-num">${fmtSAR(t.exp)}</td><td class="an-num">${fmtSAR(t.cash)}</td><td></td></tr></tfoot>`:''}</table></div>
@@ -129,10 +129,10 @@ function renderCollection(){
   return `<section class="an-sec" id="an-collection">
     <div class="an-head"><div><h3>Collection and invoice age <span>التحصيل وأعمار الفواتير</span></h3><p>Amounts include VAT, because this is what clients owe. Age is counted from the invoice issue date (the system does not hold due dates).</p></div></div>
     <div class="proj-fin-summary an-strip">
-      <div class="pfs-card"><div class="pfs-lbl">Invoiced</div><div class="pfs-val" style="color:#bfdbfe">${fmtSAR(tot.invoiced)}</div><div class="pfs-sub">Incl. VAT</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Received</div><div class="pfs-val" style="color:#4ade80">${fmtSAR(tot.received)}</div><div class="pfs-sub">${tot.invoiced>0?pct(tot.received/tot.invoiced*100)+' of invoiced':'—'}</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Outstanding</div><div class="pfs-val" style="color:#fb923c">${fmtSAR(tot.outstanding)}</div><div class="pfs-sub">${tot.b3>0.005?`${fmtSAR(tot.b3)} older than 90 days`:'Nothing older than 90 days'}</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Not invoiced yet</div><div class="pfs-val">${fmtSAR(notInvoiced)}</div><div class="pfs-sub">Contract value still to invoice</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Invoiced</div><div class="pfs-val">${fmtSAR(tot.invoiced)}</div><div class="pfs-sub">Incl. VAT</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Received</div><div class="pfs-val tone-ok">${fmtSAR(tot.received)}</div><div class="pfs-sub">Incl. VAT · ${tot.invoiced>0?pct(tot.received/tot.invoiced*100)+' of invoiced':'—'}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Outstanding</div><div class="pfs-val tone-warn">${fmtSAR(tot.outstanding)}</div><div class="pfs-sub">${tot.b3>0.005?`${fmtSAR(tot.b3)} older than 90 days`:'Nothing older than 90 days'}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Not invoiced yet</div><div class="pfs-val">${fmtSAR(notInvoiced)}</div><div class="pfs-sub">Incl. VAT · contract value still to invoice</div></div>
     </div>
     <div class="an-legend">${cols.map(([k,l])=>`<span><i class="an-age-${k}"></i>${l}</span>`).join('')}</div>
     <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Client</th><th>Invoiced</th><th>Received</th><th>Outstanding</th>${cols.map(([,l])=>`<th>${l}</th>`).join('')}<th>Outstanding by age</th></tr></thead>
@@ -231,9 +231,9 @@ function utilBody(){
   const all=t.site+t.office;
   return `<div class="proj-fin-summary an-strip">
       <div class="pfs-card"><div class="pfs-lbl">Site days</div><div class="pfs-val">${t.site}</div><div class="pfs-sub">${S.util.length} engineer(s), approved days</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">On site share</div><div class="pfs-val" style="color:#4ade80">${all?pct(t.site/all*100):'—'}</div><div class="pfs-sub">Site ÷ (site + office)</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Overtime hours</div><div class="pfs-val" style="color:#bfdbfe">${Math.round(t.ot*10)/10}</div><div class="pfs-sub">Approved</div></div>
-      <div class="pfs-card"><div class="pfs-lbl">Awaiting approval</div><div class="pfs-val" style="color:${t.pending?'#fb923c':'#4ade80'}">${t.pending}</div><div class="pfs-sub">Days not yet reviewed</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">On site share</div><div class="pfs-val tone-ok">${all?pct(t.site/all*100):'—'}</div><div class="pfs-sub">Site ÷ (site + office)</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Overtime hours</div><div class="pfs-val">${Math.round(t.ot*10)/10}</div><div class="pfs-sub">Approved</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Awaiting approval</div><div class="pfs-val ${t.pending?'tone-warn':'tone-ok'}">${t.pending}</div><div class="pfs-sub">Days not yet reviewed</div></div>
     </div>
     <div class="an-legend"><span><i class="an-mix-site"></i>Site</span><span><i class="an-mix-office"></i>Office</span><span><i class="an-mix-leave"></i>Leave</span><span><i class="an-mix-absent"></i>Absent</span></div>
     <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Engineer</th><th>Site</th><th>Office</th><th>Leave</th><th>Absent</th><th>Pending</th><th>OT hours</th><th>On site</th><th>Month mix</th></tr></thead><tbody>${rows}</tbody></table></div>

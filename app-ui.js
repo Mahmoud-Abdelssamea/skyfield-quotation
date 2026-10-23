@@ -12,6 +12,8 @@ function setIncludeArabicTranslation(includeArabic){setConditionLanguage(include
 function sfUiLookup(value){
   const key=String(value||'').replace(/\s+/g,' ').trim();
   if(!key)return '';
+  // English interface: only labels written in both languages change (to their English half).
+  if(sfUiLanguage==='en')return typeof sfUiEnglishLookup==='function'?sfUiEnglishLookup(key):'';
   return SF_UI_AR[key]||(typeof SF_UI_AR_COMMERCIAL!=='undefined'&&(SF_UI_AR_COMMERCIAL[key]||sfUiPatternLookup(key)))||'';
 }
 function sfUiExcluded(element){
@@ -19,13 +21,12 @@ function sfUiExcluded(element){
 }
 function sfTranslateUiTextNode(node){
   if(!node||node.nodeType!==Node.TEXT_NODE||sfUiExcluded(node.parentElement))return;
-  if(sfUiLanguage==='en'){
-    if(sfUiOriginalText.has(node)){node.nodeValue=sfUiOriginalText.get(node);sfUiOriginalText.delete(node);}
-    return;
-  }
   const raw=sfUiOriginalText.get(node)??node.nodeValue;
   const trimmed=String(raw||'').trim(),translated=sfUiLookup(trimmed);
-  if(!translated)return;
+  if(!translated){
+    if(sfUiOriginalText.has(node)){if(node.nodeValue!==raw)node.nodeValue=raw;sfUiOriginalText.delete(node);}
+    return;
+  }
   if(!sfUiOriginalText.has(node))sfUiOriginalText.set(node,raw);
   const leading=String(raw).match(/^\s*/)?.[0]||'',trailing=String(raw).match(/\s*$/)?.[0]||'';
   const next=leading+translated+trailing;
@@ -35,18 +36,19 @@ function sfTranslateUiAttributes(element){
   if(!element||element.nodeType!==Node.ELEMENT_NODE||sfUiExcluded(element))return;
   const attrs=['placeholder','title','aria-label'];
   let originals=sfUiOriginalAttrs.get(element);
-  if(sfUiLanguage==='en'){
-    if(originals){Object.entries(originals).forEach(([name,value])=>element.setAttribute(name,value));sfUiOriginalAttrs.delete(element);}
-    return;
-  }
+  // Each attribute is set only when its value actually changes, so the mutation observer settles.
   attrs.forEach(name=>{
     if(!element.hasAttribute(name))return;
     const current=element.getAttribute(name),source=originals?.[name]??current,translated=sfUiLookup(source);
-    if(!translated)return;
+    if(!translated){
+      if(originals&&name in originals){if(current!==originals[name])element.setAttribute(name,originals[name]);delete originals[name];}
+      return;
+    }
     if(!originals){originals={};sfUiOriginalAttrs.set(element,originals);}
     if(!(name in originals))originals[name]=current;
     if(current!==translated)element.setAttribute(name,translated);
   });
+  if(originals&&!Object.keys(originals).length)sfUiOriginalAttrs.delete(element);
 }
 function sfApplyUiTranslation(root=document.body){
   if(!root||sfUiMutationGuard)return;
@@ -81,7 +83,7 @@ function sfLoadUserInterfaceLanguage(user){
 function sfInitInterfaceLanguage(){
   if(!sfUiObserver){
     sfUiObserver=new MutationObserver(mutations=>{
-      if(sfUiMutationGuard||sfUiLanguage!=='ar')return;
+      if(sfUiMutationGuard)return;
       mutations.forEach(m=>{
         if(m.type==='characterData')sfApplyUiTranslation(m.target);
         else if(m.type==='attributes')sfApplyUiTranslation(m.target);
@@ -121,7 +123,7 @@ function renderDashboard(){
   root.innerHTML=`
     <div class="dash-kpis">
       <div class="dash-kpi"><div class="dk-icon">▣</div><div class="dk-label">Active Projects</div><div class="dk-value">${ps.filter(p=>p.status!=='completed').length}</div><div class="dk-sub">${ps.length} projects in total</div></div>
-      <div class="dash-kpi"><div class="dk-icon">◫</div><div class="dk-label">Contract Value</div><div class="dk-value">${fmtSAR(totalContract)}</div><div class="dk-sub">Across tracked projects</div></div>
+      <div class="dash-kpi"><div class="dk-icon">◫</div><div class="dk-label">Contract Value</div><div class="dk-value">${fmtSAR(totalContract)}</div><div class="dk-sub">Incl. VAT · across tracked projects</div></div>
       <div class="dash-kpi"><div class="dk-icon">▧</div><div class="dk-label">Total Invoiced</div><div class="dk-value">${fmtSAR(totalInvoiced)}</div><div class="dk-sub">All invoices, incl. VAT</div></div>
       <div class="dash-kpi"><div class="dk-icon">◉</div><div class="dk-label">Outstanding</div><div class="dk-value">${fmtSAR(outstanding)}</div><div class="dk-sub">Unpaid, incl. VAT</div></div> </div> <div id="dash-attention"></div> <div class="dash-grid">
       <div class="dash-panel">

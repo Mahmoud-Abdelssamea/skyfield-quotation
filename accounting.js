@@ -43,9 +43,9 @@ function summaryCards(){
  const list=scoped(),sum=rows=>money(rows.reduce((s,r)=>s+Number(r.amount),0)),open=list.filter(payable),attention=list.filter(r=>inState(r,'attention')),paid=list.filter(r=>r.status==='paid');
  const oldest=open.reduce((m,r)=>Math.max(m,daysSince(r.reviewed_at||r.day)??0),0),allPeriod=A('acctPeriod').value==='all';
  const card=(state,label,value,sub,tone='')=>`<button type="button" class="acct-card ${tone}" data-acct-state="${state}"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></button>`;
- return card('awaiting',T('بانتظار السداد','Awaiting payment'),`${sum(open)} ${T('ريال','SAR')}`,T(`${open.length} مصروف`,`${open.length} expense${open.length===1?'':'s'}`),open.length?'warn':'')
+ return card('awaiting',T('بانتظار السداد','Awaiting payment'),`${T(sum(open)+' ريال','SAR '+sum(open))}`,T(`${open.length} مصروف`,`${open.length} expense${open.length===1?'':'s'}`),open.length?'warn':'')
   +card('attention',T('يحتاج إجراء','Needs action'),String(attention.length),T('تعديل مطلوب أو بانتظار اعتماد الإدارة','Correction requested or awaiting admin approval'),attention.length?'alert':'')
-  +card('paid',T('تم السداد','Paid'),allPeriod?'—':`${sum(paid)} ${T('ريال','SAR')}`,allPeriod?T('اختر شهرًا لعرض المسدد','Choose a month to see paid items'):T(`${paid.length} مصروف في الفترة`,`${paid.length} in this period`),'ok')
+  +card('paid',T('تم السداد','Paid'),allPeriod?'—':T(sum(paid)+' ريال','SAR '+sum(paid)),allPeriod?T('اختر شهرًا لعرض المسدد','Choose a month to see paid items'):T(`${paid.length} مصروف في الفترة`,`${paid.length} in this period`),'ok')
   +card('awaiting',T('أقدم غير مسدد','Oldest unpaid'),open.length?T(`${oldest} يوم`,`${oldest} day${oldest===1?'':'s'}`):'—',T('منذ اعتماد الإدارة','since admin approval'),oldest>30?'alert':'');
 }
 const badgeTone=s=>s==='paid'?'approved':['changes_requested','cancelled'].includes(s)?'rejected':s==='closed'?'mixed':'pending';
@@ -204,7 +204,7 @@ function preparePanel(r){
  ++panelRequest;closeEditor();closeFeedback();A('acctHistory').hidden=true;A('acctReopenPanel').hidden=true;batchRows=null;A('acctBatchPanel').hidden=true;detailDirty=false;detail={...r};
  showDialog();A('acctDetailHistory').hidden=A('acctDetailReceipt').hidden=false;
  A('acctInvoiceTitle').textContent=T('تفاصيل الفاتورة','Invoice details')+' · '+r.engineer_name;
- A('acctInvoiceSummary').innerHTML=`<b>${esc(r.project_name||T('مصروف عام','General expense'))}</b><br>${esc(r.day)} · ${esc(money(r.amount))} SAR · ${esc(status(r.status))}<br>${esc(r.description||'')}<br>${esc(r.accounting_comment||'')}`;
+ A('acctInvoiceSummary').innerHTML=`<b>${esc(r.project_name||T('مصروف عام','General expense'))}</b><br>${esc(r.day)} · SAR ${esc(money(r.amount))} · ${esc(status(r.status))}<br>${esc(r.description||'')}<br>${esc(r.accounting_comment||'')}`;
  activeTab(null);A('acctDetailPayment').hidden=A('acctDetailFeedback').hidden=!payable(r);A('acctDetailReopen').hidden=!['changes_requested','cancelled'].includes(r.status);A('acctDialogMessage').textContent='';return true;
 }
 function openInvoice(r){if(stale||busy)return;if(payable(r))openEditor(r);else if(preparePanel(r)&&['changes_requested','cancelled'].includes(r.status)){activeTab('acctDetailReopen');A('acctReopenForm').reset();A('acctReopenPanel').hidden=false}}
@@ -247,7 +247,7 @@ async function saveBatch(e){
 }
 function openEditor(r){
  if(stale||busy||!payable(r)||!preparePanel(r))return;closeFeedback();activeTab('acctDetailPayment');editing={...r};const f=A('acctPaymentForm');f.reset();
- A('acctEditTitle').textContent=r.engineer_name+' · '+money(r.amount)+' '+T('ريال','SAR');
+ A('acctEditTitle').textContent=r.engineer_name+' · '+T(money(r.amount)+' ريال','SAR '+money(r.amount));
  A('acctNextStatus').value=r.status==='paid'?'paid':'awaiting';
  f.elements.payment_date.value=today();f.elements.payment_date.max=today();f.elements.note.value=r.note||'';
  updatePaymentFields();
@@ -281,7 +281,7 @@ async function savePayment(e){
  finally{busy=false;button.disabled=false;if(me?.user_id===user){render();if(!editing)await refreshQueue();if(completion)note(completion,failed)}}
 }
 function closeFeedback(){feedback=null;A('acctFeedbackPanel').hidden=true;A('acctFeedbackForm').reset()}
-function openFeedback(r){if(stale||busy||!payable(r)||!preparePanel(r))return;closeEditor();activeTab('acctDetailFeedback');feedback={...r};A('acctFeedbackForm').reset();A('acctFeedbackAction').value='comment';A('acctFeedbackTitle').textContent=r.engineer_name+' · '+money(r.amount)+' '+T('ريال','SAR');A('acctFeedbackPanel').hidden=false}
+function openFeedback(r){if(stale||busy||!payable(r)||!preparePanel(r))return;closeEditor();activeTab('acctDetailFeedback');feedback={...r};A('acctFeedbackForm').reset();A('acctFeedbackAction').value='comment';A('acctFeedbackTitle').textContent=r.engineer_name+' · '+T(money(r.amount)+' ريال','SAR '+money(r.amount));A('acctFeedbackPanel').hidden=false}
 async function sendFeedback(e){
  e.preventDefault();if(!feedback||busy||!permitted())return;
  const row={...feedback},user=me.user_id,action=A('acctFeedbackAction').value,message=A('acctFeedbackNote').value.trim();

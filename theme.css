@@ -1,0 +1,35 @@
+/* SKY FIELD — shared look for the main system and the attendance pages: fonts, core colours and summary
+   cards. Loaded last by index.html and attendance-module.html so both use the same values. Customer
+   documents (quotation, proforma invoice, vouchers) keep their own print styles. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap');
+:root{
+  --sf-font:'Inter','Tajawal',sans-serif;
+  --sf-navy:#1F3864;--sf-orange:#E8610A;--sf-bg:#F5F5FA;--sf-text:#1A1A2E;--sf-muted:#6B6B80;--sf-line:#E3E6EE;
+  --sf-ok:#3b8a5a;--sf-warn:#e8a33c;--sf-alert:#c2413b;
+  --sf-ok-text:#2f6f49;--sf-warn-text:#9a5b00;--sf-alert-text:#a02a26;
+}
+/* Latin text and numbers in Inter, Arabic in Tajawal, in both languages. */
+body,button,input,select,textarea{font-family:var(--sf-font)}
+
+/* Summary cards: white card, small grey label, large navy number, short note, coloured edge for status. */
+.dash-kpi,.pfs-card,.payroll-summary-box,.acct-card,.ap-card{background:#fff;color:var(--sf-text);border:1px solid var(--sf-line);border-radius:10px;padding:12px 14px;text-align:start;box-shadow:none}
+.dash-kpi .dk-label,.pfs-card .pfs-lbl,.payroll-summary-box .lbl,.acct-card span,.ap-card span{font-size:12px;font-weight:600;color:var(--sf-muted);text-transform:none;letter-spacing:0;opacity:1}
+.dash-kpi .dk-value,.pfs-card .pfs-val,.payroll-summary-box .val,.acct-card b,.ap-card b{font-size:20px;font-weight:700;color:var(--sf-navy);margin-top:3px}
+.dash-kpi .dk-sub,.pfs-card .pfs-sub,.acct-card small,.ap-card small{font-size:11px;color:var(--sf-muted);opacity:1;margin-top:3px}
+.pfs-card .pfs-sub.pfs-loose{color:var(--sf-warn-text)}
+.pfs-card:has(.tone-ok),.acct-card.ok,.ap-card.ok{border-inline-start:4px solid var(--sf-ok)}
+.pfs-card:has(.tone-warn),.acct-card.warn,.ap-card.warn{border-inline-start:4px solid var(--sf-warn)}
+.pfs-card:has(.tone-alert),.acct-card.alert,.ap-card.alert{border-inline-start:4px solid var(--sf-alert)}
+.pfs-card .pfs-val.tone-ok{color:var(--sf-ok-text)}.pfs-card .pfs-val.tone-warn{color:var(--sf-warn-text)}.pfs-card .pfs-val.tone-alert{color:var(--sf-alert-text)}
+.payroll-summary-box.total{background:#fff;border-inline-start:4px solid var(--sf-navy)}
+.payroll-summary-box.total .lbl{color:var(--sf-muted)}.payroll-summary-box.total .val{color:var(--sf-navy)}
+/* Analytics headings carried an Arabic name next to the English one; the interface language now decides. */
+.an-head h3>span{display:none}
+/* The customer quotation keeps the font it had in the English interface, whatever the interface language. */
+#preview-doc,.preview-doc{font-family:'Inter',sans-serif}
+/* Project page cards (header and profitability) use the same card style. */
+.pd-kpi{background:#fff;border:1px solid var(--sf-line);border-radius:10px;padding:10px 12px;color:var(--sf-text)}
+.pd-kpi small{color:var(--sf-muted);font-size:11px;font-weight:600;text-transform:none}
+.pd-kpi strong{color:var(--sf-navy);font-size:16px;font-weight:700}
+.pd-kpi .pd-kpi-note{color:var(--sf-muted);font-size:10.5px}
+.pd-kpi.is-alert{border-inline-start:4px solid var(--sf-alert)}.pd-kpi strong.tone-alert{color:var(--sf-alert-text)}

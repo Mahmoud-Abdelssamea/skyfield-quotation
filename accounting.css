@@ -7,12 +7,12 @@
 #accountingSection .acct-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-block:12px}
 #accountingSection .acct-card{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #d4dee7;border-radius:10px;background:#fff;text-align:start}
 #accountingSection .acct-card:hover,#accountingSection .acct-card:focus-visible{border-color:#2f6988;box-shadow:0 0 0 3px #2f698822}
-#accountingSection .acct-card span{font-size:12px;color:#53677c}#accountingSection .acct-card b{font-size:20px;color:#173b65;direction:ltr;unicode-bidi:isolate}#accountingSection .acct-card small{margin:0;font-size:11px}
+#accountingSection .acct-card span{font-size:12px;color:#53677c}#accountingSection .acct-card b{font-size:20px;color:#1F3864;direction:ltr;unicode-bidi:isolate}#accountingSection .acct-card small{margin:0;font-size:11px}
 #accountingSection .acct-card.warn{border-inline-start:4px solid #e8a33c}#accountingSection .acct-card.alert{border-inline-start:4px solid #c2413b}#accountingSection .acct-card.ok{border-inline-start:4px solid #3b8a5a}
 #accountingSection .acct-chips{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #d4dee7;padding-bottom:8px}
 #accountingSection .acct-chips button{width:auto;min-width:0;margin:0;padding:7px 12px;border-radius:999px;background:#eef3f8;color:#203652;font-weight:600;font-size:13px}
 #accountingSection .acct-chips button span{display:inline-block;min-width:18px;margin-inline-start:4px;padding:0 6px;border-radius:999px;background:#fff;font-size:11px}
-#accountingSection .acct-chips button.active{background:#173b65;color:#fff}#accountingSection .acct-chips button.active span{color:#173b65}
+#accountingSection .acct-chips button.active{background:#1F3864;color:#fff}#accountingSection .acct-chips button.active span{color:#1F3864}
 #accountingSection .acct-toolbar{margin-block:12px}#accountingSection .acct-toolbar label{min-width:150px}#accountingSection .acct-toolbar .acct-search{flex:2}
 #accountingSection .acct-toolbar button{min-width:0;margin:0;padding:10px 16px}
 #accountingSection .acct-state-select{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0;pointer-events:none}
@@ -20,7 +20,7 @@
 #accountingSection .acct-export{position:relative;margin-inline-start:auto;border:0;padding:0;margin-top:0}
 #accountingSection .acct-export>summary,#accountingSection .acct-menu>summary{list-style:none;cursor:pointer;user-select:none}
 #accountingSection .acct-export>summary::-webkit-details-marker,#accountingSection .acct-menu>summary::-webkit-details-marker{display:none}
-#accountingSection .acct-export>summary{padding:8px 14px;border-radius:7px;background:#eaf0f7;color:#173b65;font-weight:700;font-size:13px}
+#accountingSection .acct-export>summary{padding:8px 14px;border-radius:7px;background:#eaf0f7;color:#1F3864;font-weight:700;font-size:13px}
 #accountingSection .acct-menu-list{position:absolute;inset-inline-end:0;top:calc(100% + 4px);z-index:5;display:flex;flex-direction:column;gap:4px;min-width:230px;padding:6px;background:#fff;border:1px solid #d4dee7;border-radius:10px;box-shadow:0 10px 30px #10263c26}
 #accountingSection .acct-menu-list button{width:100%;min-width:0;margin:0;padding:8px 10px;text-align:start;font-size:13px;font-weight:600}
 #accountingSection .acct-table table{width:100%}#accountingSection .acct-table th{font-size:12px;color:#53677c;white-space:nowrap}
@@ -31,9 +31,9 @@
 #acctRows .acct-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px}
 #acctRows .acct-row-actions>button{width:auto;min-width:0;margin:0;padding:7px 14px;font-size:13px;white-space:nowrap}
 #acctRows .acct-primary{background:var(--orange,#e8610a);color:#fff}
-#acctRows .acct-menu{position:relative;border:0;padding:0;margin:0}#acctRows .acct-menu>summary{padding:4px 10px;border-radius:7px;font-size:18px;line-height:1.2;color:#173b65;background:#eef3f8}
+#acctRows .acct-menu{position:relative;border:0;padding:0;margin:0}#acctRows .acct-menu>summary{padding:4px 10px;border-radius:7px;font-size:18px;line-height:1.2;color:#1F3864;background:#eef3f8}
 #acctRows .acct-empty{text-align:center;padding:24px;color:#53677c}
-#accountingSection .acct-dialog-tabs button{background:#eef3f8;color:#173b65}#accountingSection .acct-dialog-tabs button.active{background:var(--orange,#e8610a);color:#fff}
+#accountingSection .acct-dialog-tabs button{background:#eef3f8;color:#1F3864}#accountingSection .acct-dialog-tabs button.active{background:var(--orange,#e8610a);color:#fff}
 @media(max-width:640px){
  #accountingSection .acct-cards{grid-template-columns:1fr 1fr}#accountingSection .acct-card b{font-size:16px}
  #accountingSection .acct-export{margin-inline-start:0}
@@ -50,8 +50,8 @@
 #accountingSection .acct-sr,#acctRows .acct-check-label span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #accountingSection th.acct-check-col,#acctRows td.acct-check{width:34px;min-width:34px!important;padding-inline:6px;text-align:center}
 #acctRows .acct-check-label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;min-width:28px;min-height:28px}
-#acctRows .acct-check input{width:18px;height:18px;margin:0;cursor:pointer;accent-color:#173b65}#acctRows .acct-check input:disabled{cursor:not-allowed;opacity:.35}
-#accountingSection .acct-bulkbar{position:sticky;bottom:8px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-block:8px;padding:10px 14px;border-radius:10px;background:#173b65;color:#fff;box-shadow:0 8px 24px #10263c40}
+#acctRows .acct-check input{width:18px;height:18px;margin:0;cursor:pointer;accent-color:#1F3864}#acctRows .acct-check input:disabled{cursor:not-allowed;opacity:.35}
+#accountingSection .acct-bulkbar{position:sticky;bottom:8px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-block:8px;padding:10px 14px;border-radius:10px;background:#1F3864;color:#fff;box-shadow:0 8px 24px #10263c40}
 #accountingSection .acct-bulkbar #acctBulkInfo{font-weight:700;margin-inline-end:auto}
 #accountingSection .acct-bulkbar button{width:auto;min-width:0;margin:0;padding:8px 14px;font-size:13px}
 #accountingSection .acct-batch-list{max-height:220px;overflow:auto;border:1px solid #d4dee7;border-radius:8px;margin-block:8px 12px;background:#fff}

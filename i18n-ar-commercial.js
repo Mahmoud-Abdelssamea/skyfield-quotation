@@ -43,6 +43,7 @@ const SF_UI_AR_COMMERCIAL = Object.freeze({
   "How many days, weeks or months for this item — not linked to the overall Project Duration field.":"عدد الأيام أو الأسابيع أو الشهور لهذا البند — غير مرتبط بحقل مدة المشروع.","Add engineers or manpower roles required for this quotation.":"أضف المهندسين أو الأدوار المطلوبة لهذا العرض.","Add transportation, accommodation, mobilization, or other project costs.":"أضف تكاليف النقل أو السكن أو التعبئة أو غيرها.",
   "Invoice & Bank Transfer Schedule":"جدول الفوترة والتحويل البنكي","Invoice & Bank Transfer":"فاتورة وتحويل بنكي","Letter of Credit (L/C)":"اعتماد مستندي (L/C)","Payment and parties":"الدفع والأطراف","Payment Basis":"أساس الدفع","Monthly Progress Invoices":"فواتير شهرية حسب الإنجاز","After Completion":"بعد اكتمال العمل","Currency":"العملة","Percentage Calculation Basis":"أساس حساب النسبة","Including VAT":"شامل الضريبة","Applicant — Auto from Client":"طالب الاعتماد — تلقائيًا من العميل","Beneficiary":"المستفيد","Bank/L/C Charges Borne By":"رسوم البنك/الاعتماد يتحملها","Customer":"العميل","Both Parties":"الطرفان","Rules, bank and validity":"القواعد والبنك والصلاحية","Applicable Rules":"القواعد المطبّقة","Acceptable Issuing Bank (optional)":"البنك المصدر المقبول (اختياري)","e.g. Saudi National Bank":"مثال: البنك الأهلي السعودي","Valid After Expected Completion (Days)":"الصلاحية بعد الإنجاز المتوقع (أيام)","Required L/C documents":"مستندات الاعتماد المطلوبة","Commercial Invoice":"فاتورة تجارية","Delivery Note":"مذكرة تسليم","Progress Certificate":"شهادة إنجاز","Signed Timesheet":"كشف ساعات موقّع","Calculation Base":"أساس الحساب","Advance Amount":"المبلغ المقدم","L/C Amount":"مبلغ الاعتماد",
   "The remaining percentage and amounts are calculated automatically. The Applicant is taken from the quotation Client field. Selecting another currency relabels the quotation values and does not apply an exchange-rate conversion. Confirm the final L/C wording and document set with the issuing bank before acceptance.":"تُحسب النسبة والمبالغ المتبقية تلقائيًا، ويؤخذ طالب الاعتماد من خانة العميل في العرض. اختيار عملة أخرى يغيّر تسمية القيم فقط ولا يطبّق تحويل سعر صرف. أكّد صيغة الاعتماد النهائية والمستندات مع البنك المصدر قبل القبول.",
+  "Across shown projects":"للمشاريع المعروضة","Contract before VAT":"العقد قبل الضريبة","Quotation cost plan":"خطة تكلفة العرض","No cost plan saved":"لا توجد خطة تكلفة","On the amount before VAT":"على المبلغ قبل الضريبة","Needs a cost estimate":"يحتاج تقدير تكلفة","Expected Profit":"الربح المتوقع","Cash Profit":"الربح النقدي","Non-Payroll Expenses":"مصروفات غير الرواتب","Profitability Summary":"ملخص الربحية","Upload / Manage":"رفع / إدارة","Project Documents":"مستندات المشروع",
   "Edit Condition":"تعديل الشرط","Section":"القسم","Condition Number":"رقم الشرط","Automatic":"تلقائي","English Text":"النص الإنجليزي","Reset to Default":"استرجاع الافتراضي","Save as Company Default":"حفظ كافتراضي للشركة","Save Condition":"حفظ الشرط"
 });
 
@@ -52,9 +53,14 @@ const SF_UI_AR_SERIES={Invoiced:'المفوتر',Collected:'المحصّل',Cost
 const sfArWord=t=>SF_UI_AR_COMMERCIAL[t]||(typeof SF_UI_AR!=='undefined'&&SF_UI_AR[t])||'';
 const sfHasArabic=t=>/[؀-ۿ]/.test(t),sfLatinWords=t=>(String(t).match(/[A-Za-z]{2,}/g)||[]).length;
 // [pattern, replacement]: the replacement is a string with $1… or a function of the match.
+// Any phrase, also when it follows "Incl. VAT · " in lower case ("project invoices & installments").
+const sfArAny=t=>{const cap=t.charAt(0).toUpperCase()+t.slice(1);return sfArWord(t)||sfArWord(cap)||sfUiPatternLookup(t)||sfUiPatternLookup(cap)||''};
 const SF_UI_AR_PATTERNS=[
+  [/^(Incl\. VAT|Before VAT) · (.+)$/,(m,b,rest)=>`${b==='Incl. VAT'?'شامل الضريبة':'قبل الضريبة'} · ${sfArAny(rest)||rest}`],
   [/^(\d+) projects in total$/,'$1 مشروع إجمالًا'],
-  [/^(\d+) project\(s\)$/,'$1 مشروع'],[/^(\d+) invoice\(s\)$/,'$1 فاتورة'],[/^(\d+) of (\d+)$/,'$1 من $2'],
+  [/^(\d+) project\(s\)$/,'$1 مشروع'],[/^(\d+) of (\d+) project\(s\) · filtered$/,'$1 من $2 مشروع · بعد التصفية'],
+  [/^([\d.]+%) of estimate$/,'$1 من التقدير'],[/^Incl\. VAT (SAR [\d,.]+) \(VAT (\d+)%\)$/,'شامل الضريبة $1 (الضريبة $2%)'],
+  [/^Margin ([\d.]+%)( · on actual cost)?$/,(m,p,a)=>`الهامش ${p}${a?' · على التكلفة الفعلية':''}`],[/^(\d+) invoice\(s\)$/,'$1 فاتورة'],[/^(\d+) of (\d+)$/,'$1 من $2'],
   [/^(.+) · (active|completed|on hold|cancelled|paid|pending|partial)$/i,(m,a,s)=>`${a} · ${SF_UI_AR_STATUS[s.toLowerCase()]}`],
   [/^(.+) · Started (.+)$/,'$1 · بدأ في $2'],
   [/^Margin ([\d.]+%) · (\d+) project\(s\) without estimate not included$/,'الهامش $1 · $2 مشروع بلا تقدير غير محسوب'],
@@ -85,6 +91,16 @@ const SF_UI_AR_PATTERNS=[
     if(sfHasArabic(b)&&!sfHasArabic(a)&&sfLatinWords(b)<=1)return (lead&&!b.startsWith(lead.trim())?lead:'')+b;
     if(sfHasArabic(a)&&!sfHasArabic(b)&&sfLatinWords(a)<=1)return a;return ''}]
 ];
+// English interface: labels written in both languages ("Status / الحالة", "حفظ مسودة / Save draft",
+// "Total Commission (عمولة)") show their English half only.
+function sfUiEnglishLookup(key){
+  let m=key.match(/^(.+?) \(([؀-ۿ ]+)\)$/);if(m&&!sfHasArabic(m[1]))return m[1];
+  m=key.match(/^(.+?) \/ (.+)$/);if(!m)return '';
+  const [,a,b]=m;
+  if(sfHasArabic(b)&&!sfHasArabic(a)&&sfLatinWords(b)<=1)return a;
+  if(sfHasArabic(a)&&!sfHasArabic(b)&&sfLatinWords(a)<=1)return b;
+  return '';
+}
 function sfUiPatternLookup(key){
   for(const [re,rep] of SF_UI_AR_PATTERNS){if(!re.test(key))continue;const out=typeof rep==='function'?key.replace(re,rep):key.replace(re,rep);if(out&&out!==key)return out}
   return '';

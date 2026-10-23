@@ -685,9 +685,9 @@ function renderProformas(){
   const summary=document.getElementById('pi-summary');
   if(summary)summary.innerHTML=proformaInvoices.length?`
     <div class="pfs-card"><div class="pfs-lbl">Invoices / الفواتير</div><div class="pfs-val">${rows.length}</div><div class="pfs-sub">${filteredNote}</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Total incl. VAT</div><div class="pfs-val" style="color:#bfdbfe">${fmtPiSAR(sum('total'))}</div><div class="pfs-sub">${filteredNote}</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Received / المستلم</div><div class="pfs-val" style="color:#4ade80">${fmtPiSAR(sum('received'))}</div><div class="pfs-sub">Recorded receipts</div></div>
-    <div class="pfs-card"><div class="pfs-lbl">Outstanding / المتبقي</div><div class="pfs-val" style="color:#fb923c">${fmtPiSAR(sum('remaining'))}</div><div class="pfs-sub">Not yet received</div></div>`:'';
+    <div class="pfs-card"><div class="pfs-lbl">Total incl. VAT</div><div class="pfs-val">${fmtSAR(sum('total'))}</div><div class="pfs-sub">Incl. VAT · ${filteredNote}</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Received / المستلم</div><div class="pfs-val tone-ok">${fmtSAR(sum('received'))}</div><div class="pfs-sub">Incl. VAT · recorded receipts</div></div>
+    <div class="pfs-card"><div class="pfs-lbl">Outstanding / المتبقي</div><div class="pfs-val tone-warn">${fmtSAR(sum('remaining'))}</div><div class="pfs-sub">Incl. VAT · not yet received</div></div>`:'';
   if(!rows.length){grid.innerHTML=`<div class="proj-empty" style="grid-column:1/-1"><div class="pe-icon">📄</div><p>${proformaInvoices.length?'No invoices match your search or filters. / لا توجد فواتير مطابقة.':'No Proforma Invoices saved yet. Convert a saved quotation to a Project first, then use Create Proforma.'}</p></div>`;return;}
   grid.innerHTML=rows.map(p=>{
     const pt=resolvedProformaCalculation(p);

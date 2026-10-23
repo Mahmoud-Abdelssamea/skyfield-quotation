@@ -5,7 +5,7 @@
 .approval-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0 4px}
 .ap-card{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line,#d4dee7);border-radius:10px;background:#fff;text-align:start}
 .ap-card:hover,.ap-card:focus-visible{border-color:#2f6988;box-shadow:0 0 0 3px #2f698822}
-.ap-card span{font-size:12px;color:#53677c}.ap-card b{font-size:22px;color:#173b65}.ap-card small{font-size:11px;color:#53677c}
+.ap-card span{font-size:12px;color:#53677c}.ap-card b{font-size:22px;color:#1F3864}.ap-card small{font-size:11px;color:#53677c}
 .ap-card.warn{border-inline-start:4px solid #e8a33c}.ap-card.alert{border-inline-start:4px solid #c2413b}
 @media(max-width:600px){.approval-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ap-card{padding:8px 9px}.ap-card span{font-size:11px;line-height:1.3}.ap-card b{font-size:18px}.ap-card small{font-size:10px}}
 .approval-switch{flex-wrap:wrap}.approval-switch button{width:auto;min-width:0;padding:10px 16px}
@@ -26,7 +26,7 @@
 .ov-table thead th.ov-fri{color:#9aa9b8}
 .ov-table .ov-name{position:sticky;inset-inline-start:0;background:#fff;z-index:2;text-align:start;padding:4px 10px;min-width:170px;max-width:220px;border-inline-end:1px solid #e3e9f0}
 .ov-table thead .ov-name{background:#f4f7fb;z-index:3}
-.ov-person{all:unset;cursor:pointer;display:block;font-weight:700;color:#173b65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.ov-person{all:unset;cursor:pointer;display:block;font-weight:700;color:#1F3864;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 .ov-person:hover,.ov-person:focus-visible{text-decoration:underline}
 .ov-name small{display:block;color:#7b8e9f;font-size:10px}
 .ov-cell{width:24px;height:30px;font-size:11px;font-weight:700;color:#fff;border-inline-end:1px solid #fff}
@@ -37,13 +37,13 @@
 .ov-total.ok{color:#2f6f49}.ov-total.wait{color:#9a6400}.ov-total.miss{color:#a02a26}
 
 /* Bulk approval of periods */
-.period-bulkbar{position:sticky;bottom:8px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:10px 0;padding:10px 14px;border-radius:10px;background:#173b65;color:#fff;box-shadow:0 8px 24px #10263c40}
+.period-bulkbar{position:sticky;bottom:8px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:10px 0;padding:10px 14px;border-radius:10px;background:#1F3864;color:#fff;box-shadow:0 8px 24px #10263c40}
 .period-bulkbar #periodBulkInfo{font-weight:700;margin-inline-end:auto}
 .period-bulkbar button{width:auto;min-width:0;margin:0;padding:8px 14px;font-size:13px}
 .period-bulkbar button:disabled{opacity:.5}
 .approval-periods th.pick-col,.approval-periods td.pick{width:34px;padding-inline:6px!important;text-align:center}
 .pick-label{display:inline-flex;align-items:center;justify-content:center;min-width:28px;min-height:28px;cursor:pointer}
-.pick-label input{width:18px;height:18px;margin:0;accent-color:#173b65;cursor:pointer}
+.pick-label input{width:18px;height:18px;margin:0;accent-color:#1F3864;cursor:pointer}
 .period-table td{padding:10px 10px}
 .period-table .actions button{min-width:0;margin:0;padding:7px 12px;font-size:13px}
 .period-table .period-days summary{font-size:12px}
@@ -57,15 +57,15 @@
 /* Engineers list */
 .eng-filters{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
 .eng-filters button{width:auto;min-width:0;margin:0;padding:7px 12px;border-radius:999px;border:1px solid var(--line,#d4dee7);background:#fff;color:#1f3864;font-size:13px;font-weight:600}
-.eng-filters button.active{background:#173b65;color:#fff;border-color:#173b65}
-.eng-filters button b{display:inline-block;min-width:18px;margin-inline-start:4px;padding:0 6px;border-radius:999px;background:#eef3f8;color:#173b65;font-size:11px}
+.eng-filters button.active{background:#1F3864;color:#fff;border-color:#1F3864}
+.eng-filters button b{display:inline-block;min-width:18px;margin-inline-start:4px;padding:0 6px;border-radius:999px;background:#eef3f8;color:#1F3864;font-size:11px}
 .engineers-table td{padding:9px 10px;vertical-align:middle}
 .eng-flag{display:block;width:fit-content;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
 .eng-flag.warn{background:#fff4de;color:#96620b}.eng-flag.alert{background:#fde8e8;color:#9b1c1c}.eng-flag.info{background:#eef3f8;color:#40546a}
 .eng-actions{display:flex;align-items:center;gap:6px;justify-content:flex-end}
 .eng-actions>button{width:auto;min-width:0;margin:0;padding:7px 14px;font-size:13px}
 .eng-menu{position:relative;border:0;padding:0;margin:0}
-.eng-menu>summary{list-style:none;cursor:pointer;padding:4px 10px;border-radius:7px;background:#eef3f8;color:#173b65;font-size:18px;line-height:1.2}
+.eng-menu>summary{list-style:none;cursor:pointer;padding:4px 10px;border-radius:7px;background:#eef3f8;color:#1F3864;font-size:18px;line-height:1.2}
 .eng-menu>summary::-webkit-details-marker{display:none}
 .eng-menu-list{position:absolute;inset-inline-end:0;top:calc(100% + 4px);z-index:5;min-width:180px;padding:6px;background:#fff;border:1px solid var(--line,#d4dee7);border-radius:10px;box-shadow:0 10px 30px #10263c26}
 .eng-menu-list button{width:100%;min-width:0;margin:0;padding:8px 10px;text-align:start;font-size:13px}
