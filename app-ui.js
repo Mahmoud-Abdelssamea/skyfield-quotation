@@ -11,7 +11,8 @@ function sfSetFormBusy(form,busy,busyLabel){
 function setIncludeArabicTranslation(includeArabic){setConditionLanguage(includeArabic?'both':'en')}
 function sfUiLookup(value){
   const key=String(value||'').replace(/\s+/g,' ').trim();
-  return SF_UI_AR[key]||'';
+  if(!key)return '';
+  return SF_UI_AR[key]||(typeof SF_UI_AR_COMMERCIAL!=='undefined'&&(SF_UI_AR_COMMERCIAL[key]||sfUiPatternLookup(key)))||'';
 }
 function sfUiExcluded(element){
   return !!(element&&element.closest&&element.closest(SF_UI_EXCLUDE_SELECTOR));
@@ -69,6 +70,7 @@ function sfSetInterfaceLanguage(lang,persist=true){
   if(persist)try{localStorage.setItem(sfUiStorageKey(),sfUiLanguage);}catch(e){}
   sfApplyUiTranslation(document.body);
   try{updateLcControls();}catch(e){}
+  try{updateActiveQuoteNote();}catch(e){}
   requestAnimationFrame(()=>sfApplyUiTranslation(document.body));
 }
 function sfLoadUserInterfaceLanguage(user){
@@ -129,7 +131,7 @@ function renderDashboard(){
       <div class="dash-panel">
         <div class="dash-panel-hdr"><h3>Quick Actions</h3></div>
         <div class="dash-actions">
-          <button class="dash-action" onclick="showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'))">＋ Create quotation</button>
+          <button class="dash-action" onclick="sfStartNewQuotation()">＋ Create quotation</button>
           <button class="dash-action" onclick="openProjModal('')">▣ Create project</button>
           <button class="dash-action" onclick="showTab('quotes',document.querySelector('.side-nav-btn[data-module=quotes]'))">▤ Saved quotations</button>
           <button class="dash-action" onclick="showTab('proformas',document.querySelector('.side-nav-btn[data-module=proformas]'))">▧ Invoice register</button>
@@ -165,13 +167,14 @@ function showTab(name,btn){
     if(name==='projects'){primary.textContent='+ New Project';primary.onclick=()=>openProjModal('');}
     else if(name==='projectdetails'){primary.hidden=true;}
     else if(name==='proformas'){primary.textContent='View Projects to Invoice';primary.onclick=()=>showTab('projects',document.querySelector('.side-nav-btn[data-module=projects]'));}
-    else if(name==='quotes'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
-    else if(name==='dashboard'){primary.textContent='+ New Quotation';primary.onclick=()=>showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));}
+    else if(name==='quotes'){primary.textContent='+ New Quotation';primary.onclick=()=>sfStartNewQuotation();}
+    else if(name==='dashboard'){primary.textContent='+ New Quotation';primary.onclick=()=>sfStartNewQuotation();}
     else if(name==='engineers'){primary.textContent='+ Add Engineer';primary.onclick=()=>{resetEngineerForm();document.getElementById('eng-name')?.focus();};}
     else if(name==='payroll'){primary.hidden=true;}
     else if(name==='analytics'){primary.textContent='Refresh / تحديث';primary.onclick=()=>{if(typeof sfRenderAnalytics==='function')sfRenderAnalytics({reload:true})};} else if(name==='costsettings'){primary.textContent='+ Add Equipment';primary.onclick=()=>{resetCostEquipmentForm();document.getElementById('cost-eq-name')?.focus();};}
     else {primary.textContent='Save Quotation';primary.onclick=()=>saveCurrentQuotation(false,'quotation');}
   }
+  if(isBuilder) updateActiveQuoteNote();
   if(name==='dashboard') renderDashboard();
   if(name==='projects') renderProjects();
   if(name==='projectdetails') renderProjectDetails();

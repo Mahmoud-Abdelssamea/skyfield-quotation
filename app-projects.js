@@ -235,7 +235,7 @@ function renderProjects(){
         <button class="btn-proj-edit" onclick="openProjectDetails('${p.id}')">↗ Open Project</button>
         <button class="btn-proj-invoice" onclick="openProformaFromProject('${p.id}')">🧾 New Invoice</button>
         <button class="btn-proj-edit" onclick="openProjModal('${p.id}')">✏ Edit</button>
-        <button class="btn-proj-del" onclick="deleteProject('${p.id}')">🗑 Delete</button>
+        ${sfMoreMenu([`<button type="button" class="sf-more-item danger" onclick="deleteProject('${p.id}')">Delete project…</button>`])}
       </div>
     </div>`;
   }).join('');
@@ -379,7 +379,7 @@ function renderPmLists(){
   document.getElementById('pm-pay-list').innerHTML=pmTempPays.map((rawPay,i)=>{const pay=sfNormalizePaymentRecord(rawPay),received=paymentReceivedAmount(pay),balance=paymentRemainingAmount(pay);return`
     <div style="display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:5px;padding:5px 8px;font-size:11.5px;flex-wrap:wrap">
       <span style="flex:1">${escHtml(pay.label)}</span><span style="font-weight:600">${fmtSAR(pay.amount)}</span>${received?`<span style="font-size:10px;color:#15803d">Received ${fmtSAR(received)}</span>`:''}${balance?`<span style="font-size:10px;color:#b45309">Balance ${fmtSAR(balance)}</span>`:''}
-      <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>${pay.sourceProformaId?`<button class="pay-action-btn ${pay.status==='paid'?'mark-pending':'mark-paid'}" onclick="pmTogglePaymentStatus(${i})">${pay.status==='paid'?'Set Pending':'＋ Record Payment'}</button>`:''}
+      <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>${pay.sourceProformaId?(pay.status==='paid'?`<button type="button" class="pay-undo-link" onclick="pmTogglePaymentStatus(${i})">Mark as not paid…</button>`:`<button class="pay-action-btn mark-paid" onclick="pmTogglePaymentStatus(${i})">＋ Record Payment</button>`):''}
       <button onclick="pmTempPays.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
     </div>`}).join('');
   document.getElementById('pm-doc-list').innerHTML=pmTempDocs.map((d,i)=>`
@@ -496,8 +496,8 @@ async function saveProjModal(){
 }
 
 async function deleteProject(id){
-  if(!confirm('Delete this project? This cannot be undone.')) return;
   const project=projects.find(p=>p.id===id);if(!project)return;
+  if(!confirm(sfUiLanguage==='ar'?`حذف المشروع «${project.name||''}»${project.client?' للعميل '+project.client:''}؟ لا يمكن التراجع عن الحذف.`:`Delete project "${project.name||''}"${project.client?' for '+project.client:''}? This cannot be undone.`)) return;
   const deletion=await sfSyncProjectDelete(project);
   if(!deletion.ok&&deletion.status==='conflict'){
     sfApplyProjectConflict({id,status:'conflict',remote:deletion.remote});sfCachePerRecordCollection('sfProjects',projects);renderProjects();

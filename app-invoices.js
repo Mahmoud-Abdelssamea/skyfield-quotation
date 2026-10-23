@@ -651,13 +651,17 @@ async function recordInvoicePayment(projectId,sourceProformaId){
 function setInvoicePaymentStatus(projectId,sourceProformaId,newStatus){
   if(newStatus==='paid')return recordInvoicePayment(projectId,sourceProformaId);
   const rec=getInvoicePaymentRecord(projectId,sourceProformaId);if(!rec){alert('The linked payment record could not be found.');return}
-  const{project,payment}=rec;if(paymentReceivedAmount(payment)>0&&!confirm('Clear all recorded receipts and change this invoice back to Pending?'))return;
+  const{project,payment}=rec,ar=sfUiLanguage==='ar',received=paymentReceivedAmount(payment),number=(proformaInvoices.find(x=>x.id===sourceProformaId)||{}).number||payment.label||'';
+  if(!confirm(ar?`إرجاع الفاتورة ${number} إلى غير مدفوعة؟\n\nسيتم مسح ${received>0?'الإيصالات المسجلة بقيمة '+fmtPiSAR(received):'حالة الدفع'}. استخدم هذا فقط إذا سُجّلت الدفعة بالخطأ.`:`Mark invoice ${number} as not paid?\n\nThis clears ${received>0?'the recorded receipt(s) of '+fmtPiSAR(received):'the paid status'}. Use this only if the payment was recorded by mistake.`))return;
   payment.receipts=[];payment.receivedAmount=0;payment.status='pending';payment.receivedDate='';payment.paymentReference='';payment.paymentMethod='';
   project.updatedAt=new Date().toISOString();saveProjects();renderProjects();renderProformas();if(document.body.dataset.module==='dashboard')renderDashboard();
 }
 function invoiceStatusActionHtml(projectId,sourceProformaId,status){
   if(!projectId||!sourceProformaId)return'';
-  return status==='paid'?`<button class="pay-action-btn mark-pending" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','pending')">Set Pending</button>`:`<button class="pay-action-btn mark-paid" onclick="recordInvoicePayment('${projectId}','${sourceProformaId}')">＋ Record Payment</button>`;
+  return status==='paid'?'':`<button class="pay-action-btn mark-paid" onclick="recordInvoicePayment('${projectId}','${sourceProformaId}')">＋ Record Payment</button>`;
+}
+function invoiceUndoPaymentItem(projectId,sourceProformaId,status){
+  return projectId&&sourceProformaId&&status==='paid'?`<button type="button" class="sf-more-item" onclick="setInvoicePaymentStatus('${projectId}','${sourceProformaId}','pending')">Mark as not paid…</button>`:'';
 }
 
 function renderProformas(){
@@ -715,7 +719,7 @@ function renderProformas(){
       <button class="btn-quote-preview" onclick="previewProforma('${p.id}')">Preview / Print</button>
       <button class="btn-quote-copy" onclick="createNextProforma('${p.id}')">Next Invoice</button>
       <button class="btn-quote-copy" onclick="linkProformaToProject('${p.id}')">${p.projectId?'📁 Update Project':'📁 Link Project'}</button>
-      <button class="btn-quote-del" onclick="deleteProforma('${p.id}')">Delete</button>
+      ${sfMoreMenu([p.projectId?invoiceUndoPaymentItem(p.projectId,p.id,paymentStatus):'',`<button type="button" class="sf-more-item danger" onclick="deleteProforma('${p.id}')">Delete invoice…</button>`])}
     </div></div>`;
   }).join('');
 }
@@ -744,7 +748,7 @@ async function deleteProforma(id){
   const linkedProject=projects.find(p=>p.id===pi.projectId);
   const linkedPayment=(linkedProject?.payments||[]).find(x=>x.sourceProformaId===id);
   if(linkedPayment?.status==='paid'&&!confirm('This invoice is marked as PAID. Deleting it will also remove the linked payment record. Continue?'))return;
-  if(!confirm('Delete Proforma Invoice '+pi.number+'?'))return;
+  if(!confirm(sfUiLanguage==='ar'?`حذف فاتورة البروفورما ${pi.number}${pi.clientName?' للعميل '+pi.clientName:''}؟ لا يمكن التراجع عن الحذف.`:`Delete Proforma Invoice ${pi.number}${pi.clientName?' for '+pi.clientName:''}? This cannot be undone.`))return;
   const deletion=await sfSyncInvoiceDelete(pi);
   if(!deletion.ok&&deletion.status==='conflict'){
     sfApplyInvoiceConflict({id,status:'conflict',remote:deletion.remote});sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);renderProformas();
@@ -874,7 +878,7 @@ function projectInvoiceTotal(p){return (p.payments||[]).reduce((a,x)=>a+sfNum(x.
 async function pmTogglePaymentStatus(index){
   const pay=sfNormalizePaymentRecord(pmTempPays[index]);if(!pay)return;
   if(pay.status==='paid'){
-    if(!confirm('Clear all recorded receipts and change this invoice back to Pending?'))return;pay.receipts=[];
+    if(!confirm(sfUiLanguage==='ar'?`إرجاع ${pay.label||'الدفعة'} إلى غير مدفوعة؟ سيتم مسح الإيصالات المسجلة بقيمة ${fmtPiSAR(paymentReceivedAmount(pay))} عند حفظ المشروع.`:`Mark ${pay.label||'this payment'} as not paid? The recorded receipt(s) of ${fmtPiSAR(paymentReceivedAmount(pay))} are cleared when you save the project.`))return;pay.receipts=[];
   }else{
     const entry=await sfAskPayment({remaining:paymentRemainingAmount(pay),title:'Record payment received'});if(!entry)return;
     pay.receipts=Array.isArray(pay.receipts)?pay.receipts:[];pay.receipts.push({id:'rcpt_'+Date.now(),amount:roundMoney(entry.amount),date:entry.date,reference:entry.reference,method:entry.method,createdAt:new Date().toISOString()});

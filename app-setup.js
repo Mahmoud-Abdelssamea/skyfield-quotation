@@ -485,7 +485,7 @@ let sfCurrentPayroll = null;
 const sfCollectQuotationSnapshotBase=collectQuotationSnapshot;
 collectQuotationSnapshot=function(type){const s=sfCollectQuotationSnapshotBase(type);s.costPlan=deepClone(sfCurrentCostPlan);s.internalCostSummary=calcInternalCostPlan();return s;};
 const sfApplyQuotationSnapshotBase=applyQuotationSnapshot;
-applyQuotationSnapshot=function(snap){sfApplyQuotationSnapshotBase(snap);sfCurrentCostPlan=deepClone(snap?.costPlan||{manpower:[],equipment:[],other:[]});renderCostPlan();};
+applyQuotationSnapshot=function(snap){sfApplyQuotationSnapshotBase(snap);sfCurrentCostPlan=deepClone(snap?.costPlan||{manpower:[],equipment:[],other:[]});renderCostPlan();sfMarkQuoteClean();};
 const sfClearAllBase=clearAll;
 clearAll=function(){sfCurrentCostPlan={manpower:[],equipment:[],other:[]};sfClearAllBase();renderCostPlan();};
 const sfRecalcBase=recalc;

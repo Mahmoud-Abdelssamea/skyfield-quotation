@@ -1446,6 +1446,7 @@ async function saveCurrentQuotation(forceNew=false, forceType){
     alert('Another team member saved this quotation at the same time. The latest shared version has been loaded — please check it and save again if your changes are still needed.');
     return;
   }
+  sfMarkQuoteClean();
   alert((rec.type==='invoice'?'Invoice Quotation':'Quotation')+' saved: '+rec.number);
 }
 function loadQuotation(id){
@@ -1469,7 +1470,7 @@ function duplicateQuotation(id){
 }
 async function deleteSavedQuotation(id){
   const rec=savedQuotes.find(q=>q.id===id); if(!rec)return;
-  if(!confirm('Delete saved '+(rec.type==='invoice'?'invoice quotation':'quotation')+' '+rec.number+'?')) return;
+  if(!confirm(sfUiLanguage==='ar'?`حذف ${rec.type==='invoice'?'فاتورة العرض':'عرض السعر'} ${rec.number}${rec.client?' للعميل '+rec.client:''}؟ لا يمكن التراجع عن الحذف.`:`Delete ${rec.type==='invoice'?'invoice quotation':'quotation'} ${rec.number}${rec.client?' for '+rec.client:''}? This cannot be undone.`)) return;
   savedQuotes=savedQuotes.filter(q=>q.id!==id); if(activeQuoteId===id)activeQuoteId='';
   await saveSavedQuotes(); renderSavedQuotations(); updateActiveQuoteNote();
   const result=await sfSyncQuoteDelete(rec);
@@ -1489,10 +1490,48 @@ function newSeparateQuotation(){
   updateActiveQuoteNote();
   showTab('activities',document.querySelector('.tab-btn[onclick*="activities"]'));
 }
+// Unsaved-change tracking for the editor: a fingerprint of its contents is taken
+// after a quotation is loaded, saved or started, and compared before discarding it.
+let sfQuoteBaseline=null;
+function sfQuoteFingerprint(){const s=collectQuotationSnapshot('quotation');delete s.totals;delete s.internalCostSummary;return JSON.stringify(s)}
+function sfMarkQuoteClean(){try{sfQuoteBaseline=sfQuoteFingerprint()}catch(e){sfQuoteBaseline=null}}
+function sfQuoteHasUnsavedChanges(){
+  if(sfQuoteBaseline!==null)return sfQuoteFingerprint()!==sfQuoteBaseline;
+  // Nothing loaded, saved or started since the page opened: typed client details or scope items count.
+  return !!(Object.keys(selActs).length||Object.keys(selEq).length||customSOW.length||document.getElementById('client')?.value.trim());
+}
+// "New Quotation" always opens a blank quotation with the next number, after offering
+// to save unsaved changes, so a previously opened quotation is never overwritten by mistake.
+async function sfStartNewQuotation(){
+  const ar=sfUiLanguage==='ar',rec=activeQuoteId?savedQuotes.find(q=>q.id===activeQuoteId):null;
+  if(sfQuoteHasUnsavedChanges()){
+    const name=rec?rec.number:(ar?'العرض الحالي':'the current quotation');
+    if(confirm(ar?`لديك تعديلات غير محفوظة على ${name}. هل تريد حفظها قبل بدء عرض جديد؟`:`You have unsaved changes on ${name}. Save them before starting a new quotation?`)){
+      await saveCurrentQuotation(false);
+      if(sfQuoteHasUnsavedChanges())return; // not saved (nothing to save, or a conflict): stay on it
+    }else if(!confirm(ar?'هل تريد تجاهل التعديلات وبدء عرض سعر جديد فارغ؟':'Discard the changes and start a new blank quotation?'))return;
+  }
+  activeQuoteId='';
+  clearAll();
+  ['client','client-attn','client-tel','client-email','station-name','qo-ref'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  ['proj-name','substation','discount-value','commission','profit'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=el.defaultValue});
+  const qdate=document.getElementById('qdate');if(qdate)qdate.value=new Date().toISOString().slice(0,10);
+  try{updateLcApplicantFromClient()}catch(e){}
+  showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));
+  updateActiveQuoteNote();
+  await generateNextQuoteNumber(false);
+  recalc();renderQuot();sfMarkQuoteClean();
+}
 function updateActiveQuoteNote(){
   updateProformaAvailabilityControls();
-  const note=document.getElementById('quote-active-note'); if(!note)return;
   const rec=activeQuoteId ? savedQuotes.find(q=>q.id===activeQuoteId) : null;
+  const banner=document.getElementById('quote-editing-banner');
+  if(banner){banner.hidden=!rec;const no=document.getElementById('quote-editing-number');if(no)no.textContent=rec?rec.number:'';}
+  const primary=document.getElementById('command-primary-action');
+  const title=document.getElementById('app-page-title');
+  if(title&&document.body.dataset.module==='quotation')title.textContent=rec?(sfUiLanguage==='ar'?'تعديل عرض سعر':'Edit Quotation'):(sfUiLanguage==='ar'?'عرض سعر جديد':'New Quotation');
+  if(primary&&document.body.dataset.module==='quotation')primary.textContent=rec?(sfUiLanguage==='ar'?'تحديث '+rec.number:'Update '+rec.number):(sfUiLanguage==='ar'?'حفظ عرض السعر':'Save Quotation');
+  const note=document.getElementById('quote-active-note'); if(!note)return;
   if(!rec){ note.style.display='none'; note.textContent=''; return; }
   note.style.display='block';
   note.textContent='Loaded record: '+rec.number+' — changes will update this record when you click Save Current. Use Duplicate if you need a separate copy.';
@@ -1526,7 +1565,7 @@ function renderSavedQuotations(){
         ${!isInv&&canCreateProformaFromQuote(r)?`<button class="btn-quote-invoice" onclick="openProformaFromQuotation('${r.id}')">Create Proforma</button>`:''}
         <button class="btn-quote-copy" onclick="duplicateQuotation('${r.id}')">Duplicate</button>
         <button class="btn-quote-copy" onclick="addQuotationAsProject('${r.id}')">${r.projectId?'📁 Update Project':'📁 Add as Project'}</button>
-        <button class="btn-quote-del" onclick="deleteSavedQuotation('${r.id}')">Delete</button>
+        ${sfMoreMenu([`<button type="button" class="sf-more-item danger" onclick="deleteSavedQuotation('${r.id}')">Delete quotation…</button>`])}
       </div>
     </div>`;
   }).join('');

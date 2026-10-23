@@ -54,7 +54,7 @@ async function load(){
  $('who').textContent=me.name;$('tabAdmin').hidden=me.role!=='admin';$('adminNav').hidden=me.role!=='admin';
  await loadProjectVisibility();showPortal(true);renderSecCardBanner();placeExportTools();setAttendanceView(window.sfEmbeddedInitialPanel||'dailySection',false);
  const form=$('expenseForm');form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form);
- $('month').value=today().slice(0,7);
+ $('month').value=takeApprovalMonth()||today().slice(0,7);
  window.sfAccountingInit?.();renderEngineerList();
  renderProjectChoices();renderTimesheetControls();await loadAllowedDay();await loadAttendanceMonth();await refresh();if(window.sfEmbeddedLoaded)window.sfEmbeddedLoaded();
 }
@@ -116,6 +116,18 @@ function renderTeamOverview(){
  $('teamOverviewTable').innerHTML=head+`<tbody>${body||`<tr><td class="empty-state">${esc(tr('لا يوجد مهندسون.'))}</td></tr>`}</tbody>`;
 }
 // ── Summary cards above the approvals (administrators) ──
+// Month handed over by the dashboard's "Review" button (the oldest month with pending periods); used once.
+function takeApprovalMonth(){try{const m=sessionStorage.getItem('sfApprovalMonth');sessionStorage.removeItem('sfApprovalMonth');return me?.role==='admin'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(m||'')?m:''}catch(e){return ''}}
+// Pending periods in every month, so the cards can point to months other than the one shown.
+let pendingByMonth={};
+async function loadPendingByMonth(){
+ const by={};
+ try{for(let from=0;;from+=1000){const rows=await checked(db.from('sf_daily_records').select('user_id,period_id,day').eq('review','pending').order('day').range(from,from+999));
+  for(const r of rows){const k=String(r.day).slice(0,7),b=by[k]||(by[k]={days:0,periods:new Set()});b.days++;b.periods.add(r.user_id+'|'+(r.period_id||r.day))}
+  if(rows.length<1000)break}}catch(error){pendingByMonth={};return}
+ pendingByMonth=Object.fromEntries(Object.entries(by).map(([k,v])=>[k,{days:v.days,periods:v.periods.size}]));
+}
+const monthLabel=k=>new Date(k+'-15T12:00:00').toLocaleDateString(language==='en'?'en-GB':'ar-SA-u-ca-gregory-nu-latn',{month:'long',year:'numeric'});
 function renderApprovalCards(){
  const box=$('approvalCards');if(!box)return;box.hidden=me?.role!=='admin';if(box.hidden)return;
  const days=records.filter(r=>r.table==='sf_daily_records'),pendingDays=days.filter(r=>r.review==='pending'),pendingExp=records.filter(r=>r.table==='sf_daily_expenses'&&r.review==='pending');
@@ -124,7 +136,13 @@ function renderApprovalCards(){
  const card=(key,label,value,sub,tone)=>`<button type="button" class="ap-card ${tone}" data-ap-card="${key}"><span>${esc(label)}</span><b>${esc(String(value))}</b><small>${esc(sub)}</small></button>`;
  box.innerHTML=card('periods',tr('فترات بانتظار الاعتماد'),periods,language==='en'?`${pendingDays.length} days`:`${pendingDays.length} يوم`,periods?'warn':'')
   +card('expenses',tr('مصروفات بانتظار الاعتماد'),pendingExp.length,`${money(pendingExp.reduce((t,r)=>t+Number(r.amount||0),0))} ${tr('ريال')}`,pendingExp.length?'warn':'')
-  +card('missing',tr('أيام غير مسجّلة'),ov.missingDays,language==='en'?`${ov.missingPeople} engineers · Fridays not counted`:`${ov.missingPeople} مهندس · بدون أيام الجمعة`,ov.missingDays?'alert':'');
+  +card('missing',tr('أيام غير مسجّلة'),ov.missingDays,language==='en'?`${ov.missingPeople} engineers · Fridays not counted`:`${ov.missingPeople} مهندس · بدون أيام الجمعة`,ov.missingDays?'alert':'')
+  +approvalElsewhere(month);
+}
+function approvalElsewhere(month){
+ const others=Object.entries(pendingByMonth).filter(([k])=>k!==month).sort(([a],[b])=>a.localeCompare(b));if(!others.length)return '';
+ const n=p=>language==='en'?`${p} period${p>1?'s':''}`:`${p} فترة`;
+ return `<div class="ap-elsewhere" role="note"><span>${esc(language==='en'?'Also awaiting approval in other months:':'بانتظار الاعتماد أيضًا في شهور أخرى:')}</span>${others.slice(0,4).map(([k,v])=>`<button type="button" class="secondary" data-ap-month="${k}">${esc(monthLabel(k))} · ${n(v.periods)}</button>`).join('')}</div>`;
 }
 // ── Export tools: below the list for administrators, closed until needed ──
 function placeExportTools(){
@@ -273,6 +291,7 @@ async function loadApprovalExtras(month,end){
  if(window.sfEmbeddedSalaryInfo)salaryInfo=await window.sfEmbeddedSalaryInfo();
  try{reviewHistory=await checked(db.from('sf_daily_review_log').select('user_id,period_from,period_to,action,note,reviewed_at').eq('action','rejected').lt('period_from',end).gte('period_to',month+'-01').order('reviewed_at'))}
  catch(error){reviewHistory=[]} // history is optional until 09 is installed
+ await loadPendingByMonth();
 }
 // unified-module.js may arrive after the first refresh; it calls this once ready so salaries still appear.
 async function sfApprovalSalaryReady(){
@@ -407,7 +426,7 @@ function setupApprovalFilters(){
  $('periodBulkAll').onclick=()=>{for(const g of approvalGroups)if(bulkSelectable(g))selectedPeriods.add(g.key);renderApprovalTable()};
  $('periodBulkClear').onclick=()=>{selectedPeriods.clear();renderApprovalTable()};
  $('periodBulkApprove').onclick=()=>run(approveSelectedPeriods);
- $('approvalCards').onclick=e=>{const b=e.target.closest('[data-ap-card]');if(!b)return;const k=b.dataset.apCard;
+ $('approvalCards').onclick=e=>{const mb=e.target.closest('[data-ap-month]');if(mb){$('month').value=mb.dataset.apMonth;setApprovalType('attendance');run(refresh);return}const b=e.target.closest('[data-ap-card]');if(!b)return;const k=b.dataset.apCard;
   if(k==='missing')return setApprovalType('overview');
   $('approvalEngineer').value='all';$('approvalState').value='pending';setApprovalType(k==='expenses'?'expenses':'attendance')};
  $('teamOverview').onclick=e=>{const b=e.target.closest('[data-ov-user]');if(!b)return;$('approvalEngineer').value=b.dataset.ovUser;$('approvalState').value='all';syncApprovalExportEngineer();setApprovalType('attendance')};

@@ -124,6 +124,9 @@ function amountInWords(amount){const a=roundMoney(amount),riyals=Math.floor(a),h
 function sfUid(prefix){return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*100000)}
 function sfNum(v){return Math.max(0,parseFloat(v)||0)}
 
+// Less-used and destructive card actions sit in a small "⋯" menu so they are not pressed by mistake.
+function sfMoreMenu(items){const list=items.filter(Boolean);return list.length?`<details class="sf-more-menu"><summary title="More actions" aria-label="More actions">⋯</summary><div class="sf-more-list">${list.join('')}</div></details>`:''}
+document.addEventListener('click',e=>{document.querySelectorAll('details.sf-more-menu[open]').forEach(d=>{if(!d.contains(e.target))d.open=false})});
 function fmtSAR(n){ return 'SAR '+(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
 
 // ── List filters (Projects, Proforma Invoices) ─────────────────────────────────

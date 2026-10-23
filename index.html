@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SKY FIELD – Management System v29</title>
-<link rel="stylesheet" href="styles.css?v=20261018-review2">
+<link rel="stylesheet" href="styles.css?v=20261023-hp">
 <script src="supabase-js-2.117.2.js"></script>
 <script src="equipment-library.js?v=20261017-eqlib-rename"></script><script src="sync-safety.js?v=20261022-signin"></script><script src="dialogs.js?v=20261017-review2"></script>
 <script>
@@ -106,7 +106,7 @@
     <button class="side-nav-btn active" data-module="dashboard" onclick="showTab('dashboard',this)"><span class="side-nav-icon">⌂</span>Dashboard</button>
     <button class="side-nav-btn" data-module="analytics" onclick="showTab('analytics',this)"><span class="side-nav-icon">◩</span>Analytics</button>
     <div class="side-nav-label">Commercial</div>
-    <button class="side-nav-btn" data-module="activities" onclick="showTab('activities',this)"><span class="side-nav-icon">＋</span>New Quotation</button>
+    <button class="side-nav-btn" data-module="activities" onclick="sfStartNewQuotation()"><span class="side-nav-icon">＋</span>New Quotation</button>
     <button class="side-nav-btn" data-module="quotes" onclick="showTab('quotes',this)"><span class="side-nav-icon">▤</span>Quotations <span class="side-nav-count" id="side-quote-count">0</span></button>
     <button class="side-nav-btn" data-module="projects" onclick="showTab('projects',this)"><span class="side-nav-icon">▣</span>Projects <span class="side-nav-count" id="side-project-count">0</span></button>
     <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Proforma Invoices <span class="side-nav-count" id="side-pi-count">0</span></button> <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">▥</span>Equipment Library</button>
@@ -164,7 +164,7 @@
     <div class="cloud-chip" id="cloud-status" title="Cloud synchronization status"><span class="cloud-dot"></span><span class="cloud-label">Checking cloud…</span></div>
     <div class="command-actions">
       
-      <button class="btn-primary" type="button" id="command-primary-action" onclick="showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'))">+ New Quotation</button>
+      <button class="btn-primary" type="button" id="command-primary-action" onclick="sfStartNewQuotation()">+ New Quotation</button>
     </div>
   </div>
 
@@ -182,6 +182,7 @@
 
   <!-- PROJECT META -->
 
+  <div class="quote-editing-banner quotation-workspace" id="quote-editing-banner" role="status" hidden><span class="qeb-text"><span>Editing saved quotation</span> <strong id="quote-editing-number"></strong><small>Saving updates this record. To make a separate copy, use Duplicate in Quotations.</small></span><button class="btn-outline" type="button" onclick="sfStartNewQuotation()">Start a new quotation</button></div>
   <div class="quotation-section-heading quotation-workspace">
     <div><h3>Quotation Setup</h3><p>Enter the client and project details, then build the scope and commercial offer.</p></div>
     <button class="btn-outline" id="advanced-fields-btn" type="button" onclick="toggleAdvancedFields()">Show Commercial Fields</button>
@@ -1030,8 +1031,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261020-accounting"></script><script src="app-common.js?v=20261021-invoice-dialog"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261017-split2"></script><script src="app-quotation.js?v=20261022-accounts-ui"></script><script src="app-projects.js?v=20261017-split2"></script><script src="app-invoices.js?v=20261017-review2"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261019-rental-conds"></script>
+<script src="i18n-ar.js?v=20261020-accounting"></script><script src="i18n-ar-commercial.js?v=20261023-hp2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261023-hp"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-hp"></script><script src="app-invoices.js?v=20261023-hp"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261023-hp"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261021-center-all"></script><script src="dashboard-attention.js?v=20261022-accounts-ui"></script><script src="unified-shell.js?v=20261022-team-ui"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261021-center-all"></script><script src="dashboard-attention.js?v=20261023-hp"></script><script src="unified-shell.js?v=20261023-hp"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>
