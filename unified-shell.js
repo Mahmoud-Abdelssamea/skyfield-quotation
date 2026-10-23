@@ -70,9 +70,27 @@ function sfUnifiedResize(frameWindow,height){
 function sfUnifiedClearFrame(){clearTimeout(sfUnifiedReviewTimer);const frame=document.getElementById('sf-unified-frame');frame.removeAttribute('src');frame.hidden=true;sfUnifiedFrameReady=false;document.getElementById('sf-unified-panel').hidden=true;}
 sfLockApp=function(clear){sfUnifiedClearFrame();sfUnifiedProfile=null;sfUnifiedProfileAt=0;sfUnifiedProfileUser='';sfAttendanceOnly=false;sfUnifiedBaseLock(clear)};
 let sfUnifiedProfileAt=0,sfUnifiedProfileUser='';
+// The same user is already signed in and Supabase repeats a sign-in event (it sends SIGNED_IN twice each time
+// the tab becomes visible, and TOKEN_REFRESHED when the session renews): keep the page as it is — no redraw,
+// no scroll to the top, no language reset. The account is still re-checked in the background every 5 minutes.
+async function sfUnifiedRecheckProfile(user){
+ sfUnifiedProfileAt=Date.now();
+ const {data:member,error}=await sfDb.from('sf_daily_members').select('*').eq('user_id',user.id).maybeSingle();
+ if(error||sfCurrentUser?.id!==user.id)return; // offline or signed out meanwhile: nothing to decide now
+ const commercial=!!sfTeamMember(user.email),active=member&&member.is_active!==false?member:null;
+ if(!commercial&&!active){sfLockApp(true);sfSetAuthMessage('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.','error');return;}
+ const roleChanged=(sfUnifiedProfile?.role||'')!==(active?.role||'');
+ sfUnifiedProfile=active;sfUnifiedProfileUser=user.id;
+ if(roleChanged){sfUnifiedApplyAccess();if(!sfUnifiedAllowed(sfUnifiedRoute||sfUnifiedDesired))showTab(active?.role==='accountant'?'accounting':sfAttendanceOnly?'attendance':'dashboard');}
+}
 sfHandleAuthState=async function(event,session){
  if(event==='PASSWORD_RECOVERY')return sfUnifiedBaseAuth(event,session);
  if(!session?.user)return sfUnifiedBaseAuth(event,session);
+ if(sfAuthReady&&sfCurrentUser?.id===session.user.id){
+  sfCurrentUser=session.user;
+  if(Date.now()-sfUnifiedProfileAt>=300000)try{await sfUnifiedRecheckProfile(session.user)}catch(error){console.warn('Account check skipped',error)}
+  return;
+ }
  try{
   // Token refreshes and repeated auth events reuse the profile read in the last 5 minutes (data access is still checked by the database).
   const reuse=sfAuthReady&&sfCurrentUser?.id===session.user.id&&sfUnifiedProfileUser===session.user.id&&Date.now()-sfUnifiedProfileAt<300000;

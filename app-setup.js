@@ -543,13 +543,11 @@ document.addEventListener('visibilitychange',async()=>{
   try{
     const {data,error}=await sfDb.auth.getSession();
     if(error)throw error;
-    if(data?.session?.user){
-      sfCurrentUser=data.session.user;
-      sfUnlockApp(data.session.user);
-    }
+    // Only refresh the session details: the page stays as it is (no redraw, no scroll to the top).
+    // A real sign-out or a different user arrives through the auth listener, which does the full check.
+    if(data?.session?.user?.id===sfCurrentUser?.id)sfCurrentUser=data.session.user;
   }catch(error){
     console.warn('Background session recheck failed; keeping the active local session.',error);
-    if(sfCurrentUser)sfUnlockApp(sfCurrentUser);
   }
 });
 setCloudStatus('saving','Checking secure session…');
