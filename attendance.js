@@ -56,7 +56,7 @@ async function load(){
  const form=$('expenseForm');form.elements.day.value=today();form.elements.day.max=today();populateProjectSelect(form);
  $('month').value=takeApprovalMonth()||today().slice(0,7);
  window.sfAccountingInit?.();renderEngineerList();
- renderProjectChoices();renderTimesheetControls();await loadAllowedDay();await loadAttendanceMonth();await refresh();if(window.sfEmbeddedLoaded)window.sfEmbeddedLoaded();
+ renderProjectChoices();renderTimesheetControls();await loadAllowedDay();window.sfAdminAttendanceInit?.();await loadAttendanceMonth();await refresh();if(window.sfEmbeddedLoaded)window.sfEmbeddedLoaded();
 }
 async function allRows(table,start,end){let result=[];for(let offset=0;;offset+=500){const batch=await checked(db.from(table).select('*').gte('day',start).lt('day',end).order('day').order('id').range(offset,offset+499));result.push(...batch);if(batch.length<500)return result}}
 let approvalType='attendance',approvalFiltersReady=false,reviewRequest=0;
@@ -223,20 +223,20 @@ function buildApprovalGroups(){
 }
 function periodStatusLabel(row){return tr(labels[row.status])+(row.status==='leave'&&row.leave_type?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة',unpaid:'بدون راتب'}[row.leave_type]):'')}
 function renderPeriodApprovalTable(){
- const admin=me.role==='admin',cost=!!salaryInfo;approvalGroups=buildApprovalGroups();
+ const admin=me.role==='admin',cost=admin&&!!salaryInfo;approvalGroups=buildApprovalGroups();
  $('rows').closest('table').className='period-table approval-periods';
- const heads=['المهندس / الفترة','المشروع / الحالة','الأيام','البدل','الإضافي',...(cost?['حصة الراتب','الإجمالي على المشروع']:[]),'الاعتماد','إجراءات'];
+ const heads=['المهندس / الفترة','المشروع / الحالة','الأيام',...(admin?['البدل','الإضافي']:['ساعات الإضافي']),...(cost?['حصة الراتب','الإجمالي على المشروع']:[]),'الاعتماد','إجراءات'];
  $('approvalTableHead').innerHTML=(admin?`<th class="pick-col"><span class="acct-sr">${esc(tr('تحديد'))}</span></th>`:'')+heads.map(h=>`<th>${esc(tr(h))}</th>`).join('');
  const sum=(list,f)=>round2(list.reduce((s,g)=>s+(f(g)||0),0));
  const approved=approvalGroups.filter(g=>g.review==='approved'),open=approvalGroups.filter(g=>g.review==='pending'||g.review==='mixed');
  const count=language==='en'?`${approvalGroups.length} periods`:`${approvalGroups.length} فترة`;
- $('summary').textContent=cost
+ $('summary').textContent=!admin?`${count} · ${tr('الأيام')}: ${sum(approvalGroups,g=>g.rows.length)} · ${tr('ساعات الإضافي')}: ${sum(approvalGroups,g=>g.otHours)}`:cost
   ?`${count} · ${tr('تكلفة معتمدة على المشاريع')}: ${money(sum(approved,g=>g.total))} · ${tr('بانتظار الاعتماد')}: ${sar(sum(open,g=>g.total))}`
   :`${count} · ${tr('البدلات')}: ${money(sum(approvalGroups,g=>g.allowance))} · ${tr('الإضافي')}: ${sar(sum(approvalGroups,g=>g.otAmount))}`+(admin?' · '+tr('الرواتب تظهر لحساب الإدارة الذي لديه صلاحية الرواتب داخل الموقع الموحد.'):'');
  const L=t=>` data-label="${esc(tr(t))}"`;
  $('rows').innerHTML=approvalGroups.map((g,i)=>{
   const project=projects.find(p=>String(p.id)===String(g.first.project_id))?.name,status=periodStatusLabel(g.first);
-  const daysList=g.rows.map(r=>`<li><span class="period-dates">${esc(r.day)}</span> · ${esc(tr(labels[r.status]))} · ${money(r.allowance)}${Number(r.overtime)?` · ${Number(r.overtime)} ${esc(tr('س'))}`:''} · ${esc(r.accounting_action==='changes_requested'?(language==='en'?'Changes requested':'مطلوب تعديل'):tr(labels[r.review]))}</li>`).join('');
+  const daysList=g.rows.map(r=>`<li><span class="period-dates">${esc(r.day)}</span> · ${esc(tr(labels[r.status]))}${admin?' · '+money(r.allowance):''}${Number(r.overtime)?` · ${Number(r.overtime)} ${esc(tr('س'))}`:''} · ${esc(r.accounting_action==='changes_requested'?(language==='en'?'Changes requested':'مطلوب تعديل'):tr(labels[r.review]))}</li>`).join('');
   const salaryCell=g.salary!==null
    ?`<b>${money(g.salary)}</b><small class="calc">${money(g.pkg)} ÷ ${g.std} × ${g.rows.length}${g.factor<1?` × ${g.factor.toFixed(4)}`:''}</small>${g.factor<1?`<small>${esc(tr('سقف الشهر: لا يتجاوز الراتب الشهري'))}</small>`:''}`
    :`—${g.salaryNote?`<small>${esc(tr(g.salaryNote))}</small>`:''}`;
@@ -249,8 +249,8 @@ function renderPeriodApprovalTable(){
   return `<tr class="${rejectingPeriod===g.key?'editing':''}">${pick}<td${L('المهندس / الفترة')}><b>${esc(members.find(m=>m.user_id===g.userId)?.name||'')}</b><span class="period-dates">${esc(g.from)} → ${esc(g.to)}</span>${g.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${g.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}<details class="period-days"><summary>${esc(tr('عرض الأيام'))} (${g.rows.length})</summary><ul>${daysList}</ul></details></td>`
    +`<td${L('المشروع / الحالة')}><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${g.first.notes?`<small>${esc(g.first.notes)}</small>`:''}</td>`
    +`<td${L('الأيام')}>${g.rows.length}</td>`
-   +`<td${L('البدل')}><b>${money(g.allowance)}</b>${g.rate!==null&&g.rate>0?`<small class="calc">${money(g.rate)} × ${g.rows.length}</small>`:''}</td>`
-   +`<td${L('الإضافي')}><b>${money(g.otAmount)}</b><small>${g.otHours} ${esc(tr('ساعة'))}</small></td>`
+   +(admin?`<td${L('البدل')}><b>${money(g.allowance)}</b>${g.rate!==null&&g.rate>0?`<small class="calc">${money(g.rate)} × ${g.rows.length}</small>`:''}</td>`
+   +`<td${L('الإضافي')}><b>${money(g.otAmount)}</b><small>${g.otHours} ${esc(tr('ساعة'))}</small></td>`:`<td${L('ساعات الإضافي')}>${g.otHours}</td>`)
    +(cost?`<td${L('حصة الراتب')}>${salaryCell}</td><td${L('الإجمالي على المشروع')}>${totalCell}</td>`:'')
    +`<td${L('الاعتماد')}><span class="status-badge ${g.review}">${esc(tr(labels[g.review]||'حالات اعتماد مختلفة'))}</span>${g.review==='rejected'&&g.note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(g.note)}</small>`:''}${g.previous?`<small class="review-note previous">${esc(tr('أُعيد إرسالها بعد رفض'))}: ${esc(g.previous.note||'')}</small>`:''}${g.to>today()?`<small class="review-note previous">${esc(tr('تشمل أيامًا لم تأتِ بعد'))} (${esc(tr('حتى'))} <bdi dir="ltr">${esc(g.to)}</bdi>)${g.otHours>0?' — '+esc(tr('الإضافي فيها متوقع وليس فعليًا')):''}</small>`:''}</td>`
    +`<td${L('إجراءات')}>${actions}</td></tr>`;
@@ -302,6 +302,7 @@ async function sfApprovalSalaryReady(){
  if(info&&!salaryInfo){salaryInfo=info;renderApprovalTable()}
 }
 function exportPeriodRows(){
+ if(me.role!=='admin')return [['المهندس','من','إلى','المشروع / الحالة','الأيام','ساعات الإضافي','الاعتماد','سبب الرفض'],...approvalGroups.map(g=>[members.find(m=>m.user_id===g.userId)?.name,g.from,g.to,projects.find(p=>String(p.id)===String(g.first.project_id))?.name||periodStatusLabel(g.first),g.rows.length,g.otHours,labels[g.review]||'حالات اعتماد مختلفة',g.note||''])];
  const cost=!!salaryInfo;
  return [['المهندس','من','إلى','المشروع / الحالة','الأيام','البدل','ساعات الإضافي','مبلغ الإضافي',...(cost?['حصة الراتب','الإجمالي على المشروع']:[]),'الاعتماد','سبب الرفض'],
   ...approvalGroups.map(g=>[members.find(m=>m.user_id===g.userId)?.name,g.from,g.to,projects.find(p=>String(p.id)===String(g.first.project_id))?.name||periodStatusLabel(g.first),g.rows.length,g.allowance,g.otHours,g.otAmount,...(cost?[g.salary??'',g.costed?g.total:'']:[]),labels[g.review]||'حالات اعتماد مختلفة',g.note||''])];

@@ -18,7 +18,7 @@ function sfUnifiedApplyAccess(){
  document.body.classList.toggle('sf-attendance-only',sfAttendanceOnly);
  for(const button of document.querySelectorAll('.side-nav-btn[data-module]'))button.style.display=sfUnifiedAllowed(button.dataset.module)?'':'none';
  const sync=document.querySelector('[data-unified-sync]');if(sync)sync.style.display=!sfAttendanceOnly&&sfUnifiedProfile?.role==='admin'&&sfHasAccess('payroll')?'':'none';
-  if(sfUnifiedProfile?.role==='engineer'){const btn=document.querySelector('button.side-nav-btn[data-module="timesheets"]');if(btn)btn.innerHTML='<span class="side-nav-icon">▦</span>'+(sfUiLanguage==='ar'?'التايم شيت الخاص بي':'My Timesheet');if(sfUnifiedRoute==='timesheets'){document.getElementById('app-page-title').textContent=sfUiLanguage==='ar'?'التايم شيت الخاص بي':'My Timesheet';document.getElementById('app-page-subtitle').textContent=sfUiLanguage==='ar'?'اختر الشهر وحمّل الحضور المعتمد لكل المشاريع':'Choose a month and download approved attendance across all projects';}}
+  if(sfUnifiedProfile?.role==='engineer'){const btn=document.querySelector('button.side-nav-btn[data-module="timesheets"]');if(btn)btn.innerHTML='<span class="side-nav-icon">▦</span>'+(sfUiLanguage==='ar'?'المصروفات والتايم شيت':'Expenses & Timesheets');if(sfUnifiedRoute==='timesheets'){document.getElementById('app-page-title').textContent=sfUiLanguage==='ar'?'المصروفات والتايم شيت':'Expenses & Timesheets';document.getElementById('app-page-subtitle').textContent=sfUiLanguage==='ar'?'تابع حضورك ومصروفاتك وحمّل التايم شيت المعتمد':'Track attendance and expenses, and download your approved timesheet';}}
   sfUnifiedRefreshNavGroups();
 }
 // Hide a sidebar group heading when every item under it is hidden for this account.
@@ -48,7 +48,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261023-theme';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261025-absence';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }

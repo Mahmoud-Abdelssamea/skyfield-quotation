@@ -46,7 +46,7 @@ function sfTimesheetFilename(member,month){return 'Timesheet_'+String(member.eng
 function sfTimesheetDownload(bytes,name,type){const url=URL.createObjectURL(new Blob([bytes],{type})),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000)}
 let sfSimpleListReady=false;
 function renderTimesheetControls(){
- if(!me)return;document.body.classList.toggle('sf-simple-timesheet',me.role!=='admin');$('timesheetExportPanel').open=me.role!=='admin';if(me.role!=='admin'){$('monthlySection').querySelector('h2').textContent=language==='en'?'My Timesheet':'التايم شيت الخاص بي';$('tabReports').textContent=language==='en'?'My Timesheet':'التايم شيت الخاص بي';
+ if(!me)return;document.body.classList.toggle('sf-simple-timesheet',me.role!=='admin');$('timesheetExportPanel').open=me.role!=='admin';if(me.role!=='admin'){$('monthlySection').querySelector('h2').textContent=language==='en'?'Expenses & Timesheets':'المصروفات والتايم شيت';$('tabReports').textContent=language==='en'?'Expenses & Timesheets':'المصروفات والتايم شيت';
   // Engineers keep their own list of attendance and expenses (status, rejection reason, edit, resubmit, withdraw).
   const sw=document.querySelectorAll('[data-approval-type]');if(sw[0])sw[0].textContent=language==='en'?'My attendance':'حضوري';if(sw[1])sw[1].textContent=language==='en'?'My expenses':'مصروفاتي';
   const engFilter=$('approvalEngineer')?.closest('label');if(engFilter)engFilter.hidden=true;
