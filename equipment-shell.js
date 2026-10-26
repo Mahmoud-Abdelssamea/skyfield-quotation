@@ -1,7 +1,7 @@
 'use strict';
 // Equipment & Custody section: the equipment page (equipment-module.html) in its own frame, sharing this sign-in.
-// Shown to every account with an active eq_roles row (eq_can_read_documents), including the accounting account's
-// documents role, which the main site treats as attendance-only. Engineer code accounts have no role and never see it.
+// Shown to equipment members (admin, storekeeper, viewer: eq_is_member). The accounting account's documents role
+// opens the separate Iqama & SEC-ID page instead (documents-page.js). Engineer code accounts never see either.
 let sfEquipmentAccess=false,sfEquipmentChecked=false;
 let sfEquipmentWanted=location.hash.slice(1)==='devices'||(!location.hash&&localStorage.getItem('sfLastModule')==='devices');
 const sfEquipmentBaseShow=showTab,sfEquipmentBaseAllowed=sfUnifiedAllowed,sfEquipmentBaseUnlock=sfUnlockApp,sfEquipmentBaseLock=sfLockApp,sfEquipmentBaseLanguage=sfSetInterfaceLanguage;
@@ -12,7 +12,7 @@ sfUnifiedAllowed=function(route){return route==='devices'?sfEquipmentAccess:sfEq
 
 async function sfEquipmentCheckAccess(){
   sfEquipmentAccess=false;
-  try{const {data,error}=await sfDb.rpc('eq_can_read_documents');sfEquipmentAccess=!error&&data===true}catch(error){console.warn('Equipment access check skipped',error)}
+  try{const {data,error}=await sfDb.rpc('eq_is_member');sfEquipmentAccess=!error&&data===true}catch(error){console.warn('Equipment access check skipped',error)}
   sfEquipmentChecked=true;sfUnifiedApplyAccess();
   if(sfEquipmentWanted&&sfEquipmentAccess)showTab('devices');
   sfEquipmentWanted=false;
@@ -33,7 +33,7 @@ showTab=function(name,button){
   const title=SF_EQUIPMENT_TITLE[sfUiLanguage==='ar'?'ar':'en'];
   document.getElementById('app-page-title').textContent=title[0];document.getElementById('app-page-subtitle').textContent=title[1];
   const frame=document.getElementById('sf-equipment-frame');
-  if(!frame.getAttribute('src'))frame.src='equipment-module.html?v=20261026-docs&lang='+(sfUiLanguage==='ar'?'ar':'en');
+  if(!frame.getAttribute('src'))frame.src='equipment-module.html?v=20261026-split&lang='+(sfUiLanguage==='ar'?'ar':'en');
   history.replaceState(null,'','#devices');localStorage.setItem('sfLastModule','devices');
   closeSidebar();window.scrollTo({top:0,behavior:'smooth'});sfUnifiedApplyAccess();
 };

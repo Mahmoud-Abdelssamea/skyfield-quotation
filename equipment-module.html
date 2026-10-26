@@ -123,10 +123,10 @@ window.eqSetLanguage=function(language){setLanguage(language);eqRenderBanner();}
 #eq-signed-out{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:#F4F6FA;padding:16px}
 #eq-signed-out div{max-width:420px;background:#fff;border-radius:14px;padding:28px;text-align:center;box-shadow:0 10px 30px rgba(15,39,71,.12);font-size:15px;line-height:1.8}
 #eq-signed-out a{display:inline-block;margin-top:12px;padding:9px 20px;border-radius:8px;background:#F47B20;color:#fff;font-weight:700;text-decoration:none}
-body.role-documents nav .nav-tab:not(:first-child):not(:last-child){display:none!important}
-body.role-documents #page-dashboard .kpi-grid,body.role-documents #page-dashboard .card:not(:has(#dashboard-iqamas)):not(:has(#dashboard-secids)){display:none!important}
-body.role-documents #page-settings > :not(:has(#eng-table)){display:none!important}
-body.role-documents.role-viewer .doc-action{display:inline-flex!important}
+/* Iqama and SEC-ID live on their own page in the main site (documents-page.js); the Iqama number stays for the forms. */
+#page-dashboard .card:has(#dashboard-iqamas),#page-dashboard .card:has(#dashboard-secids),.kpi-card:has(#kpi-documents),#eng-doc-filter,.doc-action{display:none!important}
+#eng-table th:nth-child(5),#eng-table td:nth-child(5),#eng-table td:nth-child(4) div{display:none!important}
+*:has(> #em-iqama-expiry),*:has(> #em-sec-no),*:has(> #em-sec-expiry){display:none!important}
 #eq-cert-list{list-style:none;margin:0;padding:0;max-height:55vh;overflow:auto;font-size:12px}
 #eq-cert-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5;direction:ltr}
 </style>
