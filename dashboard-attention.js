@@ -13,6 +13,8 @@ const sar2=n=>'SAR '+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigit
 const esc=s=>typeof escHtml==='function'?escHtml(s):String(s??'');
 const daysSince=d=>{const t=Date.parse(String(d||'').slice(0,10)+'T00:00:00');return Number.isFinite(t)?Math.floor((Date.now()-t)/86400000):null};
 const daysUntil=d=>{const s=daysSince(d);return s===null?null:-s};
+// Already-escaped HTML items (names wrapped in <bdi> so Arabic names keep their order inside English text).
+const namesHtml=list=>list.slice(0,3).join(L(', ','، '))+(list.length>3?L(` and ${list.length-3} more`,` و${list.length-3} غيرها`):'');
 const names=list=>esc(list.slice(0,3).join(L(', ','، ')))+(list.length>3?L(` and ${list.length-3} more`,` و${list.length-3} غيرها`):'');
 const attendanceAdmin=()=>typeof sfUnifiedProfile!=='undefined'&&sfUnifiedProfile?.role==='admin'&&!(typeof sfAttendanceOnly!=='undefined'&&sfAttendanceOnly)&&typeof sfDb!=='undefined'&&!!sfDb;
 
@@ -44,9 +46,9 @@ function attendanceItems(d){
  if(d.pendingExp)out.push({sev:'mid',title:L(`${d.pendingExp} expense${d.pendingExp>1?'s':''} awaiting approval`,`${d.pendingExp} مصروف بانتظار الاعتماد`),detail:L(`${sar2(d.pendingAmt)} in total.`,`بإجمالي ${sar2(d.pendingAmt)}.`),go:'timesheets',btn:L('Review','مراجعة')});
  if(d.unsettled)out.push({sev:'info',title:L(`${d.unsettled} approved expense${d.unsettled>1?'s':''} not settled`,`${d.unsettled} مصروف معتمد لم يُصفَّ`),detail:L(`${sar2(d.unsettledAmt)} owed to engineers. Export them for accounting from Timesheets & Approvals.`,`${sar2(d.unsettledAmt)} مستحقة للمهندسين. صدّرها للحسابات من التايم شيت والاعتمادات.`),go:'timesheets',btn:L('Open','فتح')});
  if(d.secCards&&d.secCards.length){const n=d.secCards.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
-  out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office: ','ذكّرهم بإرسال البطاقة إلى مكتب القصيم: ')+names(d.secCards.map(c=>`${c.name} (${label(c.days)})`)),go:'engineers',btn:L('Open engineers','فتح المهندسين')});}
+  out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office: ','ذكّرهم بإرسال البطاقة إلى مكتب القصيم: ')+namesHtml(d.secCards.map(c=>`<bdi>${esc(c.name)}</bdi> (${label(c.days)})`)),go:'engineers',btn:L('Open engineers','فتح المهندسين')});}
  if(d.iqamas&&d.iqamas.length){const n=d.iqamas.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
-  out.push({sev:d.iqamas.some(c=>c.days<=7)?'high':'mid',title:L(`${n} Iqama${n>1?'s':''} expiring within 45 days`,`${n} إقامة تنتهي خلال 45 يومًا`),detail:L('Start the renewal for: ','ابدأ إجراءات التجديد لـ: ')+names(d.iqamas.map(c=>`${c.name} (${label(c.days)})`)),go:'devices',btn:L('Open equipment','فتح الأجهزة')});}
+  out.push({sev:d.iqamas.some(c=>c.days<=7)?'high':'mid',title:L(`${n} Iqama${n>1?'s':''} expiring within 45 days`,`${n} إقامة تنتهي خلال 45 يومًا`),detail:L('Start the renewal for: ','ابدأ إجراءات التجديد لـ: ')+namesHtml(d.iqamas.map(c=>`<bdi>${esc(c.name)}</bdi> (${label(c.days)})`)),go:'devices',btn:L('Open equipment','فتح الأجهزة')});}
  if(d.noLocation&&d.noLocation.length)out.push({sev:'high',title:L(`${d.noLocation.length} project${d.noLocation.length>1?'s':''} without a location`,`${d.noLocation.length} مشروع بلا موقع`),detail:L('Engineers cannot record site days on: ','لا يستطيع المهندسون تسجيل أيام موقع على: ')+names(d.noLocation),go:'attendancesettings',btn:L('Set location','تحديد الموقع')});
  return out;
 }

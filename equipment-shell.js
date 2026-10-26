@@ -32,7 +32,7 @@ showTab=function(name,button){
   const title=SF_EQUIPMENT_TITLE[sfUiLanguage==='ar'?'ar':'en'];
   document.getElementById('app-page-title').textContent=title[0];document.getElementById('app-page-subtitle').textContent=title[1];
   const frame=document.getElementById('sf-equipment-frame');
-  if(!frame.getAttribute('src'))frame.src='equipment-module.html?v=20261025-eq&lang='+(sfUiLanguage==='ar'?'ar':'en');
+  if(!frame.getAttribute('src'))frame.src='equipment-module.html?v=20261026-certs&lang='+(sfUiLanguage==='ar'?'ar':'en');
   history.replaceState(null,'','#devices');localStorage.setItem('sfLastModule','devices');
   closeSidebar();window.scrollTo({top:0,behavior:'smooth'});sfUnifiedApplyAccess();
 };

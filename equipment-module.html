@@ -13,6 +13,15 @@ const EQ_OLD={url:'https://kfaytvoihwzfwxmlkkwn.supabase.co',key:'sb_publishable
 const EQ_NEW_BUCKET='eq-documents';
 let EQ_CERTS_DONE=false;
 
+// The copy button stays only while a device certificate is still missing from the new bucket.
+async function eqCheckCertificatesDone(){
+  if(EQ_REAL_ROLE!=='admin'||EQ_CERTS_DONE)return;
+  try{
+    const present=new Set((await eqListAll(getSupabaseClient(),EQ_NEW_BUCKET)).map(f=>f.path));
+    EQ_CERTS_DONE=INVENTORY.every(d=>!d.certificatePath||present.has(d.certificatePath));
+  }catch(e){console.warn('Certificate check skipped',e);}
+  eqRenderBanner();
+}
 function eqRenderBanner(){
   let banner=document.getElementById('eq-banner');
   if(!banner){banner=document.createElement('div');banner.id='eq-banner';banner.className='no-print';document.querySelector('nav')?.before(banner);}
@@ -2066,7 +2075,7 @@ async function syncFromCloud() {
     }
     CURRENT_ROLE=profile.role||'viewer';EQ_REAL_ROLE=CURRENT_ROLE;
     {const live=await client.from('eq_settings').select('value').eq('key','live').maybeSingle();EQ_PREVIEW=live.data?.value!==true;}
-    eqRenderBanner();
+    eqRenderBanner();eqCheckCertificatesDone();
     applyRolePermissions();
     RECORDS=movements.map(dbRecordToLocal);
     INVENTORY=devices.map(dbDeviceToLocal);
