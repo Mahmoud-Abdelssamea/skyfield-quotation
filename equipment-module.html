@@ -13,6 +13,22 @@ const EQ_OLD={url:'https://kfaytvoihwzfwxmlkkwn.supabase.co',key:'sb_publishable
 const EQ_NEW_BUCKET='eq-documents';
 let EQ_CERTS_DONE=false;
 
+// Iqama / SEC-ID updates: the administrator, the storekeeper and the documents role (the accounting account).
+function canEditDocuments(){return !EQ_PREVIEW&&['admin','storekeeper','documents'].includes(CURRENT_ROLE);}
+// Correct the Iqama expiry, SEC-ID number and SEC-ID expiry of one recipient (empty answer clears the value).
+async function eqEditDocuments(idx){
+  if(!canEditDocuments()){requireEditPermission();return;}
+  const e=ENGINEERS[idx];if(!e?.dbId)return;
+  const ask=(label,value)=>{const answer=prompt(translateRuntimeText(label)+' — '+e.name,value||'');return answer===null?null:String(answer).trim();};
+  const iqama=ask('تاريخ انتهاء الإقامة (YYYY-MM-DD)',e.iqamaExpiry);if(iqama===null)return;
+  const secNo=ask('رقم بطاقة SEC-ID',e.secIdNo);if(secNo===null)return;
+  const secExpiry=ask('تاريخ انتهاء بطاقة SEC-ID (YYYY-MM-DD)',e.secIdExpiry);if(secExpiry===null)return;
+  for(const d of [iqama,secExpiry])if(d&&(!/^\d{4}-\d{2}-\d{2}$/.test(d)||Number.isNaN(new Date(d+'T00:00:00').getTime()))){toast(translateRuntimeText('⚠️ اكتب التاريخ بصيغة YYYY-MM-DD'));return;}
+  const res=await callRpc('eq_update_documents',{p_id:e.dbId,p_iqama_expiry:iqama||null,p_sec_id_no:secNo||null,p_sec_id_expiry:secExpiry||null});
+  if(res.error){toast('⚠️ '+(res.transient?translateRuntimeText('تعذر الاتصال بـ Supabase؛ لم يُحفظ المستلم'):rpcErrorMessage(res.error)));return;}
+  ENGINEERS[idx]=dbEngineerToLocal(res.data);saveEngineers();renderEngTable();renderDashboard();
+  toast(translateRuntimeText('✅ تم حفظ المستندات')+' — '+e.name);
+}
 // The copy button stays only while a device certificate is still missing from the new bucket.
 async function eqCheckCertificatesDone(){
   if(EQ_REAL_ROLE!=='admin'||EQ_CERTS_DONE)return;
@@ -107,6 +123,10 @@ window.eqSetLanguage=function(language){setLanguage(language);eqRenderBanner();}
 #eq-signed-out{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:#F4F6FA;padding:16px}
 #eq-signed-out div{max-width:420px;background:#fff;border-radius:14px;padding:28px;text-align:center;box-shadow:0 10px 30px rgba(15,39,71,.12);font-size:15px;line-height:1.8}
 #eq-signed-out a{display:inline-block;margin-top:12px;padding:9px 20px;border-radius:8px;background:#F47B20;color:#fff;font-weight:700;text-decoration:none}
+body.role-documents nav .nav-tab:not(:first-child):not(:last-child){display:none!important}
+body.role-documents #page-dashboard .kpi-grid,body.role-documents #page-dashboard .card:not(:has(#dashboard-iqamas)):not(:has(#dashboard-secids)){display:none!important}
+body.role-documents #page-settings > :not(:has(#eng-table)){display:none!important}
+body.role-documents.role-viewer .doc-action{display:inline-flex!important}
 #eq-cert-list{list-style:none;margin:0;padding:0;max-height:55vh;overflow:auto;font-size:12px}
 #eq-cert-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5;direction:ltr}
 </style>
@@ -1204,7 +1224,7 @@ html{scroll-behavior:smooth}
 // ── Arabic / English interface ────────────────────────────────
 const LANGUAGE_KEY='eq_language';
 let CURRENT_LANG=localStorage.getItem(LANGUAGE_KEY)==='en'?'en':'ar';
-const AR_TO_EN=Object.freeze({"وضع المعاينة: التسجيل ما زال على النظام القديم حتى التحويل":"Preview mode: records are still made in the old system until the switch-over","ليس لديك صلاحية على قسم الأجهزة. اطلب من المدير إضافتك.":"You do not have access to the equipment section. Ask the administrator to add you.","لا صلاحية على قسم الأجهزة":"No access to equipment","سجّل الدخول من الموقع الرئيسي لعرض الأجهزة.":"Sign in on the main site to see the equipment.","فتح الموقع الرئيسي":"Open the main site","الاتصال ثابت على قاعدة بيانات الموقع الرئيسي":"The connection is fixed to the main site database","سجّل الخروج من الموقع الرئيسي":"Sign out from the main site","معاينة — التسجيل ما زال على نظام الأجهزة القديم حتى التحويل. العرض والطباعة والتصدير متاحة.":"Preview — records are still made in the old equipment system until the switch-over. Viewing, printing and export work.","نقل الشهادات من النظام القديم":"Copy certificates from the old system","نقل الشهادات":"Copy certificates","جاري قراءة الملفات...":"Reading files...","سجّل الدخول في نظام الأجهزة القديم على هذا المتصفح أولًا، ثم ارجع واضغط الزر مرة أخرى.":"Sign in to the old equipment system in this browser first, then come back and press the button again.","فتح النظام القديم":"Open the old system","نُقل":"Copied","موجود مسبقًا":"Already there","فشل":"Failed","كل الشهادات منقولة":"All certificates copied","إغلاق":"Close",
+const AR_TO_EN=Object.freeze({"وضع المعاينة: التسجيل ما زال على النظام القديم حتى التحويل":"Preview mode: records are still made in the old system until the switch-over","ليس لديك صلاحية على قسم الأجهزة. اطلب من المدير إضافتك.":"You do not have access to the equipment section. Ask the administrator to add you.","لا صلاحية على قسم الأجهزة":"No access to equipment","سجّل الدخول من الموقع الرئيسي لعرض الأجهزة.":"Sign in on the main site to see the equipment.","فتح الموقع الرئيسي":"Open the main site","الاتصال ثابت على قاعدة بيانات الموقع الرئيسي":"The connection is fixed to the main site database","سجّل الخروج من الموقع الرئيسي":"Sign out from the main site","معاينة — التسجيل ما زال على نظام الأجهزة القديم حتى التحويل. العرض والطباعة والتصدير متاحة.":"Preview — records are still made in the old equipment system until the switch-over. Viewing, printing and export work.","نقل الشهادات من النظام القديم":"Copy certificates from the old system","نقل الشهادات":"Copy certificates","جاري قراءة الملفات...":"Reading files...","سجّل الدخول في نظام الأجهزة القديم على هذا المتصفح أولًا، ثم ارجع واضغط الزر مرة أخرى.":"Sign in to the old equipment system in this browser first, then come back and press the button again.","فتح النظام القديم":"Open the old system","نُقل":"Copied","موجود مسبقًا":"Already there","فشل":"Failed","كل الشهادات منقولة":"All certificates copied","إغلاق":"Close","مستندات":"Documents","تعديل المستندات":"Edit documents","✅ تم حفظ المستندات":"✅ Documents saved","تاريخ انتهاء الإقامة (YYYY-MM-DD)":"Iqama expiry date (YYYY-MM-DD)","رقم بطاقة SEC-ID":"SEC-ID card number","تاريخ انتهاء بطاقة SEC-ID (YYYY-MM-DD)":"SEC-ID card expiry date (YYYY-MM-DD)",
   "نظام متابعة الأجهزة":"Equipment Tracking System",
   "Sky Field — تسجيل الدخول":"Sky Field — Sign in",
   "البريد الإلكتروني":"Email address",
@@ -1820,9 +1840,9 @@ function canEdit(){return !EQ_PREVIEW&&(CURRENT_ROLE==='admin'||CURRENT_ROLE==='
 function requireEditPermission(){if(EQ_PREVIEW){toast(translateRuntimeText('وضع المعاينة: التسجيل ما زال على النظام القديم حتى التحويل'));return false;}if(canEdit())return true;toast('هذه العملية متاحة للمدير أو أمين المخزن فقط');return false;}
 function applyRolePermissions(){
   document.body.classList.toggle('role-viewer',!canEdit());
-  document.body.classList.toggle('role-admin',CURRENT_ROLE==='admin');
+  document.body.classList.toggle('role-admin',CURRENT_ROLE==='admin');document.body.classList.toggle('role-documents',CURRENT_ROLE==='documents');
   const badge=document.getElementById('user-role-badge');
-  if(badge)badge.textContent=({admin:'مدير',storekeeper:'أمين مخزن',viewer:'مشاهدة'}[CURRENT_ROLE]||CURRENT_ROLE);
+  if(badge)badge.textContent=({admin:'مدير',storekeeper:'أمين مخزن',viewer:'مشاهدة',documents:'مستندات'}[CURRENT_ROLE]||CURRENT_ROLE);
 }
 
 function getSupabaseClient() {
@@ -3499,9 +3519,10 @@ function renderEngTable() {
     <td class="no-print">
       <div class="eng-actions">
         <button class="btn-edit" onclick="openEngModal(${i})">✏️ تعديل</button>
-        ${person && e.dbId ? `<button class="btn-edit edit-only" onclick="renewDocument(${i},'iqama')">تجديد الإقامة</button>
-        <button class="btn-edit edit-only" onclick="renewDocument(${i},'sec_id')">تجديد SEC-ID</button>
-        ${(e.secIdNo||e.secIdExpiry) && !e.secIdReturnedOn ? `<button class="btn-edit edit-only" onclick="handInSecId(${i})">سُلّمت البطاقة</button>` : ''}` : ''}
+        ${person && e.dbId ? `<button class="btn-edit edit-only doc-action" onclick="renewDocument(${i},'iqama')">تجديد الإقامة</button>
+        <button class="btn-edit edit-only doc-action" onclick="renewDocument(${i},'sec_id')">تجديد SEC-ID</button>
+        ${(e.secIdNo||e.secIdExpiry) && !e.secIdReturnedOn ? `<button class="btn-edit edit-only doc-action" onclick="handInSecId(${i})">سُلّمت البطاقة</button>` : ''}` : ''}
+        ${person && e.dbId ? `<button class="btn-edit edit-only doc-action" onclick="eqEditDocuments(${i})">تعديل المستندات</button>` : ''}
         <button class="btn-del" onclick="deleteEng(${i})">🗑 حذف</button>
       </div>
     </td>
@@ -3511,7 +3532,7 @@ function renderEngTable() {
 
 // "Renewed": new expiry date (suggested one year after the current one).
 async function renewDocument(idx, doc) {
-  if(!requireEditPermission())return;
+  if(!canEditDocuments()){requireEditPermission();return;}
   const e = ENGINEERS[idx]; if(!e?.dbId) return;
   const current = doc === 'iqama' ? e.iqamaExpiry : e.secIdExpiry;
   const base = current ? new Date(current+'T00:00:00') : new Date(); base.setFullYear(base.getFullYear()+1);
@@ -3523,7 +3544,7 @@ async function renewDocument(idx, doc) {
 }
 // "Handed in": the date the SEC-ID card was returned to the electricity company, kept as proof.
 async function handInSecId(idx) {
-  if(!requireEditPermission())return;
+  if(!canEditDocuments()){requireEditPermission();return;}
   const e = ENGINEERS[idx]; if(!e?.dbId) return;
   const answer = localizedPrompt(`تاريخ تسليم بطاقة SEC-ID لشركة الكهرباء — ${e.name} (YYYY-MM-DD):`, localISODate());
   if(answer === null) return;

@@ -1,17 +1,18 @@
 'use strict';
 // Equipment & Custody section: the equipment page (equipment-module.html) in its own frame, sharing this sign-in.
-// Shown to every account with an active eq_roles row (eq_is_member) since the switch-over on 2026-10-26.
+// Shown to every account with an active eq_roles row (eq_can_read_documents), including the accounting account's
+// documents role, which the main site treats as attendance-only. Engineer code accounts have no role and never see it.
 let sfEquipmentAccess=false,sfEquipmentChecked=false;
 let sfEquipmentWanted=location.hash.slice(1)==='devices'||(!location.hash&&localStorage.getItem('sfLastModule')==='devices');
 const sfEquipmentBaseShow=showTab,sfEquipmentBaseAllowed=sfUnifiedAllowed,sfEquipmentBaseUnlock=sfUnlockApp,sfEquipmentBaseLock=sfLockApp,sfEquipmentBaseLanguage=sfSetInterfaceLanguage;
 const SF_EQUIPMENT_TITLE={en:['Equipment & Custody','Test equipment, custody movements, calibration, and Iqama / SEC-ID tracking.'],
   ar:['الأجهزة والعُهد','أجهزة الاختبار وحركات العهد والمعايرة ومتابعة الإقامة وبطاقة SEC-ID.']};
 
-sfUnifiedAllowed=function(route){return route==='devices'?sfEquipmentAccess&&!sfAttendanceOnly:sfEquipmentBaseAllowed(route)};
+sfUnifiedAllowed=function(route){return route==='devices'?sfEquipmentAccess:sfEquipmentBaseAllowed(route)};
 
 async function sfEquipmentCheckAccess(){
   sfEquipmentAccess=false;
-  if(!sfAttendanceOnly)try{const {data,error}=await sfDb.rpc('eq_is_member');sfEquipmentAccess=!error&&data===true}catch(error){console.warn('Equipment access check skipped',error)}
+  try{const {data,error}=await sfDb.rpc('eq_can_read_documents');sfEquipmentAccess=!error&&data===true}catch(error){console.warn('Equipment access check skipped',error)}
   sfEquipmentChecked=true;sfUnifiedApplyAccess();
   if(sfEquipmentWanted&&sfEquipmentAccess)showTab('devices');
   sfEquipmentWanted=false;
@@ -32,7 +33,7 @@ showTab=function(name,button){
   const title=SF_EQUIPMENT_TITLE[sfUiLanguage==='ar'?'ar':'en'];
   document.getElementById('app-page-title').textContent=title[0];document.getElementById('app-page-subtitle').textContent=title[1];
   const frame=document.getElementById('sf-equipment-frame');
-  if(!frame.getAttribute('src'))frame.src='equipment-module.html?v=20261026-certs&lang='+(sfUiLanguage==='ar'?'ar':'en');
+  if(!frame.getAttribute('src'))frame.src='equipment-module.html?v=20261026-docs&lang='+(sfUiLanguage==='ar'?'ar':'en');
   history.replaceState(null,'','#devices');localStorage.setItem('sfLastModule','devices');
   closeSidebar();window.scrollTo({top:0,behavior:'smooth'});sfUnifiedApplyAccess();
 };
