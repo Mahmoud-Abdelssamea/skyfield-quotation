@@ -46,7 +46,7 @@ function sfDocsStyles(){
   if(document.getElementById('sf-docs-style'))return;
   const s=document.createElement('style');s.id='sf-docs-style';
   s.textContent=`#sf-documents-panel{width:100%;min-width:0;display:flex;flex-direction:column;gap:16px}
-.docs-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.docs-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .docs-kpi{font-family:inherit;text-align:start;background:#fff;border:1px solid var(--sf-line);border-radius:12px;padding:12px 14px;cursor:pointer;border-top:3px solid var(--k);transition:box-shadow .15s,transform .15s}
 .docs-kpi:hover{box-shadow:0 4px 14px rgba(31,56,100,.08);transform:translateY(-1px)}
 .docs-kpi span{display:block;font-size:12px;font-weight:600;color:var(--sf-muted)}
@@ -86,7 +86,7 @@ function sfDocsStyles(){
 .docs-expired,.docs-critical{background:#FDECEC;color:var(--sf-alert-text)}.docs-urgent{background:#FFF1E0;color:var(--sf-warn-text)}
 .docs-soon{background:#FFF8E1;color:#7a5a00}.docs-valid{background:#E8F5EC;color:var(--sf-ok-text)}.docs-returned,.docs-none{background:#EEF0F4;color:var(--sf-muted)}
 .docs-status{padding:10px 16px;color:var(--sf-muted);font-size:13px}
-@media(max-width:760px){.docs-tools input{min-width:0;flex:1}.docs-table-wrap{max-height:none}
+@media(max-width:760px){.docs-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.docs-tools input{min-width:0;flex:1}.docs-table-wrap{max-height:none}
  .docs-table thead{display:none}.docs-table tr{display:block;border-bottom:1px solid var(--sf-line);padding:8px 0}
  .docs-table td{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;padding:6px 14px;background:transparent!important}
  .docs-table td::before{content:attr(data-label);color:var(--sf-muted);font-weight:600;font-size:12px}
@@ -124,7 +124,7 @@ function sfDocsRender(){
     ${sfDocsLoading?`<div class="docs-status">${sfDocsEsc(sfDocsT('Loading…','جاري التحميل…'))}</div>`:''}
     <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>${sfDocsEsc(sfDocsT('Employee','الموظف'))}</th><th>${sfDocsEsc(sfDocsT('Code','الكود'))}</th><th>${sfDocsEsc(sfDocsT('Iqama','الإقامة'))}</th><th>SEC-ID</th>${sfDocsCanEdit?`<th>${sfDocsEsc(sfDocsT('Actions','إجراءات'))}</th>`:''}</tr></thead>
     <tbody>${rows.map(r=>`<tr data-search="${sfDocsEsc([r.name,r.name_en,r.empid,r.iqama,r.sec_id_no].filter(Boolean).join(' ').toLowerCase())}">
-      <td class="docs-name-cell"${L(sfDocsT('Employee','الموظف'))}><div class="docs-person"><span class="docs-avatar">${sfDocsEsc(String(r.name||'?').trim().charAt(0))}</span><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b>${r.name_en?`<span class="en" dir="ltr">${sfDocsEsc(r.name_en)}</span>`:''}</span></div></td>
+      <td class="docs-name-cell"${L(sfDocsT('Employee','الموظف'))}><div class="docs-person"><span class="docs-avatar">${sfDocsEsc(String(r.name_en||r.name||'?').replace(/[^\p{L}]/gu,'').charAt(0).toUpperCase()||'?')}</span><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b>${r.name_en?`<span class="en" dir="ltr">${sfDocsEsc(r.name_en)}</span>`:''}</span></div></td>
       <td${L(sfDocsT('Code','الكود'))}>${r.empid?`<span class="docs-code" dir="ltr">${sfDocsEsc(r.empid)}</span>`:'—'}</td>
       <td${L(sfDocsT('Iqama','الإقامة'))}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.iqama||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.iqama_expiry,''):''}</div></td>
       <td${L('SEC-ID')}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.sec_id_no||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.sec_id_expiry,r.sec_id_returned_on):''}</div></td>
