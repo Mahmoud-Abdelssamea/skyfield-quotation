@@ -45,6 +45,8 @@ function attendanceItems(d){
  if(d.unsettled)out.push({sev:'info',title:L(`${d.unsettled} approved expense${d.unsettled>1?'s':''} not settled`,`${d.unsettled} مصروف معتمد لم يُصفَّ`),detail:L(`${sar2(d.unsettledAmt)} owed to engineers. Export them for accounting from Timesheets & Approvals.`,`${sar2(d.unsettledAmt)} مستحقة للمهندسين. صدّرها للحسابات من التايم شيت والاعتمادات.`),go:'timesheets',btn:L('Open','فتح')});
  if(d.secCards&&d.secCards.length){const n=d.secCards.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
   out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office: ','ذكّرهم بإرسال البطاقة إلى مكتب القصيم: ')+names(d.secCards.map(c=>`${c.name} (${label(c.days)})`)),go:'engineers',btn:L('Open engineers','فتح المهندسين')});}
+ if(d.iqamas&&d.iqamas.length){const n=d.iqamas.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
+  out.push({sev:d.iqamas.some(c=>c.days<=7)?'high':'mid',title:L(`${n} Iqama${n>1?'s':''} expiring within 45 days`,`${n} إقامة تنتهي خلال 45 يومًا`),detail:L('Start the renewal for: ','ابدأ إجراءات التجديد لـ: ')+names(d.iqamas.map(c=>`${c.name} (${label(c.days)})`)),go:'devices',btn:L('Open equipment','فتح الأجهزة')});}
  if(d.noLocation&&d.noLocation.length)out.push({sev:'high',title:L(`${d.noLocation.length} project${d.noLocation.length>1?'s':''} without a location`,`${d.noLocation.length} مشروع بلا موقع`),detail:L('Engineers cannot record site days on: ','لا يستطيع المهندسون تسجيل أيام موقع على: ')+names(d.noLocation),go:'attendancesettings',btn:L('Set location','تحديد الموقع')});
  return out;
 }
@@ -66,9 +68,15 @@ async function loadAttendance(){
   const cards=await all(sfDb.from('sf_daily_members').select('name,sec_card_expiry').eq('role','engineer').eq('is_active',true).not('sec_card_expiry','is',null).lte('sec_card_expiry',limit).order('sec_card_expiry'));
   secCards=cards.map(c=>({name:c.name,days:daysUntil(c.sec_card_expiry)})).filter(c=>c.days!==null&&c.days<=15);
  }catch(_){}
+ let iqamas=null;
+ try{ // the equipment records (eq_recipients) hold the Iqama dates; only equipment members can read them
+  const limit=new Date(Date.now()+45*86400000).toISOString().slice(0,10);
+  const people=await all(sfDb.from('eq_recipients').select('name,iqama_expiry').not('iqama_expiry','is',null).lte('iqama_expiry',limit).order('iqama_expiry'));
+  iqamas=people.map(c=>({name:c.name,days:daysUntil(c.iqama_expiry)})).filter(c=>c.days!==null&&c.days<=45);
+ }catch(_){}
  const months=[...new Set(records.map(r=>String(r.day).slice(0,7)))].sort();
  return{periods:new Set(records.map(r=>r.user_id+'|'+(r.period_id||r.day))).size,days:records.length,engineers:new Set(records.map(r=>r.user_id)).size,months:months.length,oldestMonth:months[0]||'',
-  pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation,secCards};
+  pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation,secCards,iqamas};
 }
 function draw(){
  const root=document.getElementById('dash-attention');if(!root)return;
