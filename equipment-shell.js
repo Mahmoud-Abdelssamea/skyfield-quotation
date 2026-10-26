@@ -1,6 +1,6 @@
 'use strict';
 // Equipment & Custody section: the equipment page (equipment-module.html) in its own frame, sharing this sign-in.
-// During the trial before cutover it is shown to the administrator only (eq_is_admin); later to every eq_roles member.
+// Shown to every account with an active eq_roles row (eq_is_member) since the switch-over on 2026-10-26.
 let sfEquipmentAccess=false,sfEquipmentChecked=false;
 let sfEquipmentWanted=location.hash.slice(1)==='devices'||(!location.hash&&localStorage.getItem('sfLastModule')==='devices');
 const sfEquipmentBaseShow=showTab,sfEquipmentBaseAllowed=sfUnifiedAllowed,sfEquipmentBaseUnlock=sfUnlockApp,sfEquipmentBaseLock=sfLockApp,sfEquipmentBaseLanguage=sfSetInterfaceLanguage;
@@ -11,7 +11,7 @@ sfUnifiedAllowed=function(route){return route==='devices'?sfEquipmentAccess&&!sf
 
 async function sfEquipmentCheckAccess(){
   sfEquipmentAccess=false;
-  if(!sfAttendanceOnly)try{const {data,error}=await sfDb.rpc('eq_is_admin');sfEquipmentAccess=!error&&data===true}catch(error){console.warn('Equipment access check skipped',error)}
+  if(!sfAttendanceOnly)try{const {data,error}=await sfDb.rpc('eq_is_member');sfEquipmentAccess=!error&&data===true}catch(error){console.warn('Equipment access check skipped',error)}
   sfEquipmentChecked=true;sfUnifiedApplyAccess();
   if(sfEquipmentWanted&&sfEquipmentAccess)showTab('devices');
   sfEquipmentWanted=false;
