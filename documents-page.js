@@ -45,63 +45,106 @@ const sfDocsListTitle=doc=>doc==='iqama'?sfDocsT('Iqamas expiring within 45 days
 function sfDocsStyles(){
   if(document.getElementById('sf-docs-style'))return;
   const s=document.createElement('style');s.id='sf-docs-style';
-  s.textContent=`#sf-documents-panel{width:100%;min-width:0}
-.docs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:14px}
-.docs-card{background:#fff;border:1px solid var(--sf-line);border-radius:12px;overflow:hidden}
-.docs-card-hdr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--sf-line);font-weight:700;color:var(--sf-navy)}
-.docs-card-hdr small{color:var(--sf-muted);font-weight:500}
+  s.textContent=`#sf-documents-panel{width:100%;min-width:0;display:flex;flex-direction:column;gap:16px}
+.docs-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.docs-kpi{font-family:inherit;text-align:start;background:#fff;border:1px solid var(--sf-line);border-radius:12px;padding:12px 14px;cursor:pointer;border-top:3px solid var(--k);transition:box-shadow .15s,transform .15s}
+.docs-kpi:hover{box-shadow:0 4px 14px rgba(31,56,100,.08);transform:translateY(-1px)}
+.docs-kpi span{display:block;font-size:12px;font-weight:600;color:var(--sf-muted)}
+.docs-kpi b{display:block;font-size:24px;font-weight:800;color:var(--sf-navy);margin-top:2px}
+.docs-kpi small{display:block;font-size:11px;color:var(--sf-muted);margin-top:2px}
+.docs-card{background:#fff;border:1px solid var(--sf-line);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(31,56,100,.04)}
+.docs-card-hdr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--sf-line)}
+.docs-card-hdr h3{margin:0;font-size:15px;font-weight:700;color:var(--sf-navy);display:flex;align-items:center;gap:8px}
+.docs-card-hdr h3 small{font-size:12px;font-weight:500;color:var(--sf-muted)}
+.docs-count{display:inline-block;min-width:22px;padding:1px 8px;border-radius:999px;background:#EEF1F7;color:var(--sf-navy);font-size:12px;font-weight:700;text-align:center}
+.docs-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.docs-tools input,.docs-tools select{font-family:inherit;font-size:13px;padding:7px 11px;border-radius:9px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-text)}
+.docs-tools input{min-width:200px}
 .docs-actions{display:flex;gap:6px;flex-wrap:wrap}
-.docs-btn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-navy);cursor:pointer}
-.docs-btn.primary{background:var(--sf-navy);color:#fff;border-color:var(--sf-navy)}
-.docs-list{list-style:none;margin:0;padding:6px 14px 12px}
-.docs-list li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--sf-line);font-size:13px}
-.docs-list li:last-child{border-bottom:0}.docs-list .sub{display:block;color:var(--sf-muted);font-size:12px}
-.docs-empty{padding:16px 14px;color:var(--sf-muted);font-size:13px}
-.docs-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--sf-line)}
-.docs-toolbar select{font-family:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--sf-line)}
-.docs-table-wrap{overflow-x:auto}
-.docs-table{width:100%;border-collapse:collapse;font-size:13px}
-.docs-table th{background:#F7F8FB;color:var(--sf-muted);font-weight:600;text-align:start;padding:9px 10px;white-space:nowrap}
-.docs-table td{padding:9px 10px;border-top:1px solid var(--sf-line);vertical-align:top}
-.docs-table td .docs-row-actions{display:flex;flex-wrap:wrap;gap:5px}
-.docs-badge{display:inline-block;margin-top:3px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.docs-btn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-navy);cursor:pointer;white-space:nowrap}
+.docs-btn:hover{border-color:var(--sf-navy);background:#F5F7FB}
+.docs-btn.renew{color:#1F6B44;border-color:#CFE6D8}.docs-btn.renew:hover{background:#EEF8F2}
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.docs-list{list-style:none;margin:0;padding:8px 12px 12px}
+.docs-list li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 10px;margin-top:6px;border-radius:9px;background:#FAFBFD;border-inline-start:4px solid var(--b,#cfd5e0);font-size:13px}
+.docs-list li.sev-expired,.docs-list li.sev-critical{--b:var(--sf-alert)}.docs-list li.sev-urgent{--b:var(--sf-warn)}.docs-list li.sev-soon{--b:#d9b44a}
+.docs-list b{font-weight:700;color:var(--sf-text)}.docs-list .sub{display:block;color:var(--sf-muted);font-size:12px;margin-top:2px}
+.docs-empty{padding:18px 16px;color:var(--sf-muted);font-size:13px;text-align:center}
+.docs-table-wrap{overflow-x:auto;max-height:70vh}
+.docs-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.docs-table th{position:sticky;top:0;z-index:1;background:#F4F6FA;color:var(--sf-muted);font-weight:700;font-size:12px;text-align:start;padding:10px 12px;white-space:nowrap;border-bottom:1px solid var(--sf-line)}
+.docs-table td{padding:10px 12px;border-bottom:1px solid var(--sf-line);vertical-align:middle}
+.docs-table tr[hidden]{display:none!important}
+.docs-table tbody tr:nth-child(even) td{background:#FBFCFE}.docs-table tbody tr:hover td{background:#F2F6FC}
+.docs-person{display:flex;align-items:center;gap:10px}
+.docs-avatar{flex:0 0 34px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#E7ECF6;color:var(--sf-navy);font-weight:800;font-size:14px}
+.docs-person b{display:block;font-weight:700;color:var(--sf-text)}.docs-person .en{display:block;color:var(--sf-muted);font-size:11px}
+.docs-code{display:inline-block;padding:2px 8px;border-radius:6px;background:#F1F3F7;color:var(--sf-navy);font-weight:600;font-size:12px}
+.docs-doc{display:flex;flex-direction:column;gap:3px;align-items:flex-start}.docs-doc .no{font-size:12px;color:var(--sf-text)}
+.docs-row-actions{display:flex;flex-wrap:wrap;gap:5px}
+.docs-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
 .docs-expired,.docs-critical{background:#FDECEC;color:var(--sf-alert-text)}.docs-urgent{background:#FFF1E0;color:var(--sf-warn-text)}
 .docs-soon{background:#FFF8E1;color:#7a5a00}.docs-valid{background:#E8F5EC;color:var(--sf-ok-text)}.docs-returned,.docs-none{background:#EEF0F4;color:var(--sf-muted)}
-.docs-status{padding:10px 14px;color:var(--sf-muted);font-size:13px}
-@media(max-width:760px){.docs-table thead{display:none}.docs-table tr{display:block;border-top:1px solid var(--sf-line);padding:8px 0}
- .docs-table td{display:flex;justify-content:space-between;gap:10px;border:0;padding:5px 12px}.docs-table td::before{content:attr(data-label);color:var(--sf-muted);font-weight:600}}`;
+.docs-status{padding:10px 16px;color:var(--sf-muted);font-size:13px}
+@media(max-width:760px){.docs-tools input{min-width:0;flex:1}.docs-table-wrap{max-height:none}
+ .docs-table thead{display:none}.docs-table tr{display:block;border-bottom:1px solid var(--sf-line);padding:8px 0}
+ .docs-table td{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;padding:6px 14px;background:transparent!important}
+ .docs-table td::before{content:attr(data-label);color:var(--sf-muted);font-weight:600;font-size:12px}
+ .docs-table td.docs-name-cell::before{display:none}.docs-doc{align-items:flex-end}}`;
   document.head.appendChild(s);
 }
 
 function sfDocsRender(){
   const panel=document.getElementById('sf-documents-panel');if(!panel)return;
   sfDocsStyles();
-  const list=doc=>{const due=sfDocsDue(doc);
-    return due.length?`<ul class="docs-list">${due.map(({r,s})=>`<li><span><bdi>${sfDocsEsc(r.name)}</bdi><span class="sub" dir="ltr">${sfDocsEsc(doc==='iqama'?(r.iqama||''):(r.sec_id_no||''))} · ${sfDocsDate(doc==='iqama'?r.iqama_expiry:r.sec_id_expiry)}</span></span>${sfDocsBadge(doc==='iqama'?r.iqama_expiry:r.sec_id_expiry,'')}</li>`).join('')}</ul>`
-      :`<div class="docs-empty">${sfDocsEsc(sfDocsT('Nothing due within 45 days.','لا شيء ينتهي خلال 45 يومًا.'))}</div>`};
-  const card=(doc,icon,title)=>`<div class="docs-card"><div class="docs-card-hdr"><span>${icon} ${sfDocsEsc(title)} <small>${sfDocsEsc(sfDocsT('within 45 days or expired','خلال 45 يومًا أو منتهية'))}</small></span>
-    <span class="docs-actions"><button type="button" class="docs-btn" data-docs-print="${doc}">🖨 ${sfDocsEsc(sfDocsT('Print','طباعة'))}</button><button type="button" class="docs-btn" data-docs-excel="${doc}">📥 Excel</button></span></div>${list(doc)}</div>`;
+  const expiry=(r,doc)=>doc==='iqama'?r.iqama_expiry:r.sec_id_expiry;
+  // Summary: expired and due within 45 days for each document; a click filters the employee table.
+  const count=(doc,expired)=>sfDocsDue(doc).filter(x=>expired?x.s.days<0:x.s.days>=0).length;
+  const kpi=(color,label,value,hint,filter)=>`<button type="button" class="docs-kpi" style="--k:${color}" data-docs-filter="${filter}"><span>${sfDocsEsc(label)}</span><b>${value}</b><small>${sfDocsEsc(hint)}</small></button>`;
+  const kpis=`<div class="docs-kpis">
+    ${kpi('var(--sf-alert)',sfDocsT('Expired Iqamas','إقامات منتهية'),count('iqama',true),sfDocsT('Renew now','تحتاج تجديدًا الآن'),'expired')}
+    ${kpi('var(--sf-warn)',sfDocsT('Iqamas due','إقامات قريبة الانتهاء'),count('iqama',false),sfDocsT('Within 45 days','خلال 45 يومًا'),'due')}
+    ${kpi('var(--sf-alert)',sfDocsT('Expired SEC-ID cards','بطاقات SEC-ID منتهية'),count('sec_id',true),sfDocsT('Renew now','تحتاج تجديدًا الآن'),'expired')}
+    ${kpi('var(--sf-warn)',sfDocsT('SEC-ID cards due','بطاقات SEC-ID قريبة الانتهاء'),count('sec_id',false),sfDocsT('Within 45 days','خلال 45 يومًا'),'due')}</div>`;
+  // Employee table first.
   const worst=r=>{const keys=[sfDocsState(r.iqama_expiry,'').key,sfDocsState(r.sec_id_expiry,r.sec_id_returned_on).key];return keys.includes('expired')?'expired':keys.some(k=>['critical','urgent','soon'].includes(k))?'due':''};
   const rows=sfDocsRows.filter(r=>sfDocsFilter==='all'||(sfDocsFilter==='expired'?worst(r)==='expired':!!worst(r)));
   const L=t=>` data-label="${sfDocsEsc(t)}"`;
   const actions=r=>!sfDocsCanEdit||!sfDocsPerson(r)?'':`<div class="docs-row-actions">
-    <button type="button" class="docs-btn" data-docs-act="renew-iqama" data-id="${r.id}">${sfDocsEsc(sfDocsT('Renew Iqama','تجديد الإقامة'))}</button>
-    <button type="button" class="docs-btn" data-docs-act="renew-sec" data-id="${r.id}">${sfDocsEsc(sfDocsT('Renew SEC-ID','تجديد SEC-ID'))}</button>
+    <button type="button" class="docs-btn renew" data-docs-act="renew-iqama" data-id="${r.id}">↻ ${sfDocsEsc(sfDocsT('Iqama','الإقامة'))}</button>
+    <button type="button" class="docs-btn renew" data-docs-act="renew-sec" data-id="${r.id}">↻ SEC-ID</button>
     ${(r.sec_id_no||r.sec_id_expiry)&&!r.sec_id_returned_on?`<button type="button" class="docs-btn" data-docs-act="handin" data-id="${r.id}">${sfDocsEsc(sfDocsT('Card handed in','سُلّمت البطاقة'))}</button>`:''}
-    <button type="button" class="docs-btn" data-docs-act="edit" data-id="${r.id}">${sfDocsEsc(sfDocsT('Edit','تعديل'))}</button></div>`;
-  panel.innerHTML=`<div class="docs-grid">${card('iqama','🪪',sfDocsT('Iqamas','الإقامات'))}${card('sec_id','🦺',sfDocsT('SEC-ID cards','بطاقات SEC-ID'))}</div>
-  <div class="docs-card"><div class="docs-toolbar"><strong style="color:var(--sf-navy)">${sfDocsEsc(sfDocsT('All people','كل الأشخاص'))} (${rows.length})</strong>
+    <button type="button" class="docs-btn" data-docs-act="edit" data-id="${r.id}">✎ ${sfDocsEsc(sfDocsT('Edit','تعديل'))}</button></div>`;
+  const people=`<div class="docs-card"><div class="docs-card-hdr"><h3>👥 ${sfDocsEsc(sfDocsT('Employees','الموظفون'))} <span class="docs-count" id="sf-docs-count">${rows.length}</span></h3>
+    <div class="docs-tools"><input type="search" id="sf-docs-search" placeholder="${sfDocsEsc(sfDocsT('Search by name, code or number','بحث بالاسم أو الكود أو الرقم'))}" aria-label="${sfDocsEsc(sfDocsT('Search','بحث'))}">
     <select id="sf-docs-filter" aria-label="${sfDocsEsc(sfDocsT('Filter','تصفية'))}">
       <option value="all"${sfDocsFilter==='all'?' selected':''}>${sfDocsEsc(sfDocsT('Everyone','الكل'))}</option>
       <option value="due"${sfDocsFilter==='due'?' selected':''}>${sfDocsEsc(sfDocsT('Due within 60 days or expired','تنتهي خلال 60 يومًا أو منتهية'))}</option>
-      <option value="expired"${sfDocsFilter==='expired'?' selected':''}>${sfDocsEsc(sfDocsT('Expired only','منتهية فقط'))}</option></select></div>
-  ${sfDocsLoading?`<div class="docs-status">${sfDocsEsc(sfDocsT('Loading…','جاري التحميل…'))}</div>`:''}
-  <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>${sfDocsEsc(sfDocsT('Name','الاسم'))}</th><th>${sfDocsEsc(sfDocsT('Code','الكود'))}</th><th>${sfDocsEsc(sfDocsT('Iqama','الإقامة'))}</th><th>SEC-ID</th>${sfDocsCanEdit?`<th>${sfDocsEsc(sfDocsT('Actions','إجراءات'))}</th>`:''}</tr></thead>
-  <tbody>${rows.map(r=>`<tr><td${L(sfDocsT('Name','الاسم'))}><b><bdi>${sfDocsEsc(r.name)}</bdi></b>${r.name_en?`<span class="sub" style="display:block;color:var(--sf-muted);font-size:12px" dir="ltr">${sfDocsEsc(r.name_en)}</span>`:''}</td>
-    <td${L(sfDocsT('Code','الكود'))} dir="ltr">${sfDocsEsc(r.empid||'—')}</td>
-    <td${L(sfDocsT('Iqama','الإقامة'))}><span dir="ltr">${sfDocsEsc(r.iqama||'—')}</span><br>${sfDocsPerson(r)?sfDocsBadge(r.iqama_expiry,''):''}</td>
-    <td${L('SEC-ID')}><span dir="ltr">${sfDocsEsc(r.sec_id_no||'—')}</span><br>${sfDocsPerson(r)?sfDocsBadge(r.sec_id_expiry,r.sec_id_returned_on):''}</td>
-    ${sfDocsCanEdit?`<td${L(sfDocsT('Actions','إجراءات'))}>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="5" class="docs-empty">${sfDocsEsc(sfDocsT('No people match.','لا يوجد أشخاص مطابقون.'))}</td></tr>`}</tbody></table></div></div>`;
+      <option value="expired"${sfDocsFilter==='expired'?' selected':''}>${sfDocsEsc(sfDocsT('Expired only','منتهية فقط'))}</option></select></div></div>
+    ${sfDocsLoading?`<div class="docs-status">${sfDocsEsc(sfDocsT('Loading…','جاري التحميل…'))}</div>`:''}
+    <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>${sfDocsEsc(sfDocsT('Employee','الموظف'))}</th><th>${sfDocsEsc(sfDocsT('Code','الكود'))}</th><th>${sfDocsEsc(sfDocsT('Iqama','الإقامة'))}</th><th>SEC-ID</th>${sfDocsCanEdit?`<th>${sfDocsEsc(sfDocsT('Actions','إجراءات'))}</th>`:''}</tr></thead>
+    <tbody>${rows.map(r=>`<tr data-search="${sfDocsEsc([r.name,r.name_en,r.empid,r.iqama,r.sec_id_no].filter(Boolean).join(' ').toLowerCase())}">
+      <td class="docs-name-cell"${L(sfDocsT('Employee','الموظف'))}><div class="docs-person"><span class="docs-avatar">${sfDocsEsc(String(r.name||'?').trim().charAt(0))}</span><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b>${r.name_en?`<span class="en" dir="ltr">${sfDocsEsc(r.name_en)}</span>`:''}</span></div></td>
+      <td${L(sfDocsT('Code','الكود'))}>${r.empid?`<span class="docs-code" dir="ltr">${sfDocsEsc(r.empid)}</span>`:'—'}</td>
+      <td${L(sfDocsT('Iqama','الإقامة'))}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.iqama||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.iqama_expiry,''):''}</div></td>
+      <td${L('SEC-ID')}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.sec_id_no||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.sec_id_expiry,r.sec_id_returned_on):''}</div></td>
+      ${sfDocsCanEdit?`<td${L(sfDocsT('Actions','إجراءات'))}>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="5" class="docs-empty">${sfDocsEsc(sfDocsT('No employees match.','لا يوجد موظفون مطابقون.'))}</td></tr>`}</tbody></table></div></div>`;
+  // Then the two lists of what is due, each with print and Excel.
+  const list=doc=>{const due=sfDocsDue(doc);
+    return due.length?`<ul class="docs-list">${due.map(({r,s})=>`<li class="sev-${s.key}"><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b><span class="sub" dir="ltr">${sfDocsEsc(doc==='iqama'?(r.iqama||''):(r.sec_id_no||''))} · ${sfDocsDate(expiry(r,doc))}</span></span>${sfDocsBadge(expiry(r,doc),'')}</li>`).join('')}</ul>`
+      :`<div class="docs-empty">✅ ${sfDocsEsc(sfDocsT('Nothing due within 45 days.','لا شيء ينتهي خلال 45 يومًا.'))}</div>`};
+  const card=(doc,icon,title)=>`<div class="docs-card"><div class="docs-card-hdr"><h3>${icon} ${sfDocsEsc(title)} <span class="docs-count">${sfDocsDue(doc).length}</span> <small>${sfDocsEsc(sfDocsT('expired or within 45 days','منتهية أو خلال 45 يومًا'))}</small></h3>
+    <span class="docs-actions"><button type="button" class="docs-btn" data-docs-print="${doc}">🖨 ${sfDocsEsc(sfDocsT('Print','طباعة'))}</button><button type="button" class="docs-btn" data-docs-excel="${doc}">📥 Excel</button></span></div>${list(doc)}</div>`;
+  panel.innerHTML=kpis+people+`<div class="docs-grid">${card('iqama','🪪',sfDocsT('Iqamas','الإقامات'))}${card('sec_id','🦺',sfDocsT('SEC-ID cards','بطاقات SEC-ID'))}</div>`;
+  sfDocsApplySearch();
+}
+// Search hides table rows without redrawing, so typing keeps the focus.
+let sfDocsSearch='';
+function sfDocsApplySearch(){
+  const q=sfDocsSearch.trim().toLowerCase(),input=document.getElementById('sf-docs-search');if(input&&input.value!==sfDocsSearch)input.value=sfDocsSearch;
+  const rows=[...(document.getElementById('sf-documents-panel')?.querySelectorAll?.('.docs-table tbody tr[data-search]')||[])];
+  let shown=0;for(const tr of rows){const hit=!q||tr.dataset.search.includes(q);tr.hidden=!hit;if(hit)shown++}
+  const c=document.getElementById('sf-docs-count');if(c&&rows.length)c.textContent=shown;
 }
 
 async function sfDocsLoad(){
@@ -211,5 +254,7 @@ document.addEventListener('click',e=>{
   const act=e.target.closest('[data-docs-act]');if(act)return void sfDocsAction(act.dataset.docsAct,act.dataset.id);
   const p=e.target.closest('[data-docs-print]');if(p)return sfDocsPrint(p.dataset.docsPrint);
   const x=e.target.closest('[data-docs-excel]');if(x)return void sfDocsExcel(x.dataset.docsExcel);
+  const k=e.target.closest('[data-docs-filter]');if(k){sfDocsFilter=k.dataset.docsFilter;sfDocsRender();document.querySelector('.docs-table')?.scrollIntoView({behavior:'smooth',block:'start'})}
 });
 document.addEventListener('change',e=>{if(e.target?.id==='sf-docs-filter'){sfDocsFilter=e.target.value;sfDocsRender()}});
+document.addEventListener('input',e=>{if(e.target?.id==='sf-docs-search'){sfDocsSearch=e.target.value;sfDocsApplySearch()}});
