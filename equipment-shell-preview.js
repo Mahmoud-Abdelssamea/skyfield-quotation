@@ -44,7 +44,8 @@ function sfEquipmentStyles(){
 .sf-eq-chip.warn{background:#FFF3CD;color:#856404}.sf-eq-chip.bad{background:#FDECEC;color:var(--sf-alert-text)}
 .sf-eq-refresh{font-family:inherit;font-size:13px;font-weight:600;padding:8px 12px;border-radius:10px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-navy);cursor:pointer;white-space:nowrap}
 .sf-eq-refresh:hover{border-color:var(--sf-navy)}
-@media(max-width:760px){.sf-eq-chip.count{display:none}}`;
+@media(max-width:1180px){.sf-eq-chip{display:none!important}}
+@media(max-width:760px){.sf-eq-refresh span{display:none}.sf-eq-refresh{padding:8px 11px}}`;
   document.head.appendChild(s);
 }
 // Refresh button and the sync / record-count badges of the equipment page, next to the page title.
@@ -63,7 +64,7 @@ function sfEquipmentTools(show){
 function sfEquipmentCopyStatus(){
   const d=document.getElementById('sf-equipment-frame')?.contentDocument,sync=d?.getElementById('sync-badge'),count=d?.getElementById('total-lbl');
   const syncEl=document.getElementById('sf-eq-sync'),countEl=document.getElementById('sf-eq-count'),refresh=document.getElementById('sf-eq-refresh');
-  if(refresh)refresh.textContent='↻ '+sfEquipmentT('Refresh','تحديث');
+  if(refresh){refresh.innerHTML='↻ <span>'+sfEquipmentT('Refresh','تحديث')+'</span>';refresh.title=sfEquipmentT('Refresh the equipment data','تحديث بيانات الأجهزة')}
   if(syncEl){const text=sync?.textContent?.trim()||'';syncEl.textContent=text;syncEl.hidden=!text;
     const bg=sync?String(sync.style.background||''):'';syncEl.className='sf-eq-chip'+(/F8D7DA|248, 215, 218/i.test(bg)?' bad':/FFF3CD|255, 243, 205/i.test(bg)?' warn':'')}
   if(countEl){const text=count?.textContent?.trim()||'';countEl.textContent=text;countEl.hidden=!text}

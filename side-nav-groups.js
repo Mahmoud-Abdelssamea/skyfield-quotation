@@ -34,7 +34,9 @@ function sfNavApply(){
   const groups=sfNavGroups(),count=groups.reduce((n,g)=>n+g.buttons.filter(sfNavVisible).length,0),fold=count>=SF_NAV_FOLD_FROM;
   nav.classList.toggle('side-nav-folding',fold);
   // Arriving on a page of another group opens that group (it can still be closed by hand).
-  const active=groups.find(g=>g.buttons.some(b=>b.classList.contains('active')&&sfNavVisible(b)));
+  // (Only the page really open: before sign-in finishes, the Dashboard item is marked by default.)
+  const route=typeof sfUnifiedRoute==='string'&&sfUnifiedRoute?sfUnifiedRoute:document.body?.dataset?.module||'';
+  const active=groups.find(g=>g.buttons.some(b=>b.classList.contains('active')&&sfNavVisible(b)&&b.dataset.module===route));
   if(active&&active.key!==sfNavActiveGroup){sfNavActiveGroup=active.key;if(!sfNavOpen.includes(active.key)){sfNavOpen=[...sfNavOpen,active.key];sfNavSave()}}
   for(const g of groups){
     const open=!fold||sfNavOpen.includes(g.key);
