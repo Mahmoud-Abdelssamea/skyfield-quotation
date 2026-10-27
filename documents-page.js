@@ -167,7 +167,8 @@ async function sfDocsLoad(){
 
 const SF_DOCS_ERRORS={NEW_DATE_NOT_LATER:['The new date must be after the current expiry date.','التاريخ الجديد يجب أن يكون بعد تاريخ الانتهاء الحالي.'],
   DATE_IN_FUTURE:['The hand-in date cannot be in the future.','لا يمكن أن يكون تاريخ التسليم في المستقبل.'],NO_SEC_ID:['No SEC-ID card is recorded.','لا توجد بطاقة SEC-ID مسجلة.'],
-  ACCESS_DENIED:['You do not have permission to update this.','ليس لديك صلاحية لهذا التحديث.'],RECIPIENT_NOT_FOUND:['This person was not found. Refresh the page.','الشخص غير موجود. حدّث الصفحة.']};
+  ACCESS_DENIED:['You do not have permission to update this.','ليس لديك صلاحية لهذا التحديث.'],RECIPIENT_NOT_FOUND:['This person was not found. Refresh the page.','الشخص غير موجود. حدّث الصفحة.'],
+  IQAMA_INVALID:['The Iqama number must be 10 digits.','رقم الإقامة يجب أن يكون 10 أرقام.'],IQAMA_TAKEN:['This Iqama number is already recorded for another person.','رقم الإقامة ده مسجّل لشخص تاني.']};
 function sfDocsError(error){const code=Object.keys(SF_DOCS_ERRORS).find(k=>String(error?.message||'').includes(k));return code?sfDocsT(...SF_DOCS_ERRORS[code]):(error?.message||String(error))}
 const sfDocsValidDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(new Date(d+'T00:00:00').getTime());
 async function sfDocsSave(rpcName,args,row){
@@ -178,12 +179,13 @@ async function sfDocsSave(rpcName,args,row){
   return true;
 }
 const sfDocsTodayIso=()=>{const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`};
-// The update form: Iqama expiry, SEC-ID number and expiry, and "returned to the electricity company" with its date.
+// The update form: Iqama number and expiry, SEC-ID number and expiry, and "returned to the electricity company" with its date.
 // Resolves with the values, or null when cancelled.
 let sfDocsAskUpdate=row=>new Promise(done=>{
   const sheet=document.createElement('div');sheet.className='docs-sheet';
   const returned=!!row.sec_id_returned_on;
   sheet.innerHTML=`<form><h4>${sfDocsEsc(sfDocsT('Update','تحديث'))} — <bdi>${sfDocsEsc(row.name)}</bdi></h4>
+    <label>${sfDocsEsc(sfDocsT('Iqama number (10 digits)','رقم الإقامة (10 أرقام)'))}<input name="iqamaNo" dir="ltr" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" value="${sfDocsEsc(row.iqama||'')}"></label>
     <label>${sfDocsEsc(sfDocsT('Iqama expiry date','تاريخ انتهاء الإقامة'))}<input type="date" name="iqama" value="${sfDocsEsc(row.iqama_expiry||'')}"></label>
     <label>${sfDocsEsc(sfDocsT('SEC-ID card number','رقم بطاقة SEC-ID'))}<input name="secNo" dir="ltr" maxlength="50" value="${sfDocsEsc(row.sec_id_no||'')}"></label>
     <label>${sfDocsEsc(sfDocsT('SEC-ID card expiry date','تاريخ انتهاء بطاقة SEC-ID'))}<input type="date" name="secExpiry" value="${sfDocsEsc(row.sec_id_expiry||'')}"></label>
@@ -194,22 +196,24 @@ let sfDocsAskUpdate=row=>new Promise(done=>{
   const form=sheet.querySelector('form'),close=v=>{sheet.remove();done(v)};
   form.elements.returned.onchange=()=>{form.querySelector('.docs-returned-date').hidden=!form.elements.returned.checked};
   form.onsubmit=e=>{e.preventDefault();const f=form.elements;
-    close({iqama:f.iqama.value,secNo:f.secNo.value.trim(),secExpiry:f.secExpiry.value,returned:f.returned.checked,returnedOn:f.returnedOn.value})};
+    close({iqamaNo:f.iqamaNo.value.trim(),iqama:f.iqama.value,secNo:f.secNo.value.trim(),secExpiry:f.secExpiry.value,returned:f.returned.checked,returnedOn:f.returnedOn.value})};
   sheet.querySelector('[data-docs-cancel]').onclick=()=>close(null);
   sheet.onclick=e=>{if(e.target===sheet)close(null)};
-  document.body.appendChild(sheet);form.elements.iqama.focus();
+  document.body.appendChild(sheet);form.elements.iqamaNo.focus();
 });
 async function sfDocsUpdate(row){
   const v=await sfDocsAskUpdate(row);if(!v)return;
+  const iqamaNo=v.iqamaNo===undefined?(row.iqama||''):v.iqamaNo;
+  if(iqamaNo&&iqamaNo!==(row.iqama||'')&&!/^\d{10}$/.test(iqamaNo)){alert(sfDocsT('The Iqama number must be 10 digits.','رقم الإقامة يجب أن يكون 10 أرقام.'));return}
   if([v.iqama,v.secExpiry,v.returned?v.returnedOn:''].some(d=>d&&!sfDocsValidDate(d))){alert(sfDocsT('Write the date as YYYY-MM-DD.','اكتب التاريخ بصيغة YYYY-MM-DD.'));return}
-  const datesChanged=(v.iqama||null)!==(row.iqama_expiry||null)||(v.secNo||null)!==(row.sec_id_no||null)||(v.secExpiry||null)!==(row.sec_id_expiry||null);
+  const datesChanged=(iqamaNo||null)!==(row.iqama||null)||(v.iqama||null)!==(row.iqama_expiry||null)||(v.secNo||null)!==(row.sec_id_no||null)||(v.secExpiry||null)!==(row.sec_id_expiry||null);
   const wasReturned=!!row.sec_id_returned_on;
   // Undoing a return means a new card: its expiry date has to change (the database clears the return then).
   if(wasReturned&&!v.returned&&(v.secExpiry||null)===(row.sec_id_expiry||null)){alert(sfDocsT('To follow the card again, write the expiry date of the new card.','عشان السيستم يتابع البطاقة تاني، اكتب تاريخ انتهاء البطاقة الجديدة.'));return}
   if(v.returned&&!v.returnedOn){alert(sfDocsT('Write the date the card was returned.','اكتب تاريخ تسليم البطاقة.'));return}
   const returnChanged=v.returned&&(!wasReturned||v.returnedOn!==row.sec_id_returned_on||(v.secExpiry||null)!==(row.sec_id_expiry||null));
   if(!datesChanged&&!returnChanged)return;
-  if(datesChanged&&!await sfDocsSave('eq_update_documents',{p_id:row.id,p_iqama_expiry:v.iqama||null,p_sec_id_no:v.secNo||null,p_sec_id_expiry:v.secExpiry||null},row))return;
+  if(datesChanged&&!await sfDocsSave('eq_update_documents',{p_id:row.id,p_iqama:iqamaNo||null,p_iqama_expiry:v.iqama||null,p_sec_id_no:v.secNo||null,p_sec_id_expiry:v.secExpiry||null},row))return;
   if(returnChanged)await sfDocsSave('eq_engineer_document',{p_id:row.id,p_document:'sec_id',p_action:'returned',p_date:v.returnedOn},row);
 }
 async function sfDocsAction(act,id){
