@@ -149,7 +149,7 @@ showTab=function(name,button){
   if(!frame.getAttribute('src')){
     sfEquipmentFrameReady=false;
     frame.onload=()=>{sfEquipmentFrameReady=true;sfEquipmentOpenTab();sfEquipmentWatchStatus();sfEquipmentCopyStatus();sfEquipmentViewport()};
-    frame.src='equipment-module.html?v=20261027-sidebar3&lang='+(sfUiLanguage==='ar'?'ar':'en');
+    frame.src='equipment-module.html?v=20261027-sidebar4&lang='+(sfUiLanguage==='ar'?'ar':'en');
   }else sfEquipmentOpenTab();
   closeSidebar();window.scrollTo({top:0,behavior:'smooth'});
 };

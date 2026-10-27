@@ -167,6 +167,7 @@ window.eqSetLanguage=function(language){setLanguage(language);eqRenderBanner();}
 .eq-embedded #eq-banner{margin:0 0 12px}
 .eq-embedded .modal-bg,.eq-embedded .print-bg{top:var(--eq-vt,0px);bottom:auto;height:var(--eq-vh,100vh);padding:12px;background:rgba(15,23,42,.55)}
 .eq-embedded .modal,.eq-embedded .print-modal{max-height:calc(var(--eq-vh,100vh) - 24px)}
+.eq-embedded .print-modal{width:820px;max-width:96vw}
 .eq-embedded .toast{bottom:auto;top:calc(var(--eq-vt,0px) + var(--eq-vh,100vh) - 72px)}
 @media(max-width:760px){.eq-embedded .page{padding:0 0 10px}}
 </style>
@@ -3280,9 +3281,9 @@ function buildPrintHTML(r, lang='ar') {
   const label = s => `<div style="font-size:10px;color:#999">${escapeHTML(t(s))}</div>`;
   const box = (s, value, side=true, bottom=true) => `<div style="padding:9px 12px;${side?`border-${end}:1px solid #ddd;`:''}${bottom?'border-bottom:1px solid #ddd':''}">${label(s)}<div style="font-size:14px;font-weight:600">${value}</div></div>`;
   const section = s => `<div style="font-size:10px;font-weight:700;color:#999;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:8px">${escapeHTML(t(s))}</div>`;
-  const th = s => `<th style="padding:8px 10px;text-align:${start}">${escapeHTML(t(s))}</th>`;
+  const th = s => `<th style="padding:8px 10px;text-align:${start};white-space:nowrap">${escapeHTML(t(s))}</th>`;
   const td = v => `<td style="padding:7px 10px;border-bottom:1px solid #eee">${escapeHTML(v)}</td>`;
-  const devRows = r.devices.map(d => `<tr>${td(d.id)}${td(d.name)}${td(tv(d.type))}${td(d.serial)}${td(d.specs)}</tr>`).join('');
+  const devRows = r.devices.map(d => `<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escapeHTML(d.id)}</td>${td(d.name)}${td(tv(d.type))}<td style="padding:7px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escapeHTML(d.serial)}</td>${td(d.specs)}</tr>`).join('');
 
   return `
   <div dir="${dir}" style="direction:${dir};text-align:${start};font-family:'Inter','Tajawal','Segoe UI',Tahoma,Arial,sans-serif;color:#111">
@@ -3296,7 +3297,7 @@ function buildPrintHTML(r, lang='ar') {
       </div>
       <div style="text-align:${end}">
         <div style="font-size:11px;color:#888">${escapeHTML(t('رقم السجل'))}</div>
-        <div style="font-size:22px;font-weight:700;color:#1A1A2E;white-space:nowrap">${escapeHTML(r.id || t('يُحدَّد عند الحفظ'))}</div>
+        ${r.id ? `<div style="font-size:22px;font-weight:700;color:#1A1A2E;white-space:nowrap">${escapeHTML(r.id)}</div>` : `<div style="font-size:14px;font-weight:600;color:#888;max-width:170px">${escapeHTML(t('يُحدَّد عند الحفظ'))}</div>`}
         <div style="font-size:11px;color:#888">${escapeHTML(formatStoredDate(r.date))}</div>
       </div>
     </div>
