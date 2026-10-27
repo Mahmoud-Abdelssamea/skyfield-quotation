@@ -453,12 +453,23 @@ payrollSaveSheet=async function(){
  if(!(await sfPayrollFillFromAttendance())||sfCurrentPayroll!==sheet)return;
  return await sfSimplePayrollSaveBase();
 };
+// Why approval stopped, shown beside the Approve button (the status line is at the top of the page, out of view).
+function sfPayrollApproveNotice(text){
+ let el=document.getElementById('sf-payroll-approve-msg');
+ if(!el&&text){const anchor=document.querySelector('#tab-payroll button[onclick^="payrollApproveCurrent"]')?.parentElement;if(!anchor)return;el=document.createElement('p');el.id='sf-payroll-approve-msg';el.className='payroll-approve-msg';el.setAttribute('role','alert');el.dir='rtl';anchor.after(el)}
+ if(el){el.textContent=text||'';el.hidden=!text}
+}
 payrollApproveCurrent=async function(){
- if(sfPayrollFillBusy||!sfCurrentPayroll||sfCurrentPayroll.status==='approved')return;
- const sheet=sfCurrentPayroll;
- if(!(await sfPayrollFillFromAttendance())||sfCurrentPayroll!==sheet)return;
- if(sheet.rows.some(r=>(r.attSummary?.pending||0)+(r.attSummary?.rejected||0)>0)){
-  sfPayrollStatus('اعتمد أو صحّح سجلات الحضور المعلقة والمرفوضة أولًا، حتى يُحسب الغياب والبدلات بشكل صحيح.');return;
+ if(!sfCurrentPayroll||sfCurrentPayroll.status==='approved')return;
+ if(sfPayrollFillBusy){sfPayrollApproveNotice('انتظر اكتمال الحساب ثم اضغط اعتماد مرة أخرى. / Please wait for the calculation to finish.');return}
+ const sheet=sfCurrentPayroll;sfPayrollApproveNotice('');
+ if(!(await sfPayrollFillFromAttendance())){sfPayrollApproveNotice(document.getElementById('sf-payroll-att-status')?.textContent||'تعذر حساب الرواتب.');return}
+ if(sfCurrentPayroll!==sheet)return;
+ const held=sheet.rows.filter(r=>(r.attSummary?.pending||0)+(r.attSummary?.rejected||0)>0);
+ if(held.length){
+  const who=held.map(r=>{const s=r.attSummary;return `${r.name} (${[s.pending?s.pending+' يوم معلق':'',s.rejected?s.rejected+' يوم مرفوض':''].filter(Boolean).join('، ')})`}).join('، ');
+  const text=`لا يمكن الاعتماد بعد: يوجد حضور لم يُراجع — ${who}. اعتمد هذه الأيام أو صحّحها من صفحة الحضور، ثم اضغط اعتماد مرة أخرى. / Cannot approve yet: review the pending or rejected attendance first.`;
+  sfPayrollStatus(text);sfPayrollApproveNotice(text);return;
  }
  if(sheet.month===sfRiyadhToday().slice(0,7)||sheet.rows.some(r=>r.attSummary?.unrecorded)){
   if(!confirm('تأكيد مراجعة الشهر: الأيام غير المسجلة والأيام المتبقية لا تخصم تلقائيًا، وتُحسب ضمن الراتب الثابت. هل راجعت الغياب والإجازات قبل الاعتماد؟'))return;

@@ -18,6 +18,8 @@
 #tab-payroll .payroll-summary-box .val{font-size:20px;margin-top:10px}
 #payroll-review-notice{background:#edf3f9;color:#284666;padding:14px 16px;border-radius:8px;margin:14px 0;font-size:13px;line-height:1.7}
 #tab-payroll .payroll-actions{gap:8px;flex-wrap:wrap}
+#sf-payroll-approve-msg{background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.45);color:inherit;padding:10px 14px;border-radius:8px;margin:0 0 12px;font-size:13px;line-height:1.7}
+@media print{#sf-payroll-approve-msg{display:none}}
 #tab-payroll .payroll-signatures{display:none}
 #tab-payroll button:disabled{opacity:.45;cursor:not-allowed}
 #tab-payroll button:focus-visible,#tab-payroll input:focus-visible,#tab-payroll select:focus-visible{outline:2px solid #d97706;outline-offset:3px}
