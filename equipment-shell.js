@@ -44,6 +44,9 @@ function sfEquipmentStyles(){
 .sf-eq-chip.warn{background:#FFF3CD;color:#856404}.sf-eq-chip.bad{background:#FDECEC;color:var(--sf-alert-text)}
 .sf-eq-refresh{font-family:inherit;font-size:13px;font-weight:600;padding:8px 12px;border-radius:10px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-navy);cursor:pointer;white-space:nowrap}
 .sf-eq-refresh:hover{border-color:var(--sf-navy)}
+html.sf-eq-modal,html.sf-eq-modal body{overflow:hidden}
+html.sf-eq-modal body::before{content:'';position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000}
+html.sf-eq-modal #sf-equipment-frame{position:relative;z-index:1001}
 @media(max-width:1180px){.sf-eq-chip{display:none!important}}
 @media(max-width:760px){.sf-eq-refresh span{display:none}.sf-eq-refresh{padding:8px 11px}}`;
   document.head.appendChild(s);
@@ -87,10 +90,18 @@ function sfEquipmentResize(frameWindow,height){
 function sfEquipmentViewport(){
   const frame=document.getElementById('sf-equipment-frame');
   if(!frame||document.getElementById('sf-equipment-panel')?.hidden||!frame.contentWindow?.eqViewport)return;
-  const rect=frame.getBoundingClientRect(),bar=document.querySelector('.page-command-bar')?.getBoundingClientRect?.();
+  // While a window is open the frame sits above the whole page, so the window centres on the full screen.
+  const rect=frame.getBoundingClientRect(),modal=document.documentElement.classList.contains('sf-eq-modal'),bar=modal?null:document.querySelector('.page-command-bar')?.getBoundingClientRect?.();
   const top=Math.max(0,Math.min(window.innerHeight,bar&&getComputedStyle(document.querySelector('.page-command-bar')).position==='sticky'?bar.bottom:0));
   const from=Math.max(rect.top,top),to=Math.min(rect.bottom,window.innerHeight);
   frame.contentWindow.eqViewport(from-rect.top,Math.max(0,to-from));
+}
+// A window inside the equipment page opened or closed: dim the whole screen, keep the page still, centre the window.
+function sfEquipmentModal(frameWindow,open){
+  const frame=document.getElementById('sf-equipment-frame');
+  if(!frame||frameWindow!==frame.contentWindow)return;
+  document.documentElement.classList.toggle('sf-eq-modal',!!open&&!document.getElementById('sf-equipment-panel')?.hidden);
+  sfEquipmentViewport();
 }
 window.addEventListener('scroll',sfEquipmentViewport,{passive:true});window.addEventListener('resize',sfEquipmentViewport);
 // A link inside the equipment page moved to another section (e.g. a dashboard card): follow it in the menu and address.
@@ -121,7 +132,7 @@ function sfEquipmentOpenTab(){
     if(frame.contentWindow.eqActiveTab?.()!==sfEquipmentTab)frame.contentWindow.goTab(sfEquipmentTab);
   }
 }
-function sfEquipmentHide(){const panel=document.getElementById('sf-equipment-panel');if(panel)panel.hidden=true;sfEquipmentTools(false)}
+function sfEquipmentHide(){const panel=document.getElementById('sf-equipment-panel');if(panel)panel.hidden=true;sfEquipmentTools(false);document.documentElement.classList?.remove('sf-eq-modal')}
 function sfEquipmentClear(){sfEquipmentHide();sfEquipmentObserver?.disconnect();sfEquipmentFrameReady=false;const frame=document.getElementById('sf-equipment-frame');if(frame)frame.removeAttribute('src')}
 
 showTab=function(name,button){
@@ -138,7 +149,7 @@ showTab=function(name,button){
   if(!frame.getAttribute('src')){
     sfEquipmentFrameReady=false;
     frame.onload=()=>{sfEquipmentFrameReady=true;sfEquipmentOpenTab();sfEquipmentWatchStatus();sfEquipmentCopyStatus();sfEquipmentViewport()};
-    frame.src='equipment-module.html?v=20261027-sidebar2&lang='+(sfUiLanguage==='ar'?'ar':'en');
+    frame.src='equipment-module.html?v=20261027-sidebar3&lang='+(sfUiLanguage==='ar'?'ar':'en');
   }else sfEquipmentOpenTab();
   closeSidebar();window.scrollTo({top:0,behavior:'smooth'});
 };

@@ -14,7 +14,12 @@ var EQ_PREVIEW=true,EQ_REAL_ROLE='viewer';
  var report=function(){try{window.parent.sfEquipmentResize&&window.parent.sfEquipmentResize(window,document.body.offsetHeight)}catch(e){}};
  window.eqViewport=function(top,height){var s=document.documentElement.style;s.setProperty('--eq-vt',Math.max(0,top)+'px');s.setProperty('--eq-vh',Math.max(160,height)+'px')};
  window.eqActiveTab=function(){var p=document.querySelector('.page.active');return p?p.id.replace('page-',''):'dashboard'};
+ // A window (edit, print preview…) opened or closed: the main page dims the whole screen and holds still meanwhile.
+ var windowOpen=false;
+ var checkWindows=function(){var open=!!document.querySelector('.modal-bg.open,.print-bg.open');if(open===windowOpen)return;windowOpen=open;
+  try{window.parent.sfEquipmentModal&&window.parent.sfEquipmentModal(window,open)}catch(e){}};
  addEventListener('DOMContentLoaded',function(){
+  if(typeof MutationObserver==='function')new MutationObserver(checkWindows).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
   var base=window.goTab;
   if(typeof base==='function')window.goTab=function(t){base(t);try{window.parent.sfEquipmentTabChanged&&window.parent.sfEquipmentTabChanged(window,t)}catch(e){}report()};
   if(typeof ResizeObserver==='function')new ResizeObserver(report).observe(document.body);
@@ -160,7 +165,7 @@ window.eqSetLanguage=function(language){setLanguage(language);eqRenderBanner();}
 .eq-embedded .kpi-card{border-color:#E3E6EE;box-shadow:0 1px 3px rgba(31,56,100,.04)}
 .eq-embedded .btn{border-radius:10px}
 .eq-embedded #eq-banner{margin:0 0 12px}
-.eq-embedded .modal-bg,.eq-embedded .print-bg{top:var(--eq-vt,0px);bottom:auto;height:var(--eq-vh,100vh);padding:12px}
+.eq-embedded .modal-bg,.eq-embedded .print-bg{top:var(--eq-vt,0px);bottom:auto;height:var(--eq-vh,100vh);padding:12px;background:rgba(15,23,42,.55)}
 .eq-embedded .modal,.eq-embedded .print-modal{max-height:calc(var(--eq-vh,100vh) - 24px)}
 .eq-embedded .toast{bottom:auto;top:calc(var(--eq-vt,0px) + var(--eq-vh,100vh) - 72px)}
 @media(max-width:760px){.eq-embedded .page{padding:0 0 10px}}
