@@ -6,6 +6,22 @@
 var EQ_PREVIEW=true,EQ_REAL_ROLE='viewer';
 (function(){try{var l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ar')localStorage.setItem('eq_language',l)}catch(e){}
  if(window.parent!==window)document.documentElement.classList.add('eq-embedded')})();
+// Inside the main site: its sidebar opens the sections, so this page has no header or tabs; the page grows to its
+// content (the main page is the only scroll) and tells the main page when a link inside it changes section.
+// Windows and messages open in the part of the page on screen, which the main page passes in (eqViewport).
+(function(){
+ if(window.parent===window)return;
+ var report=function(){try{window.parent.sfEquipmentResize&&window.parent.sfEquipmentResize(window,document.body.offsetHeight)}catch(e){}};
+ window.eqViewport=function(top,height){var s=document.documentElement.style;s.setProperty('--eq-vt',Math.max(0,top)+'px');s.setProperty('--eq-vh',Math.max(160,height)+'px')};
+ window.eqActiveTab=function(){var p=document.querySelector('.page.active');return p?p.id.replace('page-',''):'dashboard'};
+ addEventListener('DOMContentLoaded',function(){
+  var base=window.goTab;
+  if(typeof base==='function')window.goTab=function(t){base(t);try{window.parent.sfEquipmentTabChanged&&window.parent.sfEquipmentTabChanged(window,t)}catch(e){}report()};
+  if(typeof ResizeObserver==='function')new ResizeObserver(report).observe(document.body);
+  report();
+ });
+ addEventListener('load',report);
+})();
 </script>
 <script>
 // ── Main-site integration (defined before the page starts; uses page functions only when called) ──
@@ -129,6 +145,24 @@ window.eqSetLanguage=function(language){setLanguage(language);eqRenderBanner();}
 *:has(> #em-iqama-expiry),*:has(> #em-sec-no),*:has(> #em-sec-expiry){display:none!important}
 #eq-cert-list{list-style:none;margin:0;padding:0;max-height:55vh;overflow:auto;font-size:12px}
 #eq-cert-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5;direction:ltr}
+/* Inside the main site: no own header or tabs (the main sidebar and page header take their place), one scroll,
+   and the main site's colours, cards and spacing. */
+.eq-embedded{--dark:#1A1A2E;--accent:#1F3864;--gold:#E8610A;--border:#E3E6EE;--input:#F7F8FC;--text:#1A1A2E;--muted:#6B6B80;--light:#F2F5FB}
+.eq-embedded,.eq-embedded body{overflow:hidden;background:transparent}
+.eq-embedded body{min-height:0;font-family:'Inter','Tajawal',sans-serif}
+.eq-embedded .app-header,.eq-embedded body>nav{display:none!important}
+.eq-embedded .page{padding:2px 1px 12px;max-width:none}
+.eq-embedded .dashboard-head h2,.eq-embedded .dashboard-head p{display:none}
+.eq-embedded .card{border:1px solid #E3E6EE;border-radius:14px;box-shadow:0 1px 3px rgba(31,56,100,.04);margin-bottom:16px}
+.eq-embedded .card-header{background:#fff;color:#1F3864;border-bottom:1px solid #E3E6EE;font-size:15px;font-weight:700}
+.eq-embedded .card-header .section-subtitle{color:#6B6B80;opacity:1}
+.eq-embedded .kpi-card{border-color:#E3E6EE;box-shadow:0 1px 3px rgba(31,56,100,.04)}
+.eq-embedded .btn{border-radius:10px}
+.eq-embedded #eq-banner{margin:0 0 12px}
+.eq-embedded .modal-bg,.eq-embedded .print-bg{top:var(--eq-vt,0px);bottom:auto;height:var(--eq-vh,100vh);padding:12px}
+.eq-embedded .modal,.eq-embedded .print-modal{max-height:calc(var(--eq-vh,100vh) - 24px)}
+.eq-embedded .toast{bottom:auto;top:calc(var(--eq-vt,0px) + var(--eq-vh,100vh) - 72px)}
+@media(max-width:760px){.eq-embedded .page{padding:0 0 10px}}
 </style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

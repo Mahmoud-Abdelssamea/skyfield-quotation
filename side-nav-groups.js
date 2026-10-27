@@ -1,8 +1,7 @@
 'use strict';
-// Sidebar groups. When an account sees a long menu (the administrator, a commercial account with equipment), each
-// heading opens and closes its group; going to a page opens its group, and the open groups are remembered.
-// Accounts with a short menu (engineers, the accountant, an equipment-only storekeeper) keep the plain list.
-const SF_NAV_FOLD_FROM=11; // visible menu items from which the groups fold
+// Sidebar groups for the system administrator, whose menu is long: each heading opens and closes its group; going to a
+// page opens its group, and the open groups are remembered. Every other account keeps the plain list.
+const SF_NAV_FOLD_FROM=11; // and only when that many menu items are visible
 let sfNavOpen=(()=>{try{const v=JSON.parse(localStorage.getItem('sfNavOpenGroups')||'[]');return Array.isArray(v)?v:[]}catch{return []}})();
 let sfNavActiveGroup='';
 const sfNavVisible=b=>b.style.display!=='none'&&!b.hidden;
@@ -31,7 +30,7 @@ html[dir="rtl"] .side-nav-folding .side-nav-label[aria-expanded="false"]::after{
 function sfNavApply(){
   const nav=document.querySelector('.side-nav');if(!nav)return;
   sfNavStyles();
-  const groups=sfNavGroups(),count=groups.reduce((n,g)=>n+g.buttons.filter(sfNavVisible).length,0),fold=count>=SF_NAV_FOLD_FROM;
+  const groups=sfNavGroups(),count=groups.reduce((n,g)=>n+g.buttons.filter(sfNavVisible).length,0),fold=typeof sfUnifiedAccess!=='undefined'&&sfUnifiedAccess?.users_admin===true&&count>=SF_NAV_FOLD_FROM;
   nav.classList.toggle('side-nav-folding',fold);
   // Arriving on a page of another group opens that group (it can still be closed by hand).
   // (Only the page really open: before sign-in finishes, the Dashboard item is marked by default.)

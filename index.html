@@ -102,25 +102,32 @@
     </div>
   </div>
   <nav class="side-nav">
-    <div class="side-nav-label">Overview</div>
+    <div class="side-nav-label" data-group="overview">Overview</div>
     <button class="side-nav-btn active" data-module="dashboard" onclick="showTab('dashboard',this)"><span class="side-nav-icon">⌂</span>Dashboard</button>
     <button class="side-nav-btn" data-module="analytics" onclick="showTab('analytics',this)"><span class="side-nav-icon">◩</span>Analytics</button>
-    <div class="side-nav-label">Commercial</div>
+    <div class="side-nav-label" data-group="commercial">Commercial</div>
     <button class="side-nav-btn" data-module="activities" onclick="sfStartNewQuotation()"><span class="side-nav-icon">＋</span>New Quotation</button>
     <button class="side-nav-btn" data-module="quotes" onclick="showTab('quotes',this)"><span class="side-nav-icon">▤</span>Quotations <span class="side-nav-count" id="side-quote-count">0</span></button>
     <button class="side-nav-btn" data-module="projects" onclick="showTab('projects',this)"><span class="side-nav-icon">▣</span>Projects <span class="side-nav-count" id="side-project-count">0</span></button>
     <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Proforma Invoices <span class="side-nav-count" id="side-pi-count">0</span></button> <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">▥</span>Equipment Library</button>
-    <div class="side-nav-label">Team &amp; Attendance</div>
+    <div class="side-nav-label" data-group="team">Team &amp; Attendance</div>
     <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon">♙</span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
     <button class="side-nav-btn" data-module="attendance" onclick="showTab('attendance',this)"><span class="side-nav-icon">◷</span>Attendance</button>
     <button class="side-nav-btn" data-module="expenses" onclick="showTab('expenses',this)"><span class="side-nav-icon">◫</span>Field Expenses</button>
     <button class="side-nav-btn" data-module="timesheets" onclick="showTab('timesheets',this)"><span class="side-nav-icon">▦</span>Timesheets &amp; Approvals</button>
-    <button class="side-nav-btn" data-module="devices" onclick="showTab('devices',this)" style="display:none"><span class="side-nav-icon">⚒</span>Equipment &amp; Custody</button>
+    <div class="side-nav-label" data-group="equipment">Equipment &amp; Custody</div>
+    <button class="side-nav-btn" data-module="devices" onclick="showTab('devices',this)" style="display:none"><span class="side-nav-icon">⚒</span>Equipment Dashboard</button>
+    <button class="side-nav-btn" data-module="devices-form" onclick="showTab('devices-form',this)" style="display:none"><span class="side-nav-icon">⇄</span>Record Movement</button>
+    <button class="side-nav-btn" data-module="devices-log" onclick="showTab('devices-log',this)" style="display:none"><span class="side-nav-icon">☰</span>Movement Log</button>
+    <button class="side-nav-btn" data-module="devices-inv" onclick="showTab('devices-inv',this)" style="display:none"><span class="side-nav-icon">▥</span>Inventory</button>
+    <button class="side-nav-btn" data-module="devices-calibration" onclick="showTab('devices-calibration',this)" style="display:none"><span class="side-nav-icon">◎</span>Calibration</button>
+    <button class="side-nav-btn" data-module="devices-manage" onclick="showTab('devices-manage',this)" style="display:none"><span class="side-nav-icon">⚙</span>Manage Devices</button>
+    <button class="side-nav-btn" data-module="devices-settings" onclick="showTab('devices-settings',this)" style="display:none"><span class="side-nav-icon">⚑</span>Recipients &amp; Sites</button>
     <button class="side-nav-btn" data-module="documents" onclick="showTab('documents',this)" style="display:none"><span class="side-nav-icon">🪪</span>Iqama &amp; SEC-ID</button>
-    <div class="side-nav-label">Finance</div>
+    <div class="side-nav-label" data-group="finance">Finance</div>
     <button class="side-nav-btn" data-module="accounting" onclick="showTab('accounting',this)"><span class="side-nav-icon">▤</span>Accounts</button>
     <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon">◈</span>Payroll <span class="side-nav-count" id="side-payroll-count">0</span></button>
-    <div class="side-nav-label">Settings</div>
+    <div class="side-nav-label" data-group="settings">Settings</div>
     
     <button class="side-nav-btn" data-module="attendancesettings" onclick="showTab('attendancesettings',this)"><span class="side-nav-icon">⚙</span>Attendance Settings</button>
     <button class="side-nav-btn" data-module="users" onclick="showTab('users',this)" style="display:none"><span class="side-nav-icon">👤</span>Users &amp; Permissions</button>
@@ -520,7 +527,7 @@
 
 <div id="sf-documents-panel" hidden></div>
 <div id="sf-users-panel" hidden></div>
-<div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block;border-radius:12px;background:#fff"></iframe></div>
+<div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" scrolling="no"></iframe></div>
 <div id="sf-unified-panel" hidden><p id="sf-unified-notice" role="status"></p><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
     <!-- ENGINEERS TAB -->
     <div id="tab-engineers" style="display:none">
@@ -1037,8 +1044,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261027-users"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261023-theme2"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-theme2"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261027-users"></script>
+<script src="i18n-ar.js?v=20261027-sidebar"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261023-theme2"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-theme2"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261027-users"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261023-theme"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261027-users"></script><script src="equipment-shell.js?v=20261026-split"></script><script src="documents-page.js?v=20261026-look2"></script><script src="users-page.js?v=20261027-users"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261023-theme"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261027-users"></script><script src="equipment-shell.js?v=20261027-sidebar"></script><script src="documents-page.js?v=20261026-look2"></script><script src="users-page.js?v=20261027-users"></script><script src="side-nav-groups.js?v=20261027-sidebar"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>
