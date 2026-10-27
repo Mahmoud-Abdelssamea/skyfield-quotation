@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKY FIELD – Management System v29</title>
+<link rel="stylesheet" href="styles.css?v=20261023-theme">
+<script src="supabase-js-2.117.2.js"></script>
+<script src="equipment-library.js?v=20261017-eqlib-rename"></script><script src="sync-safety.js?v=20261022-signin"></script><script src="dialogs.js?v=20261017-review2"></script>
+<script>
+  // ── Shared database config ──
+  // Paste your Supabase project URL and anon public key here (Project Settings → API).
+  const SUPABASE_URL = 'https://kmcgnttunukbwsqyilcv.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_yWyzQzP3IWu0pNzEBDbLNg_sLgr4VJC';
+  const sfDb = (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      })
+    : null;
+  if (!sfDb) console.warn('Supabase not configured — running in local-only mode (data stays on this device/browser).');
+</script>
+<link rel="stylesheet" href="payroll-ui.css?v=20261018-center"><link rel="stylesheet" href="theme.css?v=20261023-theme">
+</head>
+<body data-module="dashboard" class="sf-auth-locked">
+
+<div class="sf-language-switcher" aria-label="Interface language">
+  <span class="sf-language-icon" aria-hidden="true">🌐</span>
+  <select id="sf-ui-language" onchange="sfSetInterfaceLanguage(this.value)" aria-label="Interface language">
+    <option value="en">English</option>
+    <option value="ar">العربية</option>
+  </select>
+</div>
+
+
+<div class="sf-auth-overlay" id="sf-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="sf-auth-title">
+  <div class="sf-auth-shell">
+    <section class="sf-auth-brand">
+      <div>
+        <div class="sf-auth-brand-mark">SF</div>
+        <h1>SKY FIELD</h1>
+        <p>Secure access to the management, quotations, projects, invoices, payments, and company documents system.</p>
+        <div class="sf-auth-security-list">
+          <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Supabase secure email authentication</div>
+          <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Approved company accounts share one Sky Field workspace</div>
+          <div class="sf-auth-security-item"><span class="sf-auth-security-icon">✓</span> Encrypted cloud session and automatic renewal</div>
+        </div>
+      </div>
+      <div class="sf-auth-brand-foot">SKY FIELD COMPANY LIMITED · سماء الميدان</div>
+    </section>
+
+    <section class="sf-auth-card">
+      <div class="sf-auth-card-head">
+        <h2 id="sf-auth-title">Secure Account Access</h2>
+        <p id="sf-auth-subtitle">Sign in to open your company workspace.</p>
+      </div>
+
+      
+
+      <div class="sf-auth-message info show" id="sf-auth-message">Checking secure session…</div>
+
+      <form class="sf-auth-form active" data-auth-panel="login" id="sf-login-form" onsubmit="sfLogin(event)">
+        <div class="sf-auth-grid">
+          <div class="sf-auth-field"><label for="sf-login-email">Email / Employee Code</label><input id="sf-login-email" type="text" autocomplete="username" required placeholder="Email or employee code / البريد أو كود الموظف"></div>
+          <div class="sf-auth-field"><label for="sf-login-password">Password</label><input id="sf-login-password" type="password" autocomplete="current-password" required placeholder="Enter your password"></div>
+          <button class="sf-auth-primary" type="submit">Login Securely</button>
+        </div>
+        <div class="sf-auth-row"><span></span><button type="button" class="sf-auth-secondary" onclick="sfShowAuthPanel('forgot')">Forgot password?</button></div>
+      </form>
+
+      
+
+      <form class="sf-auth-form" data-auth-panel="forgot" id="sf-forgot-form" onsubmit="sfSendPasswordReset(event)">
+        <button type="button" class="sf-auth-secondary sf-auth-back" onclick="sfShowAuthPanel('login')">← Back to login</button>
+        <div class="sf-auth-grid">
+          <div class="sf-auth-field"><label for="sf-forgot-email">Email Address</label><input id="sf-forgot-email" type="email" autocomplete="email" required placeholder="name@company.com"></div>
+          <button class="sf-auth-primary" type="submit">Send Password Reset Link</button>
+        </div>
+      </form>
+
+      <form class="sf-auth-form" data-auth-panel="reset" id="sf-reset-form" onsubmit="sfUpdateRecoveredPassword(event)">
+        <div class="sf-auth-grid">
+          <div class="sf-auth-field"><label for="sf-reset-password">New Password</label><input id="sf-reset-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Minimum 8 characters"></div>
+          <div class="sf-auth-field"><label for="sf-reset-confirm">Confirm New Password</label><input id="sf-reset-confirm" type="password" autocomplete="new-password" minlength="8" required placeholder="Repeat new password"></div>
+          <button class="sf-auth-primary" type="submit">Update Password</button>
+        </div>
+      </form>
+
+      <div class="sf-auth-session-note">Use the public Supabase publishable key only. Database access is protected by authenticated Row Level Security policies.</div>
+    </section>
+  </div>
+</div>
+
+<aside class="app-sidebar" id="app-sidebar" aria-label="Main navigation">
+  <div class="side-brand">
+    <div class="side-brand-row">
+      <div class="side-mark">SF</div>
+      <div><strong>SKY FIELD</strong><small>Management &amp; Commercial System<br>سماء الميدان</small></div>
+    </div>
+  </div>
+  <nav class="side-nav">
+    <div class="side-nav-label" data-group="overview">Overview</div>
+    <button class="side-nav-btn active" data-module="dashboard" onclick="showTab('dashboard',this)"><span class="side-nav-icon">⌂</span>Dashboard</button>
+    <button class="side-nav-btn" data-module="analytics" onclick="showTab('analytics',this)"><span class="side-nav-icon">◩</span>Analytics</button>
+    <div class="side-nav-label" data-group="commercial">Commercial</div>
+    <button class="side-nav-btn" data-module="activities" onclick="sfStartNewQuotation()"><span class="side-nav-icon">＋</span>New Quotation</button>
+    <button class="side-nav-btn" data-module="quotes" onclick="showTab('quotes',this)"><span class="side-nav-icon">▤</span>Quotations <span class="side-nav-count" id="side-quote-count">0</span></button>
+    <button class="side-nav-btn" data-module="projects" onclick="showTab('projects',this)"><span class="side-nav-icon">▣</span>Projects <span class="side-nav-count" id="side-project-count">0</span></button>
+    <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Proforma Invoices <span class="side-nav-count" id="side-pi-count">0</span></button> <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">▥</span>Equipment Library</button>
+    <div class="side-nav-label" data-group="team">Team &amp; Attendance</div>
+    <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon">♙</span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
+    <button class="side-nav-btn" data-module="attendance" onclick="showTab('attendance',this)"><span class="side-nav-icon">◷</span>Attendance</button>
+    <button class="side-nav-btn" data-module="expenses" onclick="showTab('expenses',this)"><span class="side-nav-icon">◫</span>Field Expenses</button>
+    <button class="side-nav-btn" data-module="timesheets" onclick="showTab('timesheets',this)"><span class="side-nav-icon">▦</span>Timesheets &amp; Approvals</button>
+    <div class="side-nav-label" data-group="equipment">Equipment &amp; Custody</div>
+    <button class="side-nav-btn" data-module="devices" onclick="showTab('devices',this)" style="display:none"><span class="side-nav-icon">⚒</span>Equipment Dashboard</button>
+    <button class="side-nav-btn" data-module="devices-form" onclick="showTab('devices-form',this)" style="display:none"><span class="side-nav-icon">⇄</span>Record Movement</button>
+    <button class="side-nav-btn" data-module="devices-log" onclick="showTab('devices-log',this)" style="display:none"><span class="side-nav-icon">☰</span>Movement Log</button>
+    <button class="side-nav-btn" data-module="devices-inv" onclick="showTab('devices-inv',this)" style="display:none"><span class="side-nav-icon">▥</span>Inventory</button>
+    <button class="side-nav-btn" data-module="devices-calibration" onclick="showTab('devices-calibration',this)" style="display:none"><span class="side-nav-icon">◎</span>Calibration</button>
+    <button class="side-nav-btn" data-module="devices-manage" onclick="showTab('devices-manage',this)" style="display:none"><span class="side-nav-icon">⚙</span>Manage Devices</button>
+    <button class="side-nav-btn" data-module="devices-settings" onclick="showTab('devices-settings',this)" style="display:none"><span class="side-nav-icon">⚑</span>Recipients &amp; Sites</button>
+    <button class="side-nav-btn" data-module="documents" onclick="showTab('documents',this)" style="display:none"><span class="side-nav-icon">🪪</span>Iqama &amp; SEC-ID</button>
+    <div class="side-nav-label" data-group="finance">Finance</div>
+    <button class="side-nav-btn" data-module="accounting" onclick="showTab('accounting',this)"><span class="side-nav-icon">▤</span>Accounts</button>
+    <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon">◈</span>Payroll <span class="side-nav-count" id="side-payroll-count">0</span></button>
+    <div class="side-nav-label" data-group="settings">Settings</div>
+    
+    <button class="side-nav-btn" data-module="attendancesettings" onclick="showTab('attendancesettings',this)"><span class="side-nav-icon">⚙</span>Attendance Settings</button>
+    <button class="side-nav-btn" data-module="users" onclick="showTab('users',this)" style="display:none"><span class="side-nav-icon">👤</span>Users &amp; Permissions</button>
+    <button class="side-nav-btn side-nav-action" data-unified-sync onclick="sfSyncDailyModule()" title="Adds new projects to the attendance list and posts approved attendance and expenses to project cost"><span class="side-nav-icon">↻</span>Sync attendance &amp; projects</button>
+  </nav>
+  <div class="side-footer">
+    <div class="side-account" id="side-account">
+      <div class="side-account-row">
+        <div class="side-account-avatar" id="side-account-avatar">U</div>
+        <div class="side-account-text"><div class="side-account-name" id="side-account-name">User</div><div class="side-account-email" id="side-account-email"></div></div>
+      </div>
+      <button class="side-logout-btn" type="button" onclick="sfLogout()">Log out securely</button>
+    </div>
+    <div class="side-language-slot" id="side-language-slot"></div><button class="side-data-btn" onclick="toggleBackupTools();if(typeof closeSidebar==='function')closeSidebar();document.getElementById('backup-tools')?.scrollIntoView({block:'nearest'})">↕ Data Backup &amp; Restore</button>
+  </div>
+</aside>
+<div class="sidebar-scrim" onclick="closeSidebar()"></div>
+
+<header class="page-header">
+  <div class="header-inner">
+    <div class="logo-wrap">
+      <img src="skyfield-logo.webp" alt="SKY FIELD Logo">
+    </div>
+    <div class="header-title">
+      <h1>SKY FIELD MANAGEMENT SYSTEM</h1>
+      <p>Quotations · Projects · Invoices · Testing &amp; Commissioning</p>
+    </div>
+    <div class="header-meta">
+      <div><strong style="color:var(--gold)">Internal Business System</strong></div>
+      <div>Quotations · Projects · Invoices</div>
+    </div>
+  </div>
+  <div class="header-stripe"></div>
+</header>
+
+<main class="main">
+
+  <div class="page-command-bar">
+    <button class="mobile-nav-toggle" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
+    <div class="page-command-title">
+      <h2 id="app-page-title">Dashboard</h2>
+      <p id="app-page-subtitle">Business overview, projects, quotations, and invoice status.</p>
+    </div>
+    <div class="cloud-chip" id="cloud-status" title="Cloud synchronization status"><span class="cloud-dot"></span><span class="cloud-label">Checking cloud…</span></div>
+    <div class="command-actions">
+      
+      <button class="btn-primary" type="button" id="command-primary-action" onclick="sfStartNewQuotation()">+ New Quotation</button>
+    </div>
+  </div>
+
+
+  <!-- BACKUP / RESTORE (for OneDrive sync) -->
+  <div class="backup-tools-panel" id="backup-tools">
+    <div style="font-size:12px;color:var(--gray-700);flex:1;min-width:200px">
+      💾 <strong>Data backup:</strong> Export all data (projects, saved quotations, and invoices) as a JSON backup file. Use Import to restore it when needed; daily synchronization with Supabase remains automatic.
+    </div>
+    <button class="btn-sm" type="button" onclick="exportBackup()">⬇ Export Backup (JSON)</button>
+    <button class="btn-sm" type="button" onclick="document.getElementById('backup-file-input').click()">⬆ Import Backup</button>
+    <button class="btn-sm" type="button" onclick="migrateLegacyDocumentsToStorage()">☁ Move Legacy Documents to Storage</button>
+    <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
+  </div>
+
+  <!-- PROJECT META -->
+
+  <div class="quote-editing-banner quotation-workspace" id="quote-editing-banner" role="status" hidden><span class="qeb-text"><span>Editing saved quotation</span> <strong id="quote-editing-number"></strong><small>Saving updates this record. To make a separate copy, use Duplicate in Quotations.</small></span><button class="btn-outline" type="button" onclick="sfStartNewQuotation()">Start a new quotation</button></div>
+  <div class="quotation-section-heading quotation-workspace">
+    <div><h3>Quotation Setup</h3><p>Enter the client and project details, then build the scope and commercial offer.</p></div>
+    <button class="btn-outline" id="advanced-fields-btn" type="button" onclick="toggleAdvancedFields()">Show Commercial Fields</button>
+  </div>
+  <div class="meta-grid quotation-workspace">
+    <div class="meta-card"><label>Client / Project (To)</label><input id="client" placeholder="Enter client name…" oninput="updateLcApplicantFromClient()"></div>
+    <div class="meta-card"><label>Attention</label><input id="client-attn" placeholder="Contact person name…"></div>
+    <div class="meta-card"><label>Client Telephone</label><input id="client-tel" placeholder="05xxxxxxxx"></div>
+    <div class="meta-card"><label>Client Email</label><input id="client-email" type="email" placeholder="contact@client.com"></div>
+    <div class="meta-card"><label>Project (Internal)</label><input id="proj-name" placeholder="Testing &amp; Commissioning" value="Testing &amp; Commissioning"></div>
+    <div class="meta-card"><label>Station / Section</label><input id="station-name" placeholder="e.g. Station 1 / BSP-01 / Feeder A"></div>
+    <div class="meta-card"><label>Subject</label><input id="qo-ref" placeholder="Subject of the quotation…"></div>
+    <div class="meta-card"><label>Quotation No.</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="qno" placeholder="SF-Q-2025-001" style="flex:1">
+        <button class="btn-sm" type="button" onclick="generateNextQuoteNumber(true)" title="Generate a new sequential quotation number">New No.</button>
+      </div>
+    </div>
+    <div class="meta-card"><label>Date</label><input id="qdate" type="date"></div>
+    <div class="meta-card"><label>VAT %</label><input id="vat" type="number" value="15" oninput="recalc()"></div>
+    <div class="meta-card"><label>Profit Margin % <span style="font-weight:400;color:var(--gray-500)">(applies to Engineering + Equipment + Custom SOW subtotal, before VAT)</span></label><input id="profit" type="number" value="0" oninput="recalc()"></div>
+    <div class="meta-card">
+      <label>Discount <span style="font-weight:400;color:var(--gray-500)">(applied to subtotal, before VAT)</span></label>
+      <div style="display:flex;gap:6px">
+        <select id="discount-type" style="flex:1;border:1px dashed var(--gray-300);border-radius:5px;padding:7px 8px;font-size:12px;outline:none" onchange="recalc()">
+          <option value="pct">Percentage %</option>
+          <option value="fixed">Fixed Amount (SAR)</option>
+        </select>
+        <input id="discount-value" type="number" value="0" placeholder="0" style="flex:1" oninput="recalc()">
+      </div>
+    </div>
+    <div class="meta-card"><label>Commission % <span style="font-weight:400;color:var(--gray-500)">(deducted from Grand Total incl. VAT, if any)</span></label><input id="commission" type="number" value="0" oninput="recalc()"></div>
+    <div class="meta-card"><label>Prepared By (Engineer Name)</label><input id="prep-name" placeholder="Enter engineer name…" value="Mahmoud Awwad"></div>
+    <div class="meta-card"><label>Prepared By Email</label><input id="prep-email" type="email" placeholder="you@skyfield.com" value="m.awwad@skyfield-sa.com"></div>
+    <div class="meta-card"><label>Substation / Project Title</label><input id="substation" placeholder="132 / 33 / 13.8 kV Substation" value="132 / 33 / 13.8 kV Substation"></div>
+  </div>
+
+  <!-- INTERNAL COST SETTINGS -->
+  <details class="quotation-workspace" id="internal-cost-settings" style="background:var(--white);border:1px solid var(--gray-200);border-radius:10px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden">
+    <summary style="cursor:pointer;list-style:none;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;font-weight:700;color:var(--navy);user-select:none">
+      <span>🔒 Internal Cost Settings</span>
+      <span style="font-size:10.5px;font-weight:500;color:var(--gray-500)">Private costing data — not shown in customer documents</span>
+    </summary>
+    <div style="padding:0 16px 16px;border-top:1px solid var(--gray-200)">
+      <div style="font-size:11px;color:var(--gray-500);line-height:1.5;padding:10px 0 8px">Use these values only for internal costing and quotation calculations. They remain hidden unless this section is opened.</div>
+      <div class="meta-grid" style="margin-bottom:0">
+        <div class="meta-card"><label>Engineer Rate (SAR/day)</label><input id="rate" type="number" value="1500" min="0" step="0.01" oninput="recalc()"></div>
+        <div class="meta-card"><label>Working Hours/day</label><input id="hpd" type="number" value="8" min="1" step="0.5" oninput="recalc()"></div>
+        <div class="meta-card"><label>Working Days/week</label><input id="dpw" type="number" value="6" min="1" max="7" step="1"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- QUOTATION ATTACHMENTS -->
+  <div class="quotation-workspace" style="background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:14px 16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.04em">📎 Quotation Attachments <span style="font-weight:400;text-transform:none;color:var(--gray-500)">(saved with this quotation; copied into its project when you create/link one)</span></label>
+      <div>
+        <input type="file" id="qa-file-input" multiple style="display:none" onchange="handleQuoteAttachFiles(this)">
+        <button class="btn-sm" type="button" onclick="document.getElementById('qa-file-input').click()">+ Attach File(s)</button>
+      </div>
+    </div>
+    <div id="qa-list" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid quotation-workspace">
+    <div class="stat-card"><div class="slbl">Activities</div><div class="sval" id="s-act">0</div></div>
+    <div class="stat-card"><div class="slbl">Equipment</div><div class="sval" id="s-eq">0</div></div>
+    <div class="stat-card"><div class="slbl">Total Hours</div><div class="sval" id="s-hrs">0</div></div>
+    <div class="stat-card"><div class="slbl">Engineer Cost</div><div class="sval" id="s-eng">SAR 0</div></div>
+    <div class="stat-card"><div class="slbl">Equipment Cost</div><div class="sval" id="s-eqc">SAR 0</div></div>
+    <div class="stat-card" id="s-disc-card" style="display:none"><div class="slbl">Subtotal After Discount</div><div class="sval" id="s-discsub">SAR 0</div><div id="s-disc-sub" style="font-size:10px;color:var(--gold);margin-top:4px"></div></div>
+    <div class="stat-card accent"><div class="slbl">Grand Total Including VAT</div><div class="sval" id="s-tot">SAR 0</div><div id="s-opt" style="font-size:10px;color:var(--gold);margin-top:4px;display:none"></div></div>
+    <div class="stat-card accent" id="s-comm-card" style="display:none"><div class="slbl">Net Total After Commission</div><div class="sval" id="s-nettot">SAR 0</div><div id="s-comm-sub" style="font-size:10px;color:var(--gold);margin-top:4px"></div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs quotation-workspace">
+    <button class="tab-btn active" data-builder-tab="activities" onclick="showTab('activities',this)">1. Scope of Work <span class="badge badge-act" id="tab-act-badge">0</span></button>
+    <button class="tab-btn" data-builder-tab="equipment" onclick="showTab('equipment',this)">2. Equipment <span class="badge badge-eq" id="tab-eq-badge">0</span></button>
+    <button class="tab-btn" data-builder-tab="costplanning" onclick="showTab('costplanning',this)">3. Internal Cost</button>
+    <button class="tab-btn" data-builder-tab="conditions" onclick="showTab('conditions',this)">4. Conditions</button>
+  </div>
+
+  <div class="panel-wrap">
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard" class="dashboard-wrap">
+      <div id="dashboard-content"></div>
+    </div>
+
+    <!-- ACTIVITIES TAB -->
+    <div id="tab-activities">
+      <div class="sow-toggle-row">
+        <span>Scope of Work menu (browse categories &amp; select test items)</span>
+        <button class="btn-sm active-toggle" id="sow-toggle-btn" aria-expanded="false" aria-controls="sow-menu" onclick="toggleSOWMenu()">Show Scope of Work Menu</button>
+      </div>
+      <div class="two-col sow-hidden" id="sow-menu">
+        <div class="cat-panel">
+          <div class="cat-search"><input id="csearch" placeholder="Search categories…" oninput="filterCats()"></div>
+          <div class="cat-list" id="cat-list"></div>
+        </div>
+        <div class="task-panel">
+          <div class="task-header">
+            <h3 id="tp-title">Select a category</h3>
+            <div class="task-actions">
+              <button class="btn-sm" type="button" onclick="openScopeActivityForm()">+ Add Activity</button>
+              <button class="btn-sm" onclick="selAll()">Select all</button>
+              <button class="btn-sm" onclick="clrCat()">Clear</button>
+            </div>
+          </div>
+          <div class="scope-manager-panel" id="scope-activity-form">
+            <div class="scope-manager-title">
+              <strong id="scope-activity-form-title">Add Activity</strong>
+              <button class="cond-rm" type="button" title="Close" onclick="closeScopeActivityForm()">×</button>
+            </div>
+            <div class="scope-manager-grid">
+              <label>Category *<input id="scope-activity-category" type="text" list="scope-category-options" maxlength="120" placeholder="Select or enter category…"><datalist id="scope-category-options"></datalist></label>
+              <label>Activity / Test Name *<input id="scope-activity-name" type="text" maxlength="180" placeholder="Enter activity name…"></label>
+              <label>Activity Code *<input id="scope-activity-code" type="text" maxlength="80" placeholder="e.g. HV.TEST.01"></label>
+              <label>Hours *<input id="scope-activity-duration" type="number" min="0" step="0.01" placeholder="0.00"></label>
+              <label>Unit *<input id="scope-activity-unit" type="text" maxlength="60" placeholder="e.g. Feeder"></label>
+              <div class="scope-manager-actions">
+                <button class="btn-sm" type="button" onclick="saveScopeActivity()">Save Activity</button>
+                <button class="btn-sm" type="button" onclick="closeScopeActivityForm()">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <div class="task-list" id="task-list"></div>
+        </div>
+      </div>
+
+      <div class="custom-sow-panel">
+        <h4>+ Add Scope of Work manually</h4>
+        <div class="custom-sow-hint">Create a priced item directly, or create a main heading such as <strong>1. MV Cable Works</strong> and then add priced sub-items such as <strong>1.1</strong> and <strong>1.2</strong> beneath it. Main headings do not carry a quantity or price; their sub-items do.</div>
+        <div class="custom-sow-label-row">
+          <label for="custom-sow-label">Section description (shown in report instead of "Custom / Manual Entry")</label>
+          <input type="text" id="custom-sow-label" placeholder="e.g. Additional Scope of Work" oninput="updateCustomSOWLabel(this.value)">
+        </div>
+        <div class="custom-sow-add">
+          <textarea id="new-sow" placeholder="Type the main heading or priced scope item here (multiple lines allowed)..."></textarea>
+          <div class="custom-sow-add-actions">
+            <button class="btn-sm btn-main-sow" onclick="addCustomSOW('main')">+ Main Item</button>
+            <button class="btn-sm" onclick="addCustomSOW('item')">+ Priced Item</button>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gray-600);margin:-6px 0 12px 2px;cursor:pointer">
+          <input type="checkbox" id="sow-split-lines" style="width:13px;height:13px;accent-color:var(--orange)">
+          Split each line into a separate priced item instead of one combined item
+        </label>
+        <div class="custom-sow-hint" style="margin:0 0 8px 2px"><strong>Main Item:</strong> a heading numbered 1, 2, 3… with no price. Use its <strong>+ Add Sub-item</strong> button to create 1.1, 1.2… Each sub-item has Specification, Remark, Qty, Unit and Unit Price. Existing standalone priced items remain supported. Tick <strong>Optional</strong> only on priced items that must be excluded from the Grand Total.</div>
+
+        <div class="custom-sow-list" id="custom-sow-list"></div>
+      </div>
+    </div>
+
+    <!-- EQUIPMENT TAB -->
+    <div id="tab-equipment" style="display:none">
+      <div class="equipment-toolbar">
+        <div class="equipment-toolbar-copy">
+          <strong>Equipment Library</strong>
+          <span>Devices and prices come from the Equipment Library.</span> </div> <button class="btn-sm" type="button" onclick="sfOpenEquipmentLibrary()">Manage Equipment Library</button> </div>
+      <div class="eq-hdr-row"> <span></span><span>Equipment / Kit</span><span>Rent by · Price</span><span title="How many days, weeks or months for this item — not linked to the overall Project Duration field.">Quantity ⓘ</span><span style="text-align:right">Total (SAR)</span><span></span> </div>
+      <div class="eq-list" id="eq-list"></div>
+    </div>
+
+    <!-- INTERNAL COST PLANNING TAB -->
+    <div id="tab-costplanning" style="display:none">
+      <div class="cost-plan-wrap">
+        <div class="cost-plan-intro"><strong>Private internal estimate.</strong> Select company engineers, enter duration and other expenses, then compare the estimated cost with the quotation selling value. Equipment belongs to the company and has no internal cost. This section is never included in customer quotations or invoices.</div>
+
+        <div class="cost-plan-section">
+          <div class="cost-plan-hdr"><h4>Manpower</h4><button class="btn-sm" type="button" onclick="addCostManpowerRow()">+ Add Engineer / Role</button></div>
+          <div style="overflow:auto"><table class="cost-plan-table" style="min-width:860px"><thead><tr><th style="width:25%">Engineer / Role</th><th style="width:8%">Qty</th><th style="width:10%">Duration</th><th style="width:13%">Basis</th><th style="width:15%">Rate</th><th class="num" style="width:18%">Cost</th><th class="remove-col"></th></tr></thead><tbody id="cost-manpower-body"></tbody></table></div>
+        </div>
+
+        <div class="cost-plan-section">
+          <div class="cost-plan-hdr"><h4>Other Project Costs</h4><button class="btn-sm" type="button" onclick="addCostOtherRow()">+ Add Cost</button></div>
+          <div style="overflow:auto"><table class="cost-plan-table"><thead><tr><th>Description</th><th style="width:180px">Amount (SAR)</th><th class="remove-col"></th></tr></thead><tbody id="cost-other-body"></tbody></table></div>
+        </div>
+
+        <div class="cost-summary-grid">
+          <div class="cost-summary-box"><div class="lbl">Manpower Cost</div><div class="val" id="cost-sum-manpower">SAR 0</div></div>
+          <div class="cost-summary-box"><div class="lbl">Other Costs</div><div class="val" id="cost-sum-resources">SAR 0</div></div>
+          <div class="cost-summary-box primary"><div class="lbl">Total Internal Cost</div><div class="val" id="cost-sum-total">SAR 0</div></div>
+          <div class="cost-summary-box" id="cost-profit-box"><div class="lbl">Expected Profit / Margin</div><div class="val" id="cost-sum-profit">SAR 0 · 0%</div></div>
+        </div>
+        <div class="cost-privacy-note">🔒 Internal only — excluded from quotation PDF, Proforma Invoice, and client reports.</div>
+      </div>
+    </div>
+
+    <!-- CONDITIONS TAB -->
+    <div id="tab-conditions" style="display:none">
+      <div class="cond-panel">
+        <div class="custom-sow-label-row" style="max-width:420px">
+          <label for="condition-type">Project / Quotation Type</label>
+          <select id="condition-type" onchange="setConditionType(this.value)" style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;color:var(--navy);background:#fff">
+            <option value="testing">Testing &amp; Commissioning Project</option>
+            <option value="engineer_rental">Rental – LOA Holder</option>
+            <option value="test_engineer_rental">Rental – Test Engineer</option>
+            <option value="equipment_rental">Rental – Equipment</option>
+          </select>
+          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">The system loads only the conditions relevant to the selected quotation type.</div>
+        </div>
+        <div class="custom-sow-label-row" style="max-width:520px">
+          <label>Quotation Language / لغة عرض السعر</label>
+          <label class="eo-row" style="margin-top:7px;padding:9px 11px;border:1px solid var(--gray-200);border-radius:8px;background:#fff">
+            <span class="eo-switch"><input id="include-arabic-translation" type="checkbox" onchange="setIncludeArabicTranslation(this.checked)"><span class="slider"></span></span>
+            <span class="eo-row-text"><strong>Include Arabic Translation / إضافة الترجمة العربية</strong></span>
+          </label>
+          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">English is always included. Turn this on to add Arabic to the quotation header, fixed labels, and every Terms &amp; Conditions clause.</div>
+        </div>
+        <div class="custom-sow-label-row standard-payment-controls" id="standard-payment-controls" style="max-width:760px">
+          <label for="payment-term-type">Invoice &amp; Bank Transfer Schedule</label>
+          <select id="payment-term-type" onchange="setPaymentTermType(this.value)" style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;color:var(--navy);background:#fff">
+            <option value="full_advance">100% Advance Payment</option>
+            <option value="advance_balance">Advance Payment + Balance</option>
+            <option value="after_completion">Payment After Completion</option>
+            <option value="monthly_progress">Monthly / Progress Payment</option>
+            <option value="custom">Custom Payment Condition</option>
+          </select>
+          <div id="payment-term-extra" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <div id="advance-pct-wrap" style="display:none">
+              <label for="payment-advance-pct" style="font-size:10px;color:var(--gray-500)">Advance Percentage</label>
+              <input id="payment-advance-pct" type="number" min="0" max="100" value="30" oninput="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px">
+            </div>
+            <div id="payment-balance-basis-wrap" style="display:none">
+              <label for="payment-balance-basis" style="font-size:10px;color:var(--gray-500)">Remaining Balance Method</label>
+              <select id="payment-balance-basis" onchange="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px;background:#fff">
+                <option value="monthly_progress">Monthly invoices based on approved progress</option>
+                <option value="after_completion">After completion of the work</option>
+              </select>
+            </div>
+            <div id="payment-days-wrap">
+              <label for="payment-due-days" style="font-size:10px;color:var(--gray-500)">Payment Due Within (Days)</label>
+              <input id="payment-due-days" type="number" min="0" value="30" oninput="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px">
+            </div>
+          </div>
+          <textarea id="payment-custom-text" placeholder="Enter the custom payment condition..." oninput="updatePaymentTerms()" style="display:none;width:100%;margin-top:8px;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;min-height:58px"></textarea>
+          <textarea id="payment-custom-text-ar" placeholder="أدخل ترجمة شرط الدفع المخصص بالعربية..." dir="rtl" oninput="updatePaymentTerms()" style="display:none;width:100%;margin-top:8px;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:Tahoma,'Inter',sans-serif;min-height:58px"></textarea>
+          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Only the selected payment condition will appear in the quotation.</div>
+        </div>
+        <div class="custom-sow-label-row" style="max-width:900px">
+          <div class="condition-language-grid">
+            <div>
+              <label for="payment-method">Payment Method / طريقة الدفع</label>
+              <select id="payment-method" onchange="setPaymentMethod(this.value)" style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',Tahoma,sans-serif;color:var(--navy);background:#fff">
+                <option value="bank_transfer">Invoice &amp; Bank Transfer</option>
+                <option value="lc">Letter of Credit (L/C)</option>
+              </select>
+            </div>
+            <div id="lc-quick-status" style="font-size:10.5px;color:var(--gray-500);line-height:1.6;padding-top:20px">Invoice and bank-transfer conditions are currently selected.</div>
+          </div>
+          <div id="lc-summary-card" class="lc-summary-card">
+            <strong>L/C payment structure:</strong> 30% mobilization payment by bank transfer + 70% irrevocable L/C at sight, paid against monthly progress invoices. The mandatory 14-day countersignature protection is included in Payment Condition No. 1 so Conditions 22 and 26 remain unchanged.
+          </div>
+          <div id="lc-controls" class="lc-controls">
+            <div class="lc-controls-grid">
+              <div class="lc-field"><label for="lc-advance-pct">Advance Payment (%)</label><input id="lc-advance-pct" type="number" min="0" max="100" step="0.01" value="30" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-balance-pct">L/C Balance (%) — Auto</label><input id="lc-balance-pct" type="number" value="70" readonly></div>
+              <div class="lc-field"><label for="lc-type">L/C Type</label><select id="lc-type" onchange="updateLcTerms()"><option value="irrevocable_at_sight">Irrevocable L/C at Sight</option><option value="confirmed_at_sight">Confirmed Irrevocable L/C at Sight</option></select></div>
+              <div class="lc-field"><label for="lc-advance-days">Advance Due Within (Calendar Days)</label><input id="lc-advance-days" type="number" min="0" max="365" value="7" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-open-days">Open L/C Within (Calendar Days)</label><input id="lc-open-days" type="number" min="0" max="365" value="10" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-document-days">Countersignature Period (Calendar Days)</label><input id="lc-document-days" type="number" min="1" max="365" value="14" oninput="updateLcTerms()"></div>
+              <div class="lc-subsection">Payment and parties</div>
+              <div class="lc-field"><label for="lc-payment-basis">Payment Basis</label><select id="lc-payment-basis" onchange="updateLcTerms()"><option value="monthly_progress">Monthly Progress Invoices</option><option value="after_completion">After Completion</option></select></div>
+              <div class="lc-field"><label for="lc-currency">Currency</label><select id="lc-currency" onchange="updateLcTerms()"><option value="SAR">SAR</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+              <div class="lc-field"><label for="lc-calculation-basis">Percentage Calculation Basis</label><select id="lc-calculation-basis" onchange="updateLcTerms()"><option value="before_vat">Before VAT</option><option value="including_vat">Including VAT</option></select></div>
+              <div class="lc-field"><label for="lc-applicant">Applicant — Auto from Client</label><input id="lc-applicant" type="text" readonly></div>
+              <div class="lc-field"><label for="lc-beneficiary">Beneficiary</label><input id="lc-beneficiary" type="text" value="Sky Field Company Limited" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-bank-charges">Bank/L/C Charges Borne By</label><select id="lc-bank-charges" onchange="updateLcTerms()"><option value="client">Customer</option><option value="shared" selected>Both Parties</option><option value="beneficiary">Beneficiary</option></select></div>
+              <div class="lc-subsection">Rules, bank and validity</div>
+              <div class="lc-field"><label for="lc-rules">Applicable Rules</label><input id="lc-rules" type="text" value="UCP 600" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-acceptable-bank">Acceptable Issuing Bank (optional)</label><input id="lc-acceptable-bank" type="text" placeholder="e.g. Saudi National Bank" oninput="updateLcTerms()"></div>
+              <div class="lc-field"><label for="lc-validity-days">Valid After Expected Completion (Days)</label><input id="lc-validity-days" type="number" min="0" max="365" value="30" oninput="updateLcTerms()"></div>
+              <div class="lc-subsection">Required L/C documents</div>
+              <div class="lc-documents">
+                <label><input id="lc-doc-commercial-invoice" type="checkbox" checked onchange="updateLcTerms()"> Commercial Invoice</label>
+                <label><input id="lc-doc-delivery-note" type="checkbox" checked onchange="updateLcTerms()"> Delivery Note</label>
+                <label><input id="lc-doc-progress-certificate" type="checkbox" checked onchange="updateLcTerms()"> Progress Certificate</label>
+                <label><input id="lc-doc-timesheet" type="checkbox" onchange="updateLcTerms()"> Signed Timesheet</label>
+              </div>
+            </div>
+            <div class="lc-amount-summary">
+              <div class="lc-amount-card">Calculation Base<strong id="lc-base-amount">SAR 0</strong></div>
+              <div class="lc-amount-card">Advance Amount<strong id="lc-advance-amount">SAR 0</strong></div>
+              <div class="lc-amount-card">L/C Amount<strong id="lc-balance-amount">SAR 0</strong></div>
+            </div>
+            <div class="lc-private-note">The remaining percentage and amounts are calculated automatically. The Applicant is taken from the quotation Client field. Selecting another currency relabels the quotation values and does not apply an exchange-rate conversion. Confirm the final L/C wording and document set with the issuing bank before acceptance.</div>
+          </div>
+        </div>
+        <div class="custom-sow-label-row" style="max-width:340px">
+          <label for="proj-duration">Project Duration</label>
+          <input type="text" id="proj-duration" placeholder="e.g. 6 months" oninput="updateProjectDuration(this.value)">
+        </div>
+        <div class="custom-sow-label-row" style="max-width:760px">
+          <label>Commercial Rates for Conditions</label>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+            <div>
+              <label for="commercial-engineer-daily-rate" style="font-size:10px;color:var(--gray-500)">Engineer Daily Rate (SAR/day)</label>
+              <input id="commercial-engineer-daily-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,500" oninput="refreshCommercialConditionRates()">
+            </div>
+            <div>
+              <label for="commercial-engineer-monthly-rate" style="font-size:10px;color:var(--gray-500)">Engineer Monthly Rate (SAR/month)</label>
+              <input id="commercial-engineer-monthly-rate" type="number" min="0" step="0.01" placeholder="e.g. 30,000" oninput="refreshCommercialConditionRates()">
+            </div>
+            <div style="grid-column:1 / -1">
+              <label for="commercial-mobilization-rate" style="font-size:10px;color:var(--gray-500)">Mobilization &amp; Demobilization Cost / Engineer (SAR)</label>
+              <input id="commercial-mobilization-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,000" oninput="refreshCommercialConditionRates()">
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
+        </div>
+        <div class="cond-list" id="cond-list"></div>
+      </div>
+    </div>
+
+    <div class="condition-modal-overlay" id="condition-modal-overlay" onclick="if(event.target===this)closeConditionEditor()">
+      <div class="condition-modal" role="dialog" aria-modal="true" aria-labelledby="condition-modal-title">
+        <div class="condition-modal-hdr"><h3 id="condition-modal-title">Edit Condition</h3><button class="condition-modal-close" onclick="closeConditionEditor()" aria-label="Close">×</button></div>
+        <div class="condition-modal-body">
+          <div class="condition-edit-grid">
+            <div class="condition-edit-field"><label>Section</label><select id="condition-edit-section"></select></div>
+            <div class="condition-edit-field"><label>Condition Number</label><select id="condition-edit-number" disabled><option>Automatic</option></select></div>
+            <div class="condition-edit-field"><label>English Text</label><textarea id="condition-edit-en" dir="ltr"></textarea></div>
+            <div class="condition-edit-field"><label>النص العربي</label><textarea id="condition-edit-ar" dir="rtl"></textarea></div>
+          </div>
+          <div class="condition-modal-actions"><button class="condition-modal-cancel" onclick="resetConditionEditor()">Reset to Default</button><button class="condition-modal-cancel" id="condition-save-default" onclick="saveConditionAsCompanyDefault()" style="display:none">Save as Company Default</button><button class="condition-modal-cancel" onclick="closeConditionEditor()">Cancel</button><button class="condition-modal-save" onclick="saveConditionEditor()">Save Condition</button></div>
+        </div>
+      </div>
+    </div>
+
+<div id="sf-documents-panel" hidden></div>
+<div id="sf-users-panel" hidden></div>
+<div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" scrolling="no"></iframe></div>
+<div id="sf-unified-panel" hidden><p id="sf-unified-notice" role="status"></p><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
+    <!-- ENGINEERS TAB -->
+    <div id="tab-engineers" style="display:none">
+      <div class="resource-toolbar">
+        <h3>Engineers Database</h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="quote-search" id="engineer-search" placeholder="Search name / ID / nationality / LOA..." oninput="renderEngineers()">
+          <button class="btn-outline" type="button" onclick="importSkyFieldEngineers(true)">Import Sky Field Engineers</button>
+        </div>
+      </div>
+      <div class="resource-layout">
+        <div class="resource-form">
+          <h4 id="engineer-form-title">Add Engineer</h4>
+          <input type="hidden" id="eng-id">
+          <div class="resource-grid">
+            <div class="resource-field span-2"><label>Engineer Name *</label><input id="eng-name" placeholder="Full name"></div>
+            <div class="resource-field"><label>Nationality</label><input id="eng-nationality" placeholder="e.g. Egyptian"></div>
+            <div class="resource-field"><label>Iqama / ID Number</label><input id="eng-iqama" placeholder="ID number"></div>
+            <div class="resource-field"><label>Employee Number</label><input id="eng-employee-no" placeholder="Employee no."></div>
+            <div class="resource-field"><label>Profession</label><input id="eng-profession" placeholder="Job profession"></div>
+            <div class="resource-field"><label>Specialization</label><select id="eng-specialization"><option>Protection</option><option>Testing & Commissioning</option><option>Transformer</option><option>Switchgear</option><option>Cable Testing</option><option>Solar</option><option>Technician</option><option>Project Management</option><option>Other</option></select></div>
+            <div class="resource-field"><label>LOA Classification</label><select id="eng-loa"><option value="Non-LOA">Non-LOA</option><option value="C1">C1</option><option value="C2">C2</option></select></div>
+            <div class="resource-field"><label>Employment Type</label><select id="eng-employment"><option>Company Employee</option><option>Rental Engineer</option><option>Freelancer</option></select></div>
+            <div class="resource-field"><label>Status</label><select id="eng-status"><option value="available">Available</option><option value="assigned">Assigned</option><option value="leave">On Leave</option><option value="unavailable">Unavailable</option></select></div>
+            <div class="resource-field"><label>Daily Internal Cost (SAR)</label><input id="eng-daily" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Basic Monthly Salary (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Housing & Transport Allowance</label><input id="eng-housing-transport" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Site Allowance</label><input id="eng-site-allowance" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label>Car Allowance</label><input id="eng-car-allowance" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field span-2"><label>Notes</label><textarea id="eng-notes" rows="3" placeholder="Availability, experience, document notes..."></textarea></div>
+          </div>
+          <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveEngineerRecord()" id="eng-save-btn">Save Engineer</button><button class="btn-outline" type="button" onclick="resetEngineerForm()">Clear</button></div>
+        </div>
+        <div class="resource-card">
+          <h4>Saved Engineers</h4>
+          <div class="resource-table-wrap"><table class="resource-table"><thead><tr><th>Name</th><th>Employee / ID</th><th>Specialization</th><th>LOA</th><th>Monthly</th><th>OT/Hr</th><th>Status</th><th>Actions</th></tr></thead><tbody id="engineer-table-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- MONTHLY TIMESHEETS / PAYROLL TAB -->
+    <div id="tab-payroll" style="display:none">
+      <div class="resource-toolbar">
+        <h3>Monthly Payroll Sheets</h3>
+        <span style="font-size:10.5px;color:var(--gray-500)">Days, overtime and site allowance can be filled from approved attendance.</span>
+      </div>
+      <div class="payroll-page">
+        <div class="payroll-controls">
+          <div class="payroll-control"><label>Payroll Month</label><input id="payroll-month" type="month" onchange="payrollMonthChanged()"></div>
+          <div class="payroll-control"><label>Project</label><select id="payroll-project" onchange="payrollProjectChanged()"><option value="">General / Not assigned</option></select></div>
+          <div class="payroll-control"><label>Payroll Divisor</label><input id="payroll-standard-days" type="number" value="30" readonly title="Sky Field payroll is calculated on a fixed 30-day divisor."></div>
+          <div class="payroll-actions">
+            <button class="btn-outline" type="button" onclick="payrollNewSheet()">New Sheet</button>
+            <button class="btn-outline" type="button" onclick="payrollLoadProjectEngineers()">Load Engineers</button>
+            <button class="btn-outline" type="button" onclick="payrollAddRow()">+ Add Row</button>
+            <button class="btn-primary" type="button" onclick="payrollSaveSheet()">حفظ مسودة / Save draft</button>
+          </div>
+        </div>
+        
+        <div class="payroll-summary" id="payroll-summary"></div>
+        <div id="payroll-review-notice" role="status"></div>
+        <div class="payroll-table-wrap">
+          <table class="payroll-table">
+            <thead><tr><th>الموظف / Employee</th><th>الحضور / Worked</th><th>الغياب / Absent</th><th>المستحقات / Gross</th><th>الخصومات / Deductions</th><th>الصافي / Net</th><th>المراجعة / Review</th></tr></thead>
+            <tbody id="payroll-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="payroll-actions" style="justify-content:flex-start;margin-bottom:12px">
+          <button class="btn-outline" type="button" onclick="payrollExportXlsx()">Export Excel</button>
+          <button class="btn-outline" type="button" onclick="payrollPrint()">Print / Save PDF</button>
+          <button class="btn-outline" type="button" onclick="payrollApproveCurrent()">اعتماد الكشف / Approve</button>
+        </div>
+        <div class="payroll-signatures"><div>General Manager<br>المدير العام</div><div>Accounts<br>الحسابات</div><div>HR Department<br>إدارة شؤون الموظفين</div></div>
+        <div class="payroll-saved">
+          <div class="payroll-saved-hdr"><h4>Saved Monthly Sheets</h4><input class="quote-search" id="payroll-search" placeholder="Search month / project..." oninput="payrollRenderSaved()"></div>
+          <div class="payroll-saved-list" id="payroll-saved-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EQUIPMENT LIBRARY TAB (module id: costsettings) -->
+    <div id="tab-costsettings" style="display:none">
+      <div class="resource-toolbar"><h3>Equipment Library</h3><span style="font-size:11px;color:var(--gray-500)">Devices and prices offered in quotations</span></div> <div class="resource-layout"> <div class="resource-form"> <h4 id="cost-eq-form-title">Add Equipment</h4> <input type="hidden" id="cost-eq-id"> <div class="resource-grid"> <div class="resource-field span-2"><label>Equipment / Kit Name *</label><input id="cost-eq-name" maxlength="160" placeholder="e.g. CPC 100"></div> <div class="resource-field"><label>Manufacturer</label><input id="cost-eq-mfr" maxlength="100" placeholder="e.g. OMICRON"></div> <div class="resource-field"><label>Category</label><input id="cost-eq-category" placeholder="Protection / HV / Transformer..."></div> <div class="resource-field"><label>Price per Day (SAR)</label><input id="cost-eq-daily" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field"><label>Price per Week (SAR)</label><input id="cost-eq-weekly" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field"><label>Price per Month (SAR)</label><input id="cost-eq-monthly" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field span-2 eq-lib-note">Leave a price empty if the device is not rented by that unit. In a quotation you choose days, weeks or months and how many.</div> </div> <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveCostEquipmentRecord()" id="cost-eq-save-btn">Save Equipment</button><button class="btn-outline" type="button" onclick="resetCostEquipmentForm()">Clear</button></div> </div> <div class="resource-card"> <h4>Equipment</h4> <div class="eq-lib-tools"><input id="cost-eq-search" type="search" placeholder="Search equipment, manufacturer, category…" oninput="sfRenderEquipmentLibrary()"><span id="cost-eq-count" class="eq-lib-count"></span></div> <div class="resource-table-wrap eq-lib-wrap"><table class="resource-table"><thead><tr><th>Equipment</th><th>Category</th><th>Day</th><th>Week</th><th>Month</th><th>Actions</th></tr></thead><tbody id="cost-equipment-table-body"></tbody></table></div> </div>
+      </div>
+    </div>
+
+    <!-- PROJECTS TAB -->
+    <div id="tab-projects" style="display:none">
+      <!-- Summary bar -->
+      <div class="proj-fin-summary" id="proj-summary"></div>
+      <!-- Toolbar -->
+      <div class="proj-toolbar">
+        <h3>📁 Project Records</h3>
+        <input class="proj-search" id="proj-search" placeholder="Search projects…" oninput="renderProjects()">
+        
+      </div>
+      <!-- Grid -->
+      <div id="proj-comm-review" style="display:none"></div>
+    <div class="list-filters" id="proj-filters">
+      <label>Status / الحالة<select id="pf-status" onchange="renderProjects()"><option value="">All / الكل</option><option value="active">Active / نشط</option><option value="completed">Completed / مكتمل</option><option value="hold">On Hold / متوقف</option></select></label>
+      <label>Client / العميل<select id="pf-client" onchange="renderProjects()"><option value="">All clients / كل العملاء</option></select></label>
+      <label>Start from / البداية من<input type="date" id="pf-from" onchange="renderProjects()"></label>
+      <label>to / إلى<input type="date" id="pf-to" onchange="renderProjects()"></label>
+      <label>Collection / التحصيل<select id="pf-collect" onchange="renderProjects()"><option value="">All / الكل</option><option value="outstanding">Outstanding / عليه مستحقات</option><option value="paid">Fully paid / مسدد</option><option value="none">Not invoiced / لم يُفوتر</option></select></label>
+      <button type="button" class="btn-outline" onclick="clearListFilters('proj')">Clear / مسح</button>
+      <span class="lf-count" id="pf-count"></span>
+    </div>
+    <div class="proj-grid" id="proj-grid"></div>
+    </div>
+
+
+    <!-- ANALYTICS TAB -->
+  <div id="tab-analytics" style="display:none"><div id="analytics-root"></div></div>
+
+  <!-- PROJECT DETAILS TAB -->
+    <div id="tab-projectdetails" style="display:none">
+      <div class="pd-back-row">
+        <button class="pd-back-btn" onclick="closeProjectDetails()">← Back to Projects</button>
+        <div class="pd-actions">
+          <button class="btn-primary" id="pd-new-invoice-btn" type="button">🧾 New Invoice</button>
+          <button class="btn-outline" id="pd-edit-project-btn" type="button">✏ Edit Project</button>
+        </div>
+      </div>
+      <div id="project-details-root"></div>
+    </div>
+
+    <!-- SAVED QUOTATIONS TAB -->
+    <div id="tab-quotes" style="display:none">
+      <div class="quote-toolbar">
+        <h3>🧾 Saved Quotations &amp; Legacy Invoice Quotations</h3>
+        <input class="quote-search" id="quote-search" placeholder="Search quotation / station / client…" oninput="renderSavedQuotations()">
+        <button class="btn-outline" style="font-size:12px;padding:6px 12px" onclick="newSeparateQuotation()">+ New Separate Quotation</button>
+        <button class="btn-primary" style="font-size:12px;padding:6px 14px" onclick="saveCurrentQuotation(false)">💾 Save Current</button>
+        <button class="btn-outline" style="font-size:12px;padding:6px 12px" onclick="addCurrentQuotationAsProject()">📁 Add as Project</button>
+      </div>
+      <div class="quote-hint">
+        Use this area when one project has more than one station or section. Save each station as a separate quotation, then click <strong>Add as Project</strong> to convert and link it to a tracked <strong>Project</strong>. Only after that step will the <strong>Create Proforma</strong> option appear. The project keeps the quotation, Proforma Invoices, payments, commission, attachments, and documents linked in one place.
+      </div>
+      <div class="quote-active-note" id="quote-active-note"></div>
+      <div class="quote-grid" id="quote-grid"></div>
+    </div>
+
+    <!-- PROFORMA INVOICES TAB -->
+    <div id="tab-proformas" style="display:none">
+      <div class="pi-toolbar">
+        <h3>📄 Proforma Invoices / الفواتير المبدئية</h3>
+        <input class="pi-search" id="pi-search" placeholder="Search number / client / project…" oninput="renderProformas()">
+        <button class="btn-primary" id="pi-from-current-btn" style="font-size:12px;padding:6px 14px;display:none" onclick="createProformaFromCurrent()">+ From Current Project Quotation</button>
+      </div>
+      <div class="list-filters" id="pi-filters">
+      <label>Payment / حالة الدفع<select id="if-status" onchange="renderProformas()"><option value="">All / الكل</option><option value="pending">Pending / معلّق</option><option value="partial">Partially paid / مدفوع جزئيًا</option><option value="unpaid">Not fully paid / غير مسدد</option><option value="paid">Paid / مدفوع</option></select></label>
+      <label>Client / العميل<select id="if-client" onchange="renderProformas()"><option value="">All clients / كل العملاء</option></select></label>
+      <label>Project / المشروع<select id="if-project" onchange="renderProformas()"><option value="">All projects / كل المشاريع</option></select></label>
+      <button type="button" class="btn-outline" onclick="clearListFilters('pi')">Clear / مسح</button>
+      <span class="lf-count" id="if-count"></span>
+    </div>
+    <div class="proj-fin-summary pi-summary" id="pi-summary"></div>
+    <div class="pi-hint">
+        A Proforma Invoice is a payment-request document and is <strong>not a Tax Invoice</strong>. It can only be created after the quotation has been converted and linked to a <strong>Project</strong>. Choose Full, Percentage, or Fixed Amount, then preview and print it as an A4 PDF. Every saved Proforma Invoice is linked to its Project and automatically creates or updates a pending payment entry. Mark that entry as paid inside the Project when payment is received.
+      </div>
+      <div class="pi-grid" id="pi-grid"></div>
+    </div>
+  </div>
+
+  <!-- PROJECT MODAL -->
+  <div class="proj-modal-overlay" id="proj-modal-overlay" onclick="if(event.target===this)closeProjModal()">
+    <div class="proj-modal">
+      <div class="proj-modal-hdr">
+        <h3 id="proj-modal-title">New Project</h3>
+        <button class="proj-modal-close" onclick="closeProjModal()">×</button>
+      </div>
+      <div class="proj-modal-body">
+        <input type="hidden" id="pm-id">
+        <div class="proj-field">
+          <label>Project Name *</label>
+          <input id="pm-name" placeholder="e.g. YANBU Wind Farm T&C">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="proj-field">
+            <label>Client</label>
+            <input id="pm-client" placeholder="Client company">
+          </div>
+          <div class="proj-field">
+            <label>Status</label>
+            <select id="pm-status">
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="hold">On Hold</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr .7fr 1fr;gap:12px">
+          <div class="proj-field">
+            <label>Contract Value incl. VAT (SAR)</label>
+            <input id="pm-contract" type="number" placeholder="0" oninput="pmContractChanged()">
+            <div id="pm-contract-net" style="font-size:10.5px;color:var(--gray-500);margin-top:3px"></div>
+          </div>
+          <div class="proj-field">
+            <label>VAT %</label>
+            <input id="pm-vat" type="number" min="0" max="99" step="0.01" placeholder="15" oninput="pmContractChanged()">
+          </div>
+          <div class="proj-field">
+            <label>Start Date</label>
+            <input id="pm-start" type="date">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="proj-field">
+            <label>Commission % before VAT (عمولة)</label>
+            <input id="pm-commission-pct" type="number" placeholder="0" oninput="pmRecalcCommission()">
+          </div>
+          <div class="proj-field">
+            <label>Commission Amount (SAR)</label>
+            <input id="pm-commission-amt" type="number" placeholder="0">
+          </div>
+        </div>
+        <div class="proj-field">
+          <label>Description / Notes</label>
+          <textarea id="pm-notes" rows="2" placeholder="Project notes…"></textarea>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--gray-200)">
+        <!-- Purchase Orders -->
+        <div class="proj-field">
+          <label>Purchase Orders (PO)</label>
+          <div id="pm-po-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px"></div>
+          <div class="proj-add-row" style="flex-wrap:wrap;gap:4px">
+            <input id="pm-po-input" placeholder="PO number…" aria-label="PO number" style="flex:2;min-width:130px" onkeydown="if(event.key==='Enter')addProjItem('po')">
+            <input id="pm-po-date" type="date" aria-label="PO date" title="PO date" style="flex:1;min-width:125px">
+            <input id="pm-po-amount" type="number" min="0" placeholder="Value SAR (optional)" aria-label="PO value" style="flex:1;min-width:125px">
+          </div>
+          <div class="proj-add-row" style="margin-top:4px;flex-wrap:wrap;gap:6px;align-items:center">
+            <input type="file" id="pm-po-file" accept="application/pdf,image/*" aria-label="PO file" style="font-size:11px;flex:1;min-width:180px">
+            <button class="btn-sm" id="pm-po-add-btn" onclick="addProjItem('po')">+ Add PO</button>
+          </div>
+          <div style="font-size:10px;color:var(--gray-500);margin-top:3px">Attach the PO as a PDF or an image (up to 25 MB). It is stored securely with the project documents. / أرفق أمر الشراء PDF أو صورة.</div>
+        </div>
+        <!-- Commission Entries -->
+        <div class="proj-field">
+          <label>Commission Entries (عمولة)</label>
+          <div id="pm-comm-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px"></div>
+          <div class="proj-add-row" style="flex-wrap:wrap;gap:4px">
+            <input id="pm-comm-label" placeholder="Label (e.g. Agent commission)" style="flex:2;min-width:140px">
+            <input id="pm-comm-pct" type="number" placeholder="%" style="flex:1;min-width:70px" oninput="pmSuggestCommAmount()">
+            <input id="pm-comm-amount" type="number" placeholder="Amount (SAR)" style="flex:1;min-width:100px">
+            <input id="pm-comm-notes" placeholder="Notes (optional)" style="flex:2;min-width:120px">
+            <button class="btn-sm" onclick="addProjItem('comm')">+ Add Commission</button>
+          </div>
+          <div style="font-size:10px;color:var(--gray-500);margin-top:2px">Enter a % to auto-suggest the amount from the Contract Value above, or type an amount directly.</div>
+        </div>
+        <!-- Payment Installments -->
+        <div class="proj-field">
+          <label>Payment Installments</label>
+          <div id="pm-pay-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px"></div>
+          <div class="proj-add-row" style="flex-wrap:wrap;gap:4px">
+            <input id="pm-pay-label" placeholder="Label (e.g. Advance)" style="flex:2;min-width:120px">
+            <input id="pm-pay-amount" type="number" placeholder="Amount (SAR)" style="flex:1;min-width:100px">
+            <input id="pm-pay-date" type="date" style="flex:1;min-width:120px">
+            <select id="pm-pay-status" style="border:1px dashed var(--gray-300);border-radius:5px;padding:5px 8px;font-size:11.5px;outline:none">
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+            <button class="btn-sm" onclick="addProjItem('pay')">+ Add</button>
+          </div>
+        </div>
+        <!-- Documents -->
+        <div class="proj-field">
+          <label>Attached Documents</label>
+          <div id="pm-doc-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px"></div>
+          <div class="proj-add-row" style="flex-wrap:wrap;gap:4px">
+            <input id="pm-doc-name" placeholder="Document name…" style="flex:2;min-width:120px">
+            <input id="pm-doc-url" placeholder="Google Drive or any URL…" style="flex:3;min-width:180px">
+            <button class="btn-sm" onclick="addProjItem('doc')">+ Add Link</button>
+          </div>
+          <div style="margin-top:4px">
+            <input type="file" id="pm-doc-file" multiple style="font-size:11px;color:var(--gray-600)" onchange="handleDocFiles(this)">
+            <div style="font-size:10px;color:var(--gray-500);margin-top:2px">Or upload files (stored in browser)</div>
+          </div>
+        </div>
+      </div>
+      <div class="proj-modal-footer">
+        <button class="btn-outline" onclick="closeProjModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveProjModal()">💾 Save Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUOTATION TABLE -->
+  <div class="quot-section quotation-workspace" id="quot-sec" style="display:none">
+    <h2>Quotation Line Items</h2>
+    <table class="quot-table">
+      <colgroup>
+        <col style="width:130px"><col><col style="width:100px">
+        <col style="width:45px"><col style="width:65px"><col style="width:90px"><col style="width:28px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Category</th><th>Item / Test</th><th>Code / Model</th>
+          <th>Qty</th><th>Hrs / Days</th><th>Cost (SAR)</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="q-tbody"></tbody>
+    </table>
+    <div class="bottom-bar">
+      <div class="totals">
+        <div class="ti">Items: <span id="b-items">0</span></div>
+        <div class="ti">Hours: <span id="b-hrs">0</span></div>
+        <div class="ti">Eng. cost: <span id="b-eng">SAR 0</span></div>
+        <div class="ti">Equip: <span id="b-eq">SAR 0</span></div>
+        <div class="ti">Subtotal Before VAT: <span id="b-sub">SAR 0</span></div>
+        <div class="ti">VAT: <span id="b-vat">SAR 0</span></div>
+        <div class="ti big">Grand Total Including VAT: <span id="b-tot">SAR 0</span></div>
+        <div class="ti" id="b-comm-row" style="display:none;color:var(--red)">Commission: <span id="b-comm">SAR 0</span> &nbsp;→&nbsp; Net Total After Commission: <span id="b-nettot" style="font-weight:700">SAR 0</span></div>
+      </div>
+      <div class="btn-actions">
+        <button class="btn-outline" onclick="clearAll()">✕ Clear All</button>
+        <button class="btn-outline" onclick="saveCurrentQuotation(false)">💾 Save Quotation</button>
+        <button class="btn-outline" id="pi-current-action-btn" style="display:none" onclick="createProformaFromCurrent()">📄 Create / Preview Proforma Invoice</button>
+        <button class="btn-primary" onclick="showExport()">⬇ Preview / Print Quotation</button>
+      </div>
+    </div>
+
+    <!-- EXPORT OPTIONS PANEL -->
+    <div class="export-opts" id="export-opts">
+      <div class="export-opts-hdr" onclick="toggleExportOptsPanel()">
+        <h3>⚙ Export Document Options — choose what appears on the printed quotation</h3>
+        <span class="eo-toggle-arrow">▾</span>
+      </div>
+      <div class="export-opts-body">
+
+        <!-- PROJECT INFO -->
+        <div class="eo-group">
+          <div class="eo-group-title">Project Info Box</div>
+          <label class="eo-row" for="eo-info-rate"><span class="eo-row-text">Show Engineer Rate</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-info-rate" onchange="recalc()"><span class="slider"></span></span>
+          </label>
+        </div>
+
+        <!-- ACTIVITIES COLUMNS -->
+        <div class="eo-group" id="eo-act-group">
+          <div class="eo-group-title" id="eo-act-group-title">Scope of Work — Columns</div>
+          <label class="eo-row" for="eo-act-show"><span class="eo-row-text">Show this section</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-act-show" checked onchange="onActSectionToggle()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-act-code"><span class="eo-row-text">Show Code column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-act-code" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-act-qty"><span class="eo-row-text">Show Qty column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-act-qty" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-act-hrs"><span class="eo-row-text">Show Hours column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-act-hrs" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-act-cost"><span class="eo-row-text">Show Cost column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-act-cost" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+        </div>
+
+        <!-- EQUIPMENT RENTAL -->
+        <div class="eo-group" id="eo-eq-group">
+          <div class="eo-group-title">Equipment Rental Section
+            <button class="eo-mini-link" onclick="eoSetEqCols(true)">all</button>
+          </div>
+          <label class="eo-row" for="eo-eq-show"><span class="eo-row-text">Show this section</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-eq-show" checked onchange="onEqSectionToggle()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-eq-mfr"><span class="eo-row-text">Manufacturer column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-eq-mfr" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-eq-daily"><span class="eo-row-text">Rate column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-eq-daily" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-eq-days"><span class="eo-row-text">Duration column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-eq-days" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row sub" for="eo-eq-total"><span class="eo-row-text">Total column</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-eq-total" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+        </div>
+
+        <!-- COST SUMMARY -->
+        <div class="eo-group">
+          <div class="eo-group-title">Cost Summary — Line Items</div>
+          <label class="eo-row" for="eo-sum-hrs"><span class="eo-row-text">Total Engineering Hours</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-hrs" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sum-days"><span class="eo-row-text">Total Working Days</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-days" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sum-eng"><span class="eo-row-text">Engineer Cost</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-eng" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sum-eqrental"><span class="eo-row-text">Equipment Rental</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-eqrental" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sum-sub"><span class="eo-row-text">Sub-Total</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-sub" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sum-vat"><span class="eo-row-text">VAT</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-vat" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sum-tot"><span class="eo-row-text">Total Price</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sum-tot" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+        </div>
+
+        <!-- SIGNATURES -->
+        <div class="eo-group">
+          <div class="eo-group-title">Signature Block</div>
+          <label class="eo-row" for="eo-sig-skyfield"><span class="eo-row-text">Sky Field signature box</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sig-skyfield" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+          <label class="eo-row" for="eo-sig-client"><span class="eo-row-text">Client Acceptance box</span>
+            <span class="eo-switch"><input type="checkbox" id="eo-sig-client" checked onchange="recalc()"><span class="slider"></span></span>
+          </label>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PROFORMA INVOICE MODAL -->
+  <div class="proj-modal-overlay" id="pi-modal-overlay" onclick="if(event.target===this)closeProformaModal()">
+    <div class="proj-modal pi-modal">
+      <div class="proj-modal-hdr">
+        <h3 id="pi-modal-title">Create Proforma Invoice</h3>
+        <button class="proj-modal-close" onclick="closeProformaModal()">×</button>
+      </div>
+      <div class="proj-modal-body">
+        <input type="hidden" id="pi-id">
+        <input type="hidden" id="pi-source-id">
+        <div class="pi-form-grid">
+          <div class="proj-field"><label>Proforma Invoice Number *</label><input id="pi-number" placeholder="SF-PI-2026-001"></div>
+          <div class="proj-field"><label>Issue Date *</label><input id="pi-date" type="date"></div>
+          <div class="proj-field"><label>Client Name *</label><input id="pi-client" placeholder="Client company"></div>
+          <div class="proj-field"><label>Client VAT Number</label><input id="pi-client-vat" placeholder="VAT registration number"></div>
+          <div class="proj-field span-2"><label>Client Address</label><textarea id="pi-client-address" rows="2" placeholder="Billing address…"></textarea></div>
+          <div class="proj-field"><label>Attention</label><input id="pi-attention" placeholder="Contact person"></div>
+          <div class="proj-field"><label>Client Telephone</label><input id="pi-client-tel" placeholder="05xxxxxxxx"></div>
+          <div class="proj-field"><label>Client Email</label><input id="pi-client-email" type="email" placeholder="contact@client.com"></div>
+          <div class="proj-field"><label>Project Name</label><input id="pi-project" placeholder="Project name"></div>
+          <div class="proj-field span-2"><label>Subject</label><input id="pi-subject" placeholder="Subject / scope summary"></div>
+          <div class="proj-field"><label>Quotation Reference</label><input id="pi-quote-ref" readonly></div>
+          <div class="proj-field"><label>PO / Contract Reference</label><input id="pi-po-ref" placeholder="PO number or contract reference"></div>
+        </div>
+
+        <div class="pi-basis-box">
+          <div class="proj-field"><label>Invoice Amount Basis *</label>
+            <select id="pi-basis" onchange="onPiBasisChange()">
+              <option value="full">Full Quotation Amount</option>
+              <option value="percentage">Fixed Advance Percentage</option>
+              <option value="fixed">Fixed Amount</option>
+              <option value="progress">Progress-Based (Per-Item Completion %)</option>
+            </select>
+          </div>
+          <div class="pi-basis-fields">
+            <div class="proj-field" id="pi-pct-wrap" style="display:none"><label>Advance Percentage %</label><input id="pi-percentage" type="number" min="0.01" max="100" step="0.01" value="10" oninput="recalcProformaModal()"></div>
+            <div class="proj-field" id="pi-fixed-wrap" style="display:none"><label>Fixed Amount (SAR)</label><input id="pi-fixed-amount" type="number" min="0.01" step="0.01" oninput="recalcProformaModal()"></div>
+            <div class="proj-field" id="pi-fixed-mode-wrap" style="display:none"><label>Fixed Amount Is</label><select id="pi-fixed-mode" onchange="recalcProformaModal()"><option value="beforeVat">Before VAT</option><option value="includingVat">Including VAT</option></select></div>
+          </div>
+          <label class="pi-check" style="margin-top:10px"><input type="checkbox" id="pi-include-optional" onchange="handleIncludeOptionalChange()"> Include accepted optional items</label>
+          <div id="pi-progress-wrap" style="display:none;margin-top:10px"></div>
+          <div class="pi-live-summary" id="pi-live-summary"></div>
+        </div>
+
+        <div class="pi-form-grid">
+          <div class="proj-field span-2"><label>Payment Description</label><input id="pi-payment-desc" placeholder="e.g. 10% Advance Payment against Quotation No.…"></div>
+          <div class="proj-field span-2"><label>Notes</label><textarea id="pi-notes" rows="3" placeholder="Optional notes shown on the Proforma Invoice…"></textarea></div>
+        </div>
+
+        <div class="pi-image-row">
+          <div class="pi-upload-box">
+            <strong>Authorized Signature</strong><br>
+            <input type="file" id="pi-signature-file" accept="image/*" onchange="handleProformaImage(this,'signature')">
+            <div class="pi-upload-status" id="pi-signature-status"></div>
+          </div>
+          <div class="pi-upload-box">
+            <strong>Company Stamp</strong><br>
+            <input type="file" id="pi-stamp-file" accept="image/*" onchange="handleProformaImage(this,'stamp')">
+            <div class="pi-upload-status" id="pi-stamp-status"></div>
+          </div>
+        </div>
+      </div>
+      <div class="proj-modal-footer">
+        <button class="btn-outline" onclick="closeProformaModal()">Cancel</button>
+        <button class="btn-outline" onclick="saveProforma(false)">💾 Save</button>
+        <button class="btn-primary" onclick="saveProforma(true)">💾 Save &amp; Preview</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- EXPORT PREVIEW MODAL -->
+<div id="export-preview" onclick="if(event.target===this)closeExport()">
+  <label class="preview-language-toggle"><input id="preview-include-arabic" type="checkbox" onchange="togglePreviewArabicTranslation(this.checked)"><span>Include Arabic / إضافة العربية</span></label>
+  <button class="preview-close" id="export-preview-close" type="button" onclick="closeExport()" aria-label="Close quotation preview" title="Close quotation preview">×</button>
+  <div class="preview-doc" id="preview-doc"></div>
+  <div class="preview-actions" style="text-align:center;margin-top:16px">
+    <button class="btn-primary" onclick="sfPrintWithSuggestedName('quotation')">🖨 Print / Save as PDF</button>
+  </div>
+</div>
+
+<!-- PROFORMA INVOICE PREVIEW MODAL -->
+<div id="proforma-preview">
+  <button class="preview-close" onclick="closeProformaPreview()">✕</button>
+  <div class="pi-preview-doc" id="pi-preview-doc"></div>
+  <div class="preview-actions" style="text-align:center;margin-top:16px">
+    <button class="btn-primary" onclick="sfPrintWithSuggestedName('proforma')">🖨 Print / Save as PDF</button>
+  </div>
+</div>
+
+<script src="i18n-ar.js?v=20261027-sidebar"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261023-theme2"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-theme2"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261027-users"></script>
+
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261023-theme"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261027-roles"></script><script src="equipment-shell.js?v=20261027-sidebar5"></script><script src="documents-page-preview.js?v=1"></script><script src="users-page-preview.js?v=1"></script><script src="side-nav-groups.js?v=20261027-sidebar"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+</body>
+</html>
