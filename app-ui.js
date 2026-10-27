@@ -78,6 +78,8 @@ function sfSetInterfaceLanguage(lang,persist=true){
 function sfLoadUserInterfaceLanguage(user){
   let selected='';
   try{selected=localStorage.getItem(sfUiStorageKey(user))||localStorage.getItem(sfUiStorageKey(null))||'';}catch(e){}
+  // No language chosen yet on this device: follow the device language (an Arabic phone or PC opens in Arabic).
+  if(!selected)selected=String((typeof navigator!=='undefined'&&(navigator.languages?.[0]||navigator.language))||'').toLowerCase().startsWith('ar')?'ar':'en';
   sfSetInterfaceLanguage(selected==='ar'?'ar':'en',false);
 }
 function sfInitInterfaceLanguage(){

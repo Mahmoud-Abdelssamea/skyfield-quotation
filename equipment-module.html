@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<meta name="google" content="notranslate">
 <script>
 // Equipment section of the main site. EQ_PREVIEW is set from the database setting after sign-in.
+// It has its own Arabic and English, so the browser must not machine-translate it.
+document.documentElement.setAttribute('translate','no');
 var EQ_PREVIEW=true,EQ_REAL_ROLE='viewer';
 (function(){try{var l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ar')localStorage.setItem('eq_language',l)}catch(e){}
  if(window.parent!==window)document.documentElement.classList.add('eq-embedded')})();
