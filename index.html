@@ -123,6 +123,7 @@
     <div class="side-nav-label">Settings</div>
     
     <button class="side-nav-btn" data-module="attendancesettings" onclick="showTab('attendancesettings',this)"><span class="side-nav-icon">⚙</span>Attendance Settings</button>
+    <button class="side-nav-btn" data-module="users" onclick="showTab('users',this)" style="display:none"><span class="side-nav-icon">👤</span>Users &amp; Permissions</button>
     <button class="side-nav-btn side-nav-action" data-unified-sync onclick="sfSyncDailyModule()" title="Adds new projects to the attendance list and posts approved attendance and expenses to project cost"><span class="side-nav-icon">↻</span>Sync attendance &amp; projects</button>
   </nav>
   <div class="side-footer">
@@ -518,6 +519,7 @@
     </div>
 
 <div id="sf-documents-panel" hidden></div>
+<div id="sf-users-panel" hidden></div>
 <div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block;border-radius:12px;background:#fff"></iframe></div>
 <div id="sf-unified-panel" hidden><p id="sf-unified-notice" role="status"></p><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
     <!-- ENGINEERS TAB -->
@@ -1035,8 +1037,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261026-split"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261023-theme2"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-theme2"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261023-quiet"></script>
+<script src="i18n-ar.js?v=20261027-users"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261023-theme2"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-theme2"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261027-users"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261023-theme"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261026-ro"></script><script src="equipment-shell.js?v=20261026-split"></script><script src="documents-page.js?v=20261026-look2"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261022-signin"></script><script src="analytics.js?v=20261023-theme"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261027-users"></script><script src="equipment-shell.js?v=20261026-split"></script><script src="documents-page.js?v=20261026-look2"></script><script src="users-page.js?v=20261027-users"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>

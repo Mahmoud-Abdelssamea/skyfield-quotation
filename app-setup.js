@@ -16,11 +16,9 @@ let sfPreviewTitleActive = false;
 const SF_USER_STORE_TABLE = 'sf_user_store';
 const SF_STORAGE_BUCKET = 'company-documents';
 const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',invoices:'sf_invoices',payments:'sf_payments',engineers:'sf_engineers',payroll:'sf_payroll_sheets',expenses:'sf_expenses',documents:'sf_documents'};
-const SF_TEAM_MEMBERS = Object.freeze({
-  'm.awwad@skyfield-sa.com':{name:'Mahmoud Awwad',role:'Administrator'},
-  
-  'rabieshaban900@gmail.com':{name:'Rabie Shaban',role:'Commercial Administrator',blocked:['engineers','payroll']}
-});
+// Commercial access of the signed-in account, read from the database (sf_my_access) at sign-in by unified-shell.js
+// and managed on the Users & Permissions page. Empty when signed out.
+let SF_TEAM_MEMBERS = {};
 const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);
 // Shared commercial collections must never be uploaded as whole-array blobs:
 // one stale browser could otherwise replace records created by a teammate.

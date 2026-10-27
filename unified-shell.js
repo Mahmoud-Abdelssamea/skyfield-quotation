@@ -5,6 +5,22 @@ let sfUnifiedDesired=location.hash.slice(1)||localStorage.getItem('sfLastModule'
 const sfUnifiedRoutes={accounting:['Accounts','Approved engineers’ invoices and payment preparation.','accountingSection'],engineers:['Engineers','إدارة المهندسين','engineersSection'],attendance:['Attendance','Record attendance by period.','dailySection'],expenses:['Field Expenses','Engineers’ expense receipts and requests.','expenseSection'],timesheets:['Timesheets & Approvals','Attendance and expense approvals, history, and Excel export.','monthlySection'],attendancesettings:['Attendance Settings','Projects available to engineers for attendance.','admin']};
 const sfUnifiedNativeTabs=['dashboard','activities','equipment','costplanning','conditions','projects','projectdetails','quotes','proformas','analytics','engineers','payroll','costsettings'];
 const sfUnifiedBaseShow=showTab,sfUnifiedBaseUnlock=sfUnlockApp,sfUnifiedBaseLock=sfLockApp,sfUnifiedBaseAuth=sfHandleAuthState,sfUnifiedBaseAccess=sfApplyRoleAccess,sfUnifiedBaseLanguage=sfSetInterfaceLanguage,sfUnifiedBasePull=sfCloudPullAll;
+// Commercial access and equipment role of the signed-in account (sf_my_access, managed on the Users & Permissions page).
+// Commercial access fills SF_TEAM_MEMBERS, read by the commercial pages through sfTeamMember(); an account with only an
+// equipment role opens the equipment / Iqama pages alone.
+let sfUnifiedAccess=null;
+function sfUnifiedSetAccess(user,access){
+ sfUnifiedAccess=access||null;const level=access?.commercial,name=access?.commercial_name||'';
+ SF_TEAM_MEMBERS=level?{[sfNormalizeEmail(user?.email)]:level==='full'?{name,role:'Administrator'}:{name,role:'Commercial Administrator',blocked:['engineers','payroll']}}:{};
+}
+async function sfUnifiedReadAccess(){const {data,error}=await sfDb.rpc('sf_my_access');if(error)throw error;return data||{}}
+// Where an account lands when the page it asked for is not open to it.
+function sfUnifiedHome(){
+ if(sfUnifiedProfile?.role==='accountant')return 'accounting';
+ if(!sfAttendanceOnly)return 'dashboard';
+ if(sfUnifiedProfile)return 'attendance';
+ return ['admin','storekeeper','viewer'].includes(sfUnifiedAccess?.equipment)?'devices':'documents';
+}
 function sfUnifiedCanManage(){return sfUnifiedProfile?.role==='admin'&&(sfAttendanceOnly||sfHasAccess('engineers'))}
 function sfUnifiedAllowed(route){
  if(sfUnifiedProfile?.role==='accountant')return route==='accounting';
@@ -27,7 +43,11 @@ sfApplyRoleAccess=function(){if(!sfAttendanceOnly)sfUnifiedBaseAccess();sfUnifie
 showTab=function(name,button){
  if(sfUnifiedRoute==='accounting'&&name!=='accounting'){const f=document.getElementById('sf-unified-frame')?.contentWindow;if(f?.sfAccountingHasDraft?.()){if(!confirm(sfUiLanguage==='ar'?'لديك بيانات سداد لم تحفظ. هل تريد تركها؟':'Discard the unsaved payment details?'))return;f.sfAccountingDiscardDraft?.()}}
  if(!sfAuthReady){sfUnifiedDesired=location.hash.slice(1)||sfUnifiedDesired;return;}
- if(!sfUnifiedAllowed(name))name=sfUnifiedProfile?.role==='accountant'?'accounting':sfAttendanceOnly?'attendance':'dashboard';
+ if(!sfUnifiedAllowed(name)){
+  name=sfUnifiedHome();
+  // Equipment-only accounts: open whichever of their two pages is available (both are checked after sign-in).
+  if(name==='devices'||name==='documents'){const open=[name,'documents','devices'].find(r=>sfUnifiedAllowed(r));if(open)showTab(open);return}
+ }
  sfUnifiedRoute=name;sfUnifiedDesired=name;
  if(sfUnifiedRoutes[name]){
   for(const tab of sfUnifiedNativeTabs){const el=document.getElementById('tab-'+tab);if(el)el.style.display='none'}
@@ -68,20 +88,22 @@ function sfUnifiedResize(frameWindow,height){
  if(Number.isFinite(height))document.getElementById('sf-unified-frame').style.height=Math.max(300,Math.min(12000,Math.ceil(height)+4))+'px';
 }
 function sfUnifiedClearFrame(){clearTimeout(sfUnifiedReviewTimer);const frame=document.getElementById('sf-unified-frame');frame.removeAttribute('src');frame.hidden=true;sfUnifiedFrameReady=false;document.getElementById('sf-unified-panel').hidden=true;}
-sfLockApp=function(clear){sfUnifiedClearFrame();sfUnifiedProfile=null;sfUnifiedProfileAt=0;sfUnifiedProfileUser='';sfAttendanceOnly=false;sfUnifiedBaseLock(clear)};
+sfLockApp=function(clear){sfUnifiedClearFrame();sfUnifiedSetAccess(null,null);sfUnifiedProfile=null;sfUnifiedProfileAt=0;sfUnifiedProfileUser='';sfAttendanceOnly=false;sfUnifiedBaseLock(clear)};
 let sfUnifiedProfileAt=0,sfUnifiedProfileUser='';
 // The same user is already signed in and Supabase repeats a sign-in event (it sends SIGNED_IN twice each time
 // the tab becomes visible, and TOKEN_REFRESHED when the session renews): keep the page as it is — no redraw,
 // no scroll to the top, no language reset. The account is still re-checked in the background every 5 minutes.
 async function sfUnifiedRecheckProfile(user){
  sfUnifiedProfileAt=Date.now();
- const {data:member,error}=await sfDb.from('sf_daily_members').select('*').eq('user_id',user.id).maybeSingle();
- if(error||sfCurrentUser?.id!==user.id)return; // offline or signed out meanwhile: nothing to decide now
+ const [{data:member,error},access]=await Promise.all([sfDb.from('sf_daily_members').select('*').eq('user_id',user.id).maybeSingle(),sfUnifiedReadAccess().catch(()=>null)]);
+ if(error||!access||sfCurrentUser?.id!==user.id)return; // offline or signed out meanwhile: nothing to decide now
+ const wasCommercial=!sfAttendanceOnly;sfUnifiedSetAccess(user,access);
  const commercial=!!sfTeamMember(user.email),active=member&&member.is_active!==false?member:null;
- if(!commercial&&!active){sfLockApp(true);sfSetAuthMessage('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.','error');return;}
+ if(!commercial&&!active&&!access.equipment){sfLockApp(true);sfSetAuthMessage('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.','error');return;}
+ if(commercial!==wasCommercial){location.reload();return} // commercial access given or removed: rebuild the page for it
  const roleChanged=(sfUnifiedProfile?.role||'')!==(active?.role||'');
  sfUnifiedProfile=active;sfUnifiedProfileUser=user.id;
- if(roleChanged){sfUnifiedApplyAccess();if(!sfUnifiedAllowed(sfUnifiedRoute||sfUnifiedDesired))showTab(active?.role==='accountant'?'accounting':sfAttendanceOnly?'attendance':'dashboard');}
+ if(roleChanged){sfUnifiedApplyAccess();if(!sfUnifiedAllowed(sfUnifiedRoute||sfUnifiedDesired))showTab(sfUnifiedHome());}
 }
 sfHandleAuthState=async function(event,session){
  if(event==='PASSWORD_RECOVERY')return sfUnifiedBaseAuth(event,session);
@@ -95,11 +117,16 @@ sfHandleAuthState=async function(event,session){
   // Token refreshes and repeated auth events reuse the profile read in the last 5 minutes (data access is still checked by the database).
   const reuse=sfAuthReady&&sfCurrentUser?.id===session.user.id&&sfUnifiedProfileUser===session.user.id&&Date.now()-sfUnifiedProfileAt<300000;
   let member=sfUnifiedProfile,error=null;
-  if(!reuse){({data:member,error}=await sfDb.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle());if(!error){sfUnifiedProfileAt=Date.now();sfUnifiedProfileUser=session.user.id}}
+  if(!reuse){
+   let access;
+   [{data:member,error},access]=await Promise.all([sfDb.from('sf_daily_members').select('*').eq('user_id',session.user.id).maybeSingle(),sfUnifiedReadAccess()]);
+   sfUnifiedSetAccess(session.user,access);
+   if(!error){sfUnifiedProfileAt=Date.now();sfUnifiedProfileUser=session.user.id}
+  }
   const commercial=!!sfTeamMember(session.user.email);
   if(error&&!commercial)throw error;
   sfUnifiedProfile=!error&&member?.is_active!==false?member:null;
-  if(!commercial&&!sfUnifiedProfile){sfLockApp(true);sfSetAuthMessage('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.','error');return;}
+  if(!commercial&&!sfUnifiedProfile&&!sfUnifiedAccess?.equipment){sfLockApp(true);sfSetAuthMessage('الحساب غير متاح أو تم إيقافه. تواصل مع الإدارة.','error');return;}
   sfAttendanceOnly=!commercial;
   if(sfAttendanceOnly){
    if(sfCurrentUser?.id!==session.user.id||!sfAuthReady){
@@ -114,10 +141,10 @@ sfHandleAuthState=async function(event,session){
 sfUnlockApp=function(user){
  if(sfAttendanceOnly){
   sfCurrentUser=user;sfAuthReady=true;document.body.classList.remove('sf-auth-locked');document.getElementById('sf-auth-overlay').hidden=true;
-  const profile=sfUnifiedProfile;document.getElementById('side-account').classList.add('show');document.getElementById('side-account-name').textContent=profile?.name||'';document.getElementById('side-account-email').textContent=profile?.engineer_id||'';document.getElementById('side-account-avatar').textContent=profile?.name?.[0]||'SF';
+  const profile=sfUnifiedProfile;document.getElementById('side-account').classList.add('show');const shown=profile?.name||sfUnifiedAccess?.equipment_name||'';document.getElementById('side-account-name').textContent=shown;document.getElementById('side-account-email').textContent=profile?.engineer_id||user?.email||'';document.getElementById('side-account-avatar').textContent=shown[0]||'SF';
   sfLoadUserInterfaceLanguage(user);setCloudStatus('','Secure cloud connected');
  }else{sfUnifiedBaseUnlock(user);void sfRefreshAttendanceRoster();}
- sfUnifiedApplyAccess();showTab(sfUnifiedAllowed(sfUnifiedDesired)?sfUnifiedDesired:sfUnifiedProfile?.role==='accountant'?'accounting':sfAttendanceOnly?'attendance':'dashboard');
+ sfUnifiedApplyAccess();showTab(sfUnifiedAllowed(sfUnifiedDesired)?sfUnifiedDesired:sfUnifiedHome());
 };
 sfSetInterfaceLanguage=function(lang,persist=true){sfUnifiedBaseLanguage(lang,persist);if(sfUnifiedFrameReady)document.getElementById('sf-unified-frame')?.contentWindow?.sfAccountingLanguageChanged?.();if(sfUnifiedFrameReady&&sfUnifiedRoutes[sfUnifiedRoute])sfUnifiedOpenModule()};
 sfCloudPullAll=async function(){if(sfAttendanceOnly)return [];return sfUnifiedBasePull()};
