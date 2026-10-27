@@ -46,7 +46,7 @@ function sfUsersStyles(){
 .users-count{display:inline-block;min-width:22px;padding:1px 8px;border-radius:999px;background:#EEF1F7;color:var(--sf-navy);font-size:12px;font-weight:700;text-align:center}
 .users-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .users-tools input,.users-tools select,.users-table select,.users-form input{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:9px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-text)}
-.users-tools input{min-width:200px}.users-table select{max-width:230px}
+.users-tools input{min-width:200px}.users-table select{max-width:250px}
 .users-btn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;border:1px solid var(--sf-line);background:#fff;color:var(--sf-navy);cursor:pointer;white-space:nowrap}
 .users-btn:hover{border-color:var(--sf-navy);background:#F5F7FB}.users-btn.primary{background:var(--sf-navy);color:#fff;border-color:var(--sf-navy)}.users-btn.primary:hover{opacity:.92}
 .users-btn.warn{color:var(--sf-alert-text);border-color:#F2C9C9}.users-btn:disabled{opacity:.55;cursor:default}
@@ -91,9 +91,10 @@ function sfUsersCommercialCell(u){
   if(u.commercial==='full')return `<span>${sfUsersEsc(sfUsersT('Full','كامل'))}</span>`;
   if(u.engineer_account||u.attendance_role)return `<span class="users-muted" title="${sfUsersEsc(sfUsersT('Engineer and accountant accounts open their own pages.','حسابات المهندسين والمحاسبين تفتح صفحاتها فقط.'))}">—</span>`;
   if(u.protected)return `<span>${sfUsersEsc(u.commercial?sfUsersT('Limited','محدود'):sfUsersT('None','لا شيء'))}</span>`;
-  return `<select data-users-set="commercial" data-id="${u.user_id}" aria-label="${sfUsersEsc(sfUsersT('Commercial','الأقسام التجارية'))}">
+  // Short option text so it fits the column; what "limited" leaves out is in the tooltip.
+  return `<select data-users-set="commercial" data-id="${u.user_id}" aria-label="${sfUsersEsc(sfUsersT('Commercial','الأقسام التجارية'))}" title="${sfUsersEsc(sfUsersT('Limited: quotations, projects and invoices, without salaries or engineers','محدود: عروض الأسعار والمشاريع والفواتير، بدون الرواتب والمهندسين'))}">
     <option value=""${u.commercial?'':' selected'}>${sfUsersEsc(sfUsersT('None','لا شيء'))}</option>
-    <option value="limited"${u.commercial==='limited'?' selected':''}>${sfUsersEsc(sfUsersT('Limited (no salaries or engineers)','محدود (بدون الرواتب والمهندسين)'))}</option></select>`;
+    <option value="limited"${u.commercial==='limited'?' selected':''}>${sfUsersEsc(sfUsersT('Limited','محدود'))}</option></select>`;
 }
 function sfUsersFormHtml(){
   if(!sfUsersAdding)return '';
