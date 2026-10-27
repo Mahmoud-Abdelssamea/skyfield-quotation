@@ -24,7 +24,7 @@ function sfUnifiedHome(){
 function sfUnifiedCanManage(){return sfUnifiedProfile?.role==='admin'&&(sfAttendanceOnly||sfHasAccess('engineers'))}
 function sfUnifiedAllowed(route){
  if(sfUnifiedProfile?.role==='accountant')return route==='accounting';
- if(route==='accounting')return sfUnifiedProfile?.role==='admin';
+ if(route==='accounting')return sfUnifiedProfile?.role==='admin'||(sfUnifiedProfile?.role==='engineer'&&sfUnifiedProfile?.can_accounting===true); // an employee who is also an accountant
  if(route==='engineers')return sfUnifiedCanManage();
  if(route==='attendancesettings')return sfUnifiedProfile?.role==='admin';
  if(['attendance','expenses','timesheets'].includes(route))return !!sfUnifiedProfile;
@@ -68,7 +68,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261026-ro';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261027-roles';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }

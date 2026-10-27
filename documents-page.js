@@ -1,7 +1,7 @@
 'use strict';
 // Iqama & SEC-ID page: every person in the equipment records (eq_recipients) with their Iqama and SEC-ID card,
 // what is due within 45 days or expired, renewals, hand-in and corrections, print and Excel.
-// Opened by the administrator, the storekeeper and the accounting account (eq_can_open_documents); updates go through
+// Opened by the equipment administrator and accounts with the HR role (eq_can_open_documents); updates go through
 // eq_engineer_document / eq_update_documents and are copied to the attendance card fields by the database.
 let sfDocsAccess=false,sfDocsChecked=false,sfDocsCanEdit=false,sfDocsRows=[],sfDocsFilter='all',sfDocsLoading=false;
 let sfDocsWanted=location.hash.slice(1)==='documents'||(!location.hash&&localStorage.getItem('sfLastModule')==='documents');
@@ -22,7 +22,7 @@ function sfDocsState(expiry,returnedOn){
 }
 function sfDocsText(state,expiry,returnedOn){
   const d=state.days;
-  if(state.key==='returned')return sfDocsT('Handed in ','سُلّمت ')+sfDocsDate(returnedOn);
+  if(state.key==='returned')return sfDocsT('Returned to SEC ','سُلّمت للكهرباء ')+sfDocsDate(returnedOn);
   if(state.key==='none')return sfDocsT('Not recorded','غير مسجل');
   if(state.key==='valid')return sfDocsT('Valid until ','سارية حتى ')+sfDocsDate(expiry);
   if(d<0)return sfDocsT(`Expired ${-d} day${-d>1?'s':''} ago`,`منتهية منذ ${-d} يوم`);
@@ -86,6 +86,14 @@ function sfDocsStyles(){
 .docs-expired,.docs-critical{background:#FDECEC;color:var(--sf-alert-text)}.docs-urgent{background:#FFF1E0;color:var(--sf-warn-text)}
 .docs-soon{background:#FFF8E1;color:#7a5a00}.docs-valid{background:#E8F5EC;color:var(--sf-ok-text)}.docs-returned,.docs-none{background:#EEF0F4;color:var(--sf-muted)}
 .docs-status{padding:10px 16px;color:var(--sf-muted);font-size:13px}
+.docs-sheet{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.docs-sheet form{background:#fff;border-radius:14px;padding:18px;width:min(420px,100%);max-height:calc(100vh - 32px);overflow:auto;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.docs-sheet h4{margin:0;color:var(--sf-navy);font-size:15px}
+.docs-sheet label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--sf-muted)}
+.docs-sheet label[hidden]{display:none}
+.docs-sheet input:not([type=checkbox]){font-family:inherit;font-size:14px;padding:8px 10px;border-radius:9px;border:1px solid var(--sf-line);color:var(--sf-text)}
+.docs-sheet .docs-check{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--sf-text)}
+.docs-hint{margin:0;font-size:12px;color:var(--sf-muted);line-height:1.6}
 @media(max-width:760px){.docs-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.docs-tools input{min-width:0;flex:1}.docs-table-wrap{max-height:none}
  .docs-table thead{display:none}.docs-table tr{display:block;border-bottom:1px solid var(--sf-line);padding:8px 0}
  .docs-table td{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;padding:6px 14px;background:transparent!important}
@@ -110,11 +118,9 @@ function sfDocsRender(){
   const worst=r=>{const keys=[sfDocsState(r.iqama_expiry,'').key,sfDocsState(r.sec_id_expiry,r.sec_id_returned_on).key];return keys.includes('expired')?'expired':keys.some(k=>['critical','urgent','soon'].includes(k))?'due':''};
   const rows=sfDocsRows.filter(r=>sfDocsFilter==='all'||(sfDocsFilter==='expired'?worst(r)==='expired':!!worst(r)));
   const L=t=>` data-label="${sfDocsEsc(t)}"`;
+  // One button: a small form with the Iqama date, the SEC-ID card and its return to the electricity company.
   const actions=r=>!sfDocsCanEdit||!sfDocsPerson(r)?'':`<div class="docs-row-actions">
-    <button type="button" class="docs-btn renew" data-docs-act="renew-iqama" data-id="${r.id}">↻ ${sfDocsEsc(sfDocsT('Iqama','الإقامة'))}</button>
-    <button type="button" class="docs-btn renew" data-docs-act="renew-sec" data-id="${r.id}">↻ SEC-ID</button>
-    ${(r.sec_id_no||r.sec_id_expiry)&&!r.sec_id_returned_on?`<button type="button" class="docs-btn" data-docs-act="handin" data-id="${r.id}">${sfDocsEsc(sfDocsT('Card handed in','سُلّمت البطاقة'))}</button>`:''}
-    <button type="button" class="docs-btn" data-docs-act="edit" data-id="${r.id}">✎ ${sfDocsEsc(sfDocsT('Edit','تعديل'))}</button></div>`;
+    <button type="button" class="docs-btn renew" data-docs-act="update" data-id="${r.id}">↻ ${sfDocsEsc(sfDocsT('Update','تحديث'))}</button></div>`;
   const people=`<div class="docs-card"><div class="docs-card-hdr"><h3>👥 ${sfDocsEsc(sfDocsT('Employees','الموظفون'))} <span class="docs-count" id="sf-docs-count">${rows.length}</span></h3>
     <div class="docs-tools"><input type="search" id="sf-docs-search" placeholder="${sfDocsEsc(sfDocsT('Search by name, code or number','بحث بالاسم أو الكود أو الرقم'))}" aria-label="${sfDocsEsc(sfDocsT('Search','بحث'))}">
     <select id="sf-docs-filter" aria-label="${sfDocsEsc(sfDocsT('Filter','تصفية'))}">
@@ -171,8 +177,44 @@ async function sfDocsSave(rpcName,args,row){
   sfDocsRender();if(typeof window.sfDashboardAttentionRefresh==='function')window.sfDashboardAttentionRefresh();
   return true;
 }
+const sfDocsTodayIso=()=>{const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`};
+// The update form: Iqama expiry, SEC-ID number and expiry, and "returned to the electricity company" with its date.
+// Resolves with the values, or null when cancelled.
+let sfDocsAskUpdate=row=>new Promise(done=>{
+  const sheet=document.createElement('div');sheet.className='docs-sheet';
+  const returned=!!row.sec_id_returned_on;
+  sheet.innerHTML=`<form><h4>${sfDocsEsc(sfDocsT('Update','تحديث'))} — <bdi>${sfDocsEsc(row.name)}</bdi></h4>
+    <label>${sfDocsEsc(sfDocsT('Iqama expiry date','تاريخ انتهاء الإقامة'))}<input type="date" name="iqama" value="${sfDocsEsc(row.iqama_expiry||'')}"></label>
+    <label>${sfDocsEsc(sfDocsT('SEC-ID card number','رقم بطاقة SEC-ID'))}<input name="secNo" dir="ltr" maxlength="50" value="${sfDocsEsc(row.sec_id_no||'')}"></label>
+    <label>${sfDocsEsc(sfDocsT('SEC-ID card expiry date','تاريخ انتهاء بطاقة SEC-ID'))}<input type="date" name="secExpiry" value="${sfDocsEsc(row.sec_id_expiry||'')}"></label>
+    <label class="docs-check"><input type="checkbox" name="returned"${returned?' checked':''}> ${sfDocsEsc(sfDocsT('The card was returned to the electricity company (SEC)','البطاقة اتسلّمت لشركة الكهرباء'))}</label>
+    <label class="docs-returned-date"${returned?'':' hidden'}>${sfDocsEsc(sfDocsT('Date returned','تاريخ التسليم'))}<input type="date" name="returnedOn" value="${sfDocsEsc(row.sec_id_returned_on||sfDocsTodayIso())}" max="${sfDocsTodayIso()}"></label>
+    <p class="docs-hint">${sfDocsEsc(sfDocsT('When an engineer leaves, the SEC-ID card goes back to the electricity company; from then on its expiry is no longer followed. A new card (new expiry date) starts it again.','لما المهندس يسيب الشغل البطاقة بترجع لشركة الكهرباء، ومن ساعتها السيستم بيبطّل يتابع تاريخ انتهائها. لو اتطلعت له بطاقة جديدة اكتب تاريخ انتهائها الجديد.'))}</p>
+    <div class="docs-row-actions"><button type="submit" class="docs-btn renew">${sfDocsEsc(sfDocsT('Save','حفظ'))}</button><button type="button" class="docs-btn" data-docs-cancel>${sfDocsEsc(sfDocsT('Cancel','إلغاء'))}</button></div></form>`;
+  const form=sheet.querySelector('form'),close=v=>{sheet.remove();done(v)};
+  form.elements.returned.onchange=()=>{form.querySelector('.docs-returned-date').hidden=!form.elements.returned.checked};
+  form.onsubmit=e=>{e.preventDefault();const f=form.elements;
+    close({iqama:f.iqama.value,secNo:f.secNo.value.trim(),secExpiry:f.secExpiry.value,returned:f.returned.checked,returnedOn:f.returnedOn.value})};
+  sheet.querySelector('[data-docs-cancel]').onclick=()=>close(null);
+  sheet.onclick=e=>{if(e.target===sheet)close(null)};
+  document.body.appendChild(sheet);form.elements.iqama.focus();
+});
+async function sfDocsUpdate(row){
+  const v=await sfDocsAskUpdate(row);if(!v)return;
+  if([v.iqama,v.secExpiry,v.returned?v.returnedOn:''].some(d=>d&&!sfDocsValidDate(d))){alert(sfDocsT('Write the date as YYYY-MM-DD.','اكتب التاريخ بصيغة YYYY-MM-DD.'));return}
+  const datesChanged=(v.iqama||null)!==(row.iqama_expiry||null)||(v.secNo||null)!==(row.sec_id_no||null)||(v.secExpiry||null)!==(row.sec_id_expiry||null);
+  const wasReturned=!!row.sec_id_returned_on;
+  // Undoing a return means a new card: its expiry date has to change (the database clears the return then).
+  if(wasReturned&&!v.returned&&(v.secExpiry||null)===(row.sec_id_expiry||null)){alert(sfDocsT('To follow the card again, write the expiry date of the new card.','عشان السيستم يتابع البطاقة تاني، اكتب تاريخ انتهاء البطاقة الجديدة.'));return}
+  if(v.returned&&!v.returnedOn){alert(sfDocsT('Write the date the card was returned.','اكتب تاريخ تسليم البطاقة.'));return}
+  const returnChanged=v.returned&&(!wasReturned||v.returnedOn!==row.sec_id_returned_on||(v.secExpiry||null)!==(row.sec_id_expiry||null));
+  if(!datesChanged&&!returnChanged)return;
+  if(datesChanged&&!await sfDocsSave('eq_update_documents',{p_id:row.id,p_iqama_expiry:v.iqama||null,p_sec_id_no:v.secNo||null,p_sec_id_expiry:v.secExpiry||null},row))return;
+  if(returnChanged)await sfDocsSave('eq_engineer_document',{p_id:row.id,p_document:'sec_id',p_action:'returned',p_date:v.returnedOn},row);
+}
 async function sfDocsAction(act,id){
   const row=sfDocsRows.find(r=>String(r.id)===String(id));if(!row||!sfDocsCanEdit)return;
+  if(act==='update')return sfDocsUpdate(row);
   const who=' — '+row.name;
   if(act==='renew-iqama'||act==='renew-sec'){
     const doc=act==='renew-iqama'?'iqama':'sec_id',current=doc==='iqama'?row.iqama_expiry:row.sec_id_expiry;

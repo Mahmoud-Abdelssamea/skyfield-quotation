@@ -17,7 +17,7 @@ function periodRange(){
  return {start:start.toISOString().slice(0,10),end:end.toISOString().slice(0,10)};
 }
 const historyStatus=s=>T(...(statuses[s]||[s,s]));
-const permitted=()=>typeof me!=='undefined'&&me&&['admin','accountant'].includes(me.role);
+const permitted=()=>typeof me!=='undefined'&&me&&(['admin','accountant'].includes(me.role)||(me.role==='engineer'&&me.can_accounting===true)); // an employee who is also an accountant
 const visible=()=>opened&&permitted()&&document.visibilityState==='visible'&&!A('accountingSection').hidden;
 function note(s,error=false){A('acctMessage').textContent=s;A('acctMessage').classList.toggle('error',error);A('acctDialogMessage').textContent=s;A('acctDialogMessage').classList.toggle('error',error)}
 function errorText(e){

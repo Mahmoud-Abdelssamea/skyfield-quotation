@@ -874,7 +874,7 @@ function setAttendanceView(view,updateHash=true){
  if(view!=='accountingSection'&&window.sfAccountingHasDraft?.()){if(!confirm(tr('لديك تغييرات لم تحفظ. هل تريد تركها؟')))return;window.sfAccountingDiscardDraft?.()}
  const panels=['dailySection','expenseSection','monthlySection','admin','engineersSection','accountingSection'];
  if(me?.role==='accountant')view='accountingSection';
- if(view==='accountingSection'&&!['admin','accountant'].includes(me?.role))view='dailySection';
+ if(view==='accountingSection'&&!['admin','accountant'].includes(me?.role)&&!(me?.role==='engineer'&&me?.can_accounting===true))view='dailySection';
  if(!panels.includes(view)||(['admin','engineersSection'].includes(view)&&me?.role!=='admin'))view='dailySection';
  for(const id of panels)$(id).hidden=id!==view;
  if(view==='accountingSection')window.sfAccountingOpen?.();else window.sfAccountingClose?.();

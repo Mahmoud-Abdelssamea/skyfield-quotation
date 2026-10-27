@@ -13,12 +13,49 @@ Deno.serve(async req=>{
  if(member?.role!=='admin'||member.is_active!==true)return reply({error:'Administrator access required'},403);
  try{
   const body=await req.json(),{engineer_id,name,password}=body;
-  if(['create-staff','staff-password','set-suspended'].includes(body.action)){
+  if(['create-account','create-staff','staff-password','set-suspended'].includes(body.action)){
    // Users & Permissions page: the system administrator only (full commercial access as well as attendance admin).
    const {data:own}=await admin.from('sf_commercial_access').select('level,active').eq('user_id',user.id).maybeSingle();
    if(own?.level!=='full'||own.active!==true)return reply({error:'Administrator access required'},403);
    const log=(target,area,old_value,new_value)=>admin.from('sf_access_log').insert({actor:user.id,target,area,old_value,new_value});
    const strong=p=>typeof p==='string'&&p.length>=8&&p.length<=128;
+   // One account with any of the four roles: employee (attendance), accountant, hr (Iqama & SEC-ID), storekeeper.
+   // Signs in with an employee code (employee role required, digits-only password) or with an e-mail.
+   if(body.action==='create-account'){
+    const roles=Array.isArray(body.roles)?[...new Set(body.roles)]:[];
+    if(!roles.length||roles.some(r=>!['employee','accountant','hr','storekeeper'].includes(r)))return reply({error:'اختر دورًا واحدًا على الأقل.'},400);
+    if(typeof name!=='string'||!name.trim()||name.trim().length>150)return reply({error:'الاسم مطلوب.'},400);
+    let email,login;
+    if(body.login==='code'){
+     if(!roles.includes('employee'))return reply({error:'الدخول بالكود للموظفين فقط.'},400);
+     if(typeof engineer_id!=='string'||! /^[0-9]{6,40}$/.test(engineer_id))return reply({error:'كود الموظف يجب أن يكون من 6 إلى 40 رقمًا.'},400);
+     if(typeof password!=='string'||! /^[0-9]{6,}$/.test(password))return reply({error:'كلمة المرور يجب أن تكون 6 أرقام على الأقل (0–9).'},400);
+     login=engineer_id;email=engineer_id+'@engineers.skyfield.invalid';
+    }else{
+     email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
+     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||email.endsWith('@engineers.skyfield.invalid'))return reply({error:'اكتب بريدًا إلكترونيًا صحيحًا.'},400);
+     if(!strong(password))return reply({error:'كلمة المرور يجب أن تكون من 8 إلى 128 حرفًا.'},400);
+     login=email;
+    }
+    const {data:created,error:creationError}=await admin.auth.admin.createUser({email,password,email_confirm:true});
+    if(creationError)return reply({error:creationError.message},400);
+    const id=created.user.id,employee=roles.includes('employee'),accountant=roles.includes('accountant'),hr=roles.includes('hr'),store=roles.includes('storekeeper');
+    let failed=null,member=false;
+    if(employee||accountant){
+     const {error:e1}=await admin.from('sf_daily_members').insert({user_id:id,engineer_id:login,name:name.trim(),role:employee?'engineer':'accountant',can_accounting:employee&&accountant,is_active:true});
+     if(e1)failed=e1;else member=true;
+    }
+    if(!failed&&(hr||store)){
+     const {error:e2}=await admin.from('eq_roles').insert({id,full_name:name.trim(),role:store?'storekeeper':'documents',documents:hr,active:true});
+     if(e2)failed=e2;
+    }
+    if(failed){
+     if(member)await admin.from('sf_daily_members').delete().eq('user_id',id);
+     await admin.auth.admin.deleteUser(id);return reply({error:failed.message},400);
+    }
+    await log(id,'account',null,'created:'+roles.sort().join('+'));
+    return reply({user_id:id,login,roles});
+   }
    if(body.action==='create-staff'){
     const email=typeof body.email==='string'?body.email.trim().toLowerCase():'',role=body.equipment_role;
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||email.endsWith('@engineers.skyfield.invalid')||typeof name!=='string'||!name.trim()||name.trim().length>150)
