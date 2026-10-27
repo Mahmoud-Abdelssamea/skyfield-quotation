@@ -27,7 +27,7 @@ var EQ_PREVIEW=true,EQ_REAL_ROLE='viewer';
 // ── Main-site integration (defined before the page starts; uses page functions only when called) ──
 const EQ_OLD={url:'https://kfaytvoihwzfwxmlkkwn.supabase.co',key:'sb_publishable_6K5pRY2sxSpNxYQ7_DjW2Q_WKa2Qh9s',bucket:'equipment-documents'};
 const EQ_NEW_BUCKET='eq-documents';
-let EQ_CERTS_DONE=false;
+let EQ_CERTS_DONE=false,EQ_CERTS_CHECKED=false; // the copy button waits for the check, so it never flashes
 
 // Iqama / SEC-ID updates: the administrator, the storekeeper and the documents role (the accounting account).
 function canEditDocuments(){return !EQ_PREVIEW&&['admin','storekeeper','documents'].includes(CURRENT_ROLE);}
@@ -52,12 +52,13 @@ async function eqCheckCertificatesDone(){
     const present=new Set((await eqListAll(getSupabaseClient(),EQ_NEW_BUCKET)).map(f=>f.path));
     EQ_CERTS_DONE=INVENTORY.every(d=>!d.certificatePath||present.has(d.certificatePath));
   }catch(e){console.warn('Certificate check skipped',e);}
+  EQ_CERTS_CHECKED=true;
   eqRenderBanner();
 }
 function eqRenderBanner(){
   let banner=document.getElementById('eq-banner');
   if(!banner){banner=document.createElement('div');banner.id='eq-banner';banner.className='no-print';document.querySelector('nav')?.before(banner);}
-  banner.hidden=!EQ_PREVIEW&&(EQ_REAL_ROLE!=='admin'||EQ_CERTS_DONE);
+  banner.hidden=!EQ_PREVIEW&&(EQ_REAL_ROLE!=='admin'||EQ_CERTS_DONE||!EQ_CERTS_CHECKED);
   banner.innerHTML=(EQ_PREVIEW?'<span>'+escapeHTML(translateRuntimeText('معاينة — التسجيل ما زال على نظام الأجهزة القديم حتى التحويل. العرض والطباعة والتصدير متاحة.'))+'</span>':'')
     +(EQ_REAL_ROLE==='admin'&&!EQ_CERTS_DONE?'<button type="button" onclick="eqOpenCertificateCopy()">'+escapeHTML(translateRuntimeText('نقل الشهادات'))+'</button>':'');
 }
