@@ -457,7 +457,7 @@
   .memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 16px; padding: 16px; background: var(--gray-100); border-radius: 8px; }
   .doc-section-hdr { font-size: 13px; font-weight: 700; color: var(--navy); padding: 8px 12px; background: var(--navy-light); border-left: 4px solid var(--orange); margin: 20px 0 10px; border-radius: 0 6px 6px 0; }
   .doc-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 16px; table-layout: fixed; }
-  .doc-table th { background: var(--navy); color: var(--white); padding: 7px 8px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .025em; overflow-wrap: normal; word-break: normal; }
+  .doc-table th { background: var(--navy); color: var(--white); padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .025em; overflow-wrap: normal; word-break: normal; }
   .doc-table td { padding: 6px 8px; border-bottom: 1px solid var(--gray-200); overflow-wrap: anywhere; word-break: normal; }
   .doc-table:not(.scope-table):not(.optional-table) th:first-child, .doc-table:not(.scope-table):not(.optional-table) td:first-child { width: 55%; }
   .doc-table td.col-price, .doc-table td.col-total, .doc-table td.col-rate { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
@@ -490,7 +490,7 @@
   .doc-table tr.sub-sow-row td.col-item { padding-left:16px;position:relative; }
   .doc-table tr.sub-sow-row td.col-item::before { content:'↳';position:absolute;left:5px;color:var(--navy-mid);font-weight:800; }
   .doc-table tr:nth-child(even) td { background: var(--navy-light); }
-  .doc-table tr.cat-row td, .doc-table tr.cat-row td { background: var(--navy) !important; color: var(--white); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .doc-table tr.cat-row td, .doc-table tr.cat-row td { background: var(--navy) !important; color: var(--white); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
   .doc-table tr.total-row td, .doc-table tr.total-row td { background: var(--orange) !important; color: var(--white); font-weight: 700; }
   .doc-summary { border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
   .doc-summary-row { display: flex; justify-content: space-between; padding: 9px 16px; border-bottom: 1px solid var(--gray-200); font-size: 12px; }
@@ -510,7 +510,7 @@
   .doc-sig-box { border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; }
   .doc-sig-hdr { padding: 8px 12px; font-size: 11px; font-weight: 700; text-align: center; color: var(--white); }
   .doc-sig-body { padding: 14px 12px; font-size: 11px; color: var(--gray-700); line-height: 2.4; }
-  .doc-footer { background: var(--navy); padding: 14px 32px; text-align: center; color: rgba(255,255,255,0.85); font-size: 11px; line-height: 1.7; }
+  .doc-footer { background: var(--navy); padding: 14px 32px; text-align: center; color: rgba(255,255,255,0.85); font-size: 10.5px; line-height: 1.7; }
   .doc-footer-line1 { color: var(--orange); font-weight: 700; font-size: 12px; margin-bottom: 4px; }
   .doc-footer-line2, .doc-footer-line3 { color: rgba(255,255,255,0.7); }
 

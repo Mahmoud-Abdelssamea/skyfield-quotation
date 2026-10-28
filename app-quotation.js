@@ -1019,11 +1019,11 @@ function showExport(docType='quotation'){
   // between Unit and Remark or forces its heading to render letter-by-letter.
   const actColumnDefs = hasCustomRows
     ? [
-        ['sn',5],['item',18],['spec',30],
+        ['sn',5],['item',18],['spec',22],
         ...(opt.actCodeCol?[['code',6]]:[]),
         ...(opt.actQtyCol?[['qty',5],['unit',7]]:[]),
         ...(opt.actHrsCol?[['rate',12]]:[]),
-        ['remark',7],
+        ['remark',15],
         ...(opt.actCostCol?[['total',10]]:[])
       ]
     : [
