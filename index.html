@@ -6,9 +6,9 @@
 <meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SKY FIELD – Management System v29</title>
-<link rel="stylesheet" href="styles.css?v=20261023-theme">
+<link rel="stylesheet" href="styles.css?v=20261028-quick">
 <script src="supabase-js-2.117.2.js"></script>
-<script src="equipment-library.js?v=20261017-eqlib-rename"></script><script src="sync-safety.js?v=20261022-signin"></script><script src="dialogs.js?v=20261017-review2"></script>
+<script src="equipment-library.js?v=20261017-eqlib-rename"></script><script src="sync-safety.js?v=20261022-signin"></script><script src="dialogs.js?v=20261028-quick"></script>
 <script>
   // ── Shared database config ──
   // Paste your Supabase project URL and anon public key here (Project Settings → API).
@@ -25,7 +25,7 @@
     : null;
   if (!sfDb) console.warn('Supabase not configured — running in local-only mode (data stays on this device/browser).');
 </script>
-<link rel="stylesheet" href="payroll-ui.css?v=20261027-approve"><link rel="stylesheet" href="theme.css?v=20261023-theme">
+<link rel="stylesheet" href="payroll-ui.css?v=20261027-approve"><link rel="stylesheet" href="theme.css?v=20261028-quick">
 </head>
 <body data-module="dashboard" class="sf-auth-locked">
 
@@ -200,50 +200,50 @@
     <button class="btn-outline" id="advanced-fields-btn" type="button" onclick="toggleAdvancedFields()">Show Commercial Fields</button>
   </div>
   <div class="meta-grid quotation-workspace">
-    <div class="meta-card"><label>Client / Project (To)</label><input id="client" placeholder="Enter client name…" oninput="updateLcApplicantFromClient()"></div>
-    <div class="meta-card"><label>Attention</label><input id="client-attn" placeholder="Contact person name…"></div>
-    <div class="meta-card"><label>Client Telephone</label><input id="client-tel" placeholder="05xxxxxxxx"></div>
-    <div class="meta-card"><label>Client Email</label><input id="client-email" type="email" placeholder="contact@client.com"></div>
-    <div class="meta-card"><label>Project (Internal)</label><input id="proj-name" placeholder="Testing &amp; Commissioning" value="Testing &amp; Commissioning"></div>
-    <div class="meta-card"><label>Station / Section</label><input id="station-name" placeholder="e.g. Station 1 / BSP-01 / Feeder A"></div>
-    <div class="meta-card"><label>Subject</label><input id="qo-ref" placeholder="Subject of the quotation…"></div>
+    <div class="meta-card"><label for="client">Client / Project (To)</label><input id="client" placeholder="Enter client name…" oninput="updateLcApplicantFromClient()"></div>
+    <div class="meta-card"><label for="client-attn">Attention</label><input id="client-attn" placeholder="Contact person name…"></div>
+    <div class="meta-card"><label for="client-tel">Client Telephone</label><input id="client-tel" placeholder="05xxxxxxxx"></div>
+    <div class="meta-card"><label for="client-email">Client Email</label><input id="client-email" type="email" placeholder="contact@client.com"></div>
+    <div class="meta-card"><label for="proj-name">Project (Internal)</label><input id="proj-name" placeholder="Testing &amp; Commissioning" value="Testing &amp; Commissioning"></div>
+    <div class="meta-card"><label for="station-name">Station / Section</label><input id="station-name" placeholder="e.g. Station 1 / BSP-01 / Feeder A"></div>
+    <div class="meta-card"><label for="qo-ref">Subject</label><input id="qo-ref" placeholder="Subject of the quotation…"></div>
     <div class="meta-card"><label>Quotation No.</label>
       <div style="display:flex;gap:6px;align-items:center">
         <input id="qno" placeholder="SF-Q-2025-001" style="flex:1">
         <button class="btn-sm" type="button" onclick="generateNextQuoteNumber(true)" title="Generate a new sequential quotation number">New No.</button>
       </div>
     </div>
-    <div class="meta-card"><label>Date</label><input id="qdate" type="date"></div>
-    <div class="meta-card"><label>VAT %</label><input id="vat" type="number" value="15" oninput="recalc()"></div>
-    <div class="meta-card"><label>Profit Margin % <span style="font-weight:400;color:var(--gray-500)">(applies to Engineering + Equipment + Custom SOW subtotal, before VAT)</span></label><input id="profit" type="number" value="0" oninput="recalc()"></div>
+    <div class="meta-card"><label for="qdate">Date</label><input id="qdate" type="date"></div>
+    <div class="meta-card"><label for="vat">VAT %</label><input id="vat" type="number" value="15" oninput="recalc()"></div>
+    <div class="meta-card"><label for="profit">Profit Margin % <span style="font-weight:400;color:var(--gray-500)">(applies to Engineering + Equipment + Custom SOW subtotal, before VAT)</span></label><input id="profit" type="number" value="0" oninput="recalc()"></div>
     <div class="meta-card">
       <label>Discount <span style="font-weight:400;color:var(--gray-500)">(applied to subtotal, before VAT)</span></label>
       <div style="display:flex;gap:6px">
-        <select id="discount-type" style="flex:1;border:1px dashed var(--gray-300);border-radius:5px;padding:7px 8px;font-size:12px;outline:none" onchange="recalc()">
+        <select id="discount-type" aria-label="Discount type" style="flex:1;border:1px dashed var(--gray-300);border-radius:5px;padding:7px 8px;font-size:12px;outline:none" onchange="recalc()">
           <option value="pct">Percentage %</option>
           <option value="fixed">Fixed Amount (SAR)</option>
         </select>
         <input id="discount-value" type="number" value="0" placeholder="0" style="flex:1" oninput="recalc()">
       </div>
     </div>
-    <div class="meta-card"><label>Commission % <span style="font-weight:400;color:var(--gray-500)">(deducted from Grand Total incl. VAT, if any)</span></label><input id="commission" type="number" value="0" oninput="recalc()"></div>
-    <div class="meta-card"><label>Prepared By (Engineer Name)</label><input id="prep-name" placeholder="Enter engineer name…" value="Mahmoud Awwad"></div>
-    <div class="meta-card"><label>Prepared By Email</label><input id="prep-email" type="email" placeholder="you@skyfield.com" value="m.awwad@skyfield-sa.com"></div>
-    <div class="meta-card"><label>Substation / Project Title</label><input id="substation" placeholder="132 / 33 / 13.8 kV Substation" value="132 / 33 / 13.8 kV Substation"></div>
+    <div class="meta-card"><label for="commission">Commission % <span style="font-weight:400;color:var(--gray-500)">(deducted from Grand Total incl. VAT, if any)</span></label><input id="commission" type="number" value="0" oninput="recalc()"></div>
+    <div class="meta-card"><label for="prep-name">Prepared By (Engineer Name)</label><input id="prep-name" placeholder="Enter engineer name…" value="Mahmoud Awwad"></div>
+    <div class="meta-card"><label for="prep-email">Prepared By Email</label><input id="prep-email" type="email" placeholder="you@skyfield.com" value="m.awwad@skyfield-sa.com"></div>
+    <div class="meta-card"><label for="substation">Substation / Project Title</label><input id="substation" placeholder="132 / 33 / 13.8 kV Substation" value="132 / 33 / 13.8 kV Substation"></div>
   </div>
 
   <!-- INTERNAL COST SETTINGS -->
   <details class="quotation-workspace" id="internal-cost-settings" style="background:var(--white);border:1px solid var(--gray-200);border-radius:10px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden">
     <summary style="cursor:pointer;list-style:none;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;font-weight:700;color:var(--navy);user-select:none">
       <span>🔒 Internal Cost Settings</span>
-      <span style="font-size:10.5px;font-weight:500;color:var(--gray-500)">Private costing data — not shown in customer documents</span>
+      <span style="font-size:11px;font-weight:500;color:var(--gray-500)">Private costing data — not shown in customer documents</span>
     </summary>
     <div style="padding:0 16px 16px;border-top:1px solid var(--gray-200)">
       <div style="font-size:11px;color:var(--gray-500);line-height:1.5;padding:10px 0 8px">Use these values only for internal costing and quotation calculations. They remain hidden unless this section is opened.</div>
       <div class="meta-grid" style="margin-bottom:0">
-        <div class="meta-card"><label>Engineer Rate (SAR/day)</label><input id="rate" type="number" value="1500" min="0" step="0.01" oninput="recalc()"></div>
-        <div class="meta-card"><label>Working Hours/day</label><input id="hpd" type="number" value="8" min="1" step="0.5" oninput="recalc()"></div>
-        <div class="meta-card"><label>Working Days/week</label><input id="dpw" type="number" value="6" min="1" max="7" step="1"></div>
+        <div class="meta-card"><label for="rate">Engineer Rate (SAR/day)</label><input id="rate" type="number" value="1500" min="0" step="0.01" oninput="recalc()"></div>
+        <div class="meta-card"><label for="hpd">Working Hours/day</label><input id="hpd" type="number" value="8" min="1" step="0.5" oninput="recalc()"></div>
+        <div class="meta-card"><label for="dpw">Working Days/week</label><input id="dpw" type="number" value="6" min="1" max="7" step="1"></div>
       </div>
     </div>
   </details>
@@ -267,9 +267,9 @@
     <div class="stat-card"><div class="slbl">Total Hours</div><div class="sval" id="s-hrs">0</div></div>
     <div class="stat-card"><div class="slbl">Engineer Cost</div><div class="sval" id="s-eng">SAR 0</div></div>
     <div class="stat-card"><div class="slbl">Equipment Cost</div><div class="sval" id="s-eqc">SAR 0</div></div>
-    <div class="stat-card" id="s-disc-card" style="display:none"><div class="slbl">Subtotal After Discount</div><div class="sval" id="s-discsub">SAR 0</div><div id="s-disc-sub" style="font-size:10px;color:var(--gold);margin-top:4px"></div></div>
-    <div class="stat-card accent"><div class="slbl">Grand Total Including VAT</div><div class="sval" id="s-tot">SAR 0</div><div id="s-opt" style="font-size:10px;color:var(--gold);margin-top:4px;display:none"></div></div>
-    <div class="stat-card accent" id="s-comm-card" style="display:none"><div class="slbl">Net Total After Commission</div><div class="sval" id="s-nettot">SAR 0</div><div id="s-comm-sub" style="font-size:10px;color:var(--gold);margin-top:4px"></div></div>
+    <div class="stat-card" id="s-disc-card" style="display:none"><div class="slbl">Subtotal After Discount</div><div class="sval" id="s-discsub">SAR 0</div><div id="s-disc-sub" style="font-size:11px;color:var(--gold);margin-top:4px"></div></div>
+    <div class="stat-card accent"><div class="slbl">Grand Total Including VAT</div><div class="sval" id="s-tot">SAR 0</div><div id="s-opt" style="font-size:11px;color:var(--gold);margin-top:4px;display:none"></div></div>
+    <div class="stat-card accent" id="s-comm-card" style="display:none"><div class="slbl">Net Total After Commission</div><div class="sval" id="s-nettot">SAR 0</div><div id="s-comm-sub" style="font-size:11px;color:var(--gold);margin-top:4px"></div></div>
   </div>
 
   <!-- TABS -->
@@ -397,7 +397,7 @@
             <option value="test_engineer_rental">Rental – Test Engineer</option>
             <option value="equipment_rental">Rental – Equipment</option>
           </select>
-          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">The system loads only the conditions relevant to the selected quotation type.</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:5px">The system loads only the conditions relevant to the selected quotation type.</div>
         </div>
         <div class="custom-sow-label-row" style="max-width:520px">
           <label>Quotation Language / لغة عرض السعر</label>
@@ -405,7 +405,7 @@
             <span class="eo-switch"><input id="include-arabic-translation" type="checkbox" onchange="setIncludeArabicTranslation(this.checked)"><span class="slider"></span></span>
             <span class="eo-row-text"><strong>Include Arabic Translation / إضافة الترجمة العربية</strong></span>
           </label>
-          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">English is always included. Turn this on to add Arabic to the quotation header, fixed labels, and every Terms &amp; Conditions clause.</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:5px">English is always included. Turn this on to add Arabic to the quotation header, fixed labels, and every Terms &amp; Conditions clause.</div>
         </div>
         <div class="custom-sow-label-row standard-payment-controls" id="standard-payment-controls" style="max-width:760px">
           <label for="payment-term-type">Invoice &amp; Bank Transfer Schedule</label>
@@ -418,24 +418,24 @@
           </select>
           <div id="payment-term-extra" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
             <div id="advance-pct-wrap" style="display:none">
-              <label for="payment-advance-pct" style="font-size:10px;color:var(--gray-500)">Advance Percentage</label>
+              <label for="payment-advance-pct" style="font-size:11px;color:var(--gray-500)">Advance Percentage</label>
               <input id="payment-advance-pct" type="number" min="0" max="100" value="30" oninput="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px">
             </div>
             <div id="payment-balance-basis-wrap" style="display:none">
-              <label for="payment-balance-basis" style="font-size:10px;color:var(--gray-500)">Remaining Balance Method</label>
+              <label for="payment-balance-basis" style="font-size:11px;color:var(--gray-500)">Remaining Balance Method</label>
               <select id="payment-balance-basis" onchange="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px;background:#fff">
                 <option value="monthly_progress">Monthly invoices based on approved progress</option>
                 <option value="after_completion">After completion of the work</option>
               </select>
             </div>
             <div id="payment-days-wrap">
-              <label for="payment-due-days" style="font-size:10px;color:var(--gray-500)">Payment Due Within (Days)</label>
+              <label for="payment-due-days" style="font-size:11px;color:var(--gray-500)">Payment Due Within (Days)</label>
               <input id="payment-due-days" type="number" min="0" value="30" oninput="updatePaymentTerms()" style="width:100%;border:1px solid var(--gray-200);border-radius:7px;padding:7px 9px">
             </div>
           </div>
           <textarea id="payment-custom-text" placeholder="Enter the custom payment condition..." oninput="updatePaymentTerms()" style="display:none;width:100%;margin-top:8px;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;min-height:58px"></textarea>
           <textarea id="payment-custom-text-ar" placeholder="أدخل ترجمة شرط الدفع المخصص بالعربية..." dir="rtl" oninput="updatePaymentTerms()" style="display:none;width:100%;margin-top:8px;border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:Tahoma,'Inter',sans-serif;min-height:58px"></textarea>
-          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Only the selected payment condition will appear in the quotation.</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:5px">Only the selected payment condition will appear in the quotation.</div>
         </div>
         <div class="custom-sow-label-row" style="max-width:900px">
           <div class="condition-language-grid">
@@ -446,7 +446,7 @@
                 <option value="lc">Letter of Credit (L/C)</option>
               </select>
             </div>
-            <div id="lc-quick-status" style="font-size:10.5px;color:var(--gray-500);line-height:1.6;padding-top:20px">Invoice and bank-transfer conditions are currently selected.</div>
+            <div id="lc-quick-status" style="font-size:11px;color:var(--gray-500);line-height:1.6;padding-top:20px">Invoice and bank-transfer conditions are currently selected.</div>
           </div>
           <div id="lc-summary-card" class="lc-summary-card">
             <strong>L/C payment structure:</strong> 30% mobilization payment by bank transfer + 70% irrevocable L/C at sight, paid against monthly progress invoices. The mandatory 14-day countersignature protection is included in Payment Condition No. 1 so Conditions 22 and 26 remain unchanged.
@@ -494,19 +494,19 @@
           <label>Commercial Rates for Conditions</label>
           <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
             <div>
-              <label for="commercial-engineer-daily-rate" style="font-size:10px;color:var(--gray-500)">Engineer Daily Rate (SAR/day)</label>
+              <label for="commercial-engineer-daily-rate" style="font-size:11px;color:var(--gray-500)">Engineer Daily Rate (SAR/day)</label>
               <input id="commercial-engineer-daily-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,500" oninput="refreshCommercialConditionRates()">
             </div>
             <div>
-              <label for="commercial-engineer-monthly-rate" style="font-size:10px;color:var(--gray-500)">Engineer Monthly Rate (SAR/month)</label>
+              <label for="commercial-engineer-monthly-rate" style="font-size:11px;color:var(--gray-500)">Engineer Monthly Rate (SAR/month)</label>
               <input id="commercial-engineer-monthly-rate" type="number" min="0" step="0.01" placeholder="e.g. 30,000" oninput="refreshCommercialConditionRates()">
             </div>
             <div style="grid-column:1 / -1">
-              <label for="commercial-mobilization-rate" style="font-size:10px;color:var(--gray-500)">Mobilization &amp; Demobilization Cost / Engineer (SAR)</label>
+              <label for="commercial-mobilization-rate" style="font-size:11px;color:var(--gray-500)">Mobilization &amp; Demobilization Cost / Engineer (SAR)</label>
               <input id="commercial-mobilization-rate" type="number" min="0" step="0.01" placeholder="e.g. 1,000" oninput="refreshCommercialConditionRates()">
             </div>
           </div>
-          <div style="font-size:10.5px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:5px">Customer-facing rates. These values are inserted automatically into the relevant Terms &amp; Conditions in the quotation/PDF.</div>
         </div>
         <div class="cond-list" id="cond-list"></div>
       </div>
@@ -517,10 +517,10 @@
         <div class="condition-modal-hdr"><h3 id="condition-modal-title">Edit Condition</h3><button class="condition-modal-close" onclick="closeConditionEditor()" aria-label="Close">×</button></div>
         <div class="condition-modal-body">
           <div class="condition-edit-grid">
-            <div class="condition-edit-field"><label>Section</label><select id="condition-edit-section"></select></div>
-            <div class="condition-edit-field"><label>Condition Number</label><select id="condition-edit-number" disabled><option>Automatic</option></select></div>
-            <div class="condition-edit-field"><label>English Text</label><textarea id="condition-edit-en" dir="ltr"></textarea></div>
-            <div class="condition-edit-field"><label>النص العربي</label><textarea id="condition-edit-ar" dir="rtl"></textarea></div>
+            <div class="condition-edit-field"><label for="condition-edit-section">Section</label><select id="condition-edit-section"></select></div>
+            <div class="condition-edit-field"><label for="condition-edit-number">Condition Number</label><select id="condition-edit-number" disabled><option>Automatic</option></select></div>
+            <div class="condition-edit-field"><label for="condition-edit-en">English Text</label><textarea id="condition-edit-en" dir="ltr"></textarea></div>
+            <div class="condition-edit-field"><label for="condition-edit-ar">النص العربي</label><textarea id="condition-edit-ar" dir="rtl"></textarea></div>
           </div>
           <div class="condition-modal-actions"><button class="condition-modal-cancel" onclick="resetConditionEditor()">Reset to Default</button><button class="condition-modal-cancel" id="condition-save-default" onclick="saveConditionAsCompanyDefault()" style="display:none">Save as Company Default</button><button class="condition-modal-cancel" onclick="closeConditionEditor()">Cancel</button><button class="condition-modal-save" onclick="saveConditionEditor()">Save Condition</button></div>
         </div>
@@ -545,22 +545,22 @@
           <h4 id="engineer-form-title">Add Engineer</h4>
           <input type="hidden" id="eng-id">
           <div class="resource-grid">
-            <div class="resource-field span-2"><label>Engineer Name *</label><input id="eng-name" placeholder="Full name"></div>
-            <div class="resource-field"><label>Nationality</label><input id="eng-nationality" placeholder="e.g. Egyptian"></div>
-            <div class="resource-field"><label>Iqama / ID Number</label><input id="eng-iqama" placeholder="ID number"></div>
-            <div class="resource-field"><label>Employee Number</label><input id="eng-employee-no" placeholder="Employee no."></div>
-            <div class="resource-field"><label>Profession</label><input id="eng-profession" placeholder="Job profession"></div>
-            <div class="resource-field"><label>Specialization</label><select id="eng-specialization"><option>Protection</option><option>Testing & Commissioning</option><option>Transformer</option><option>Switchgear</option><option>Cable Testing</option><option>Solar</option><option>Technician</option><option>Project Management</option><option>Other</option></select></div>
-            <div class="resource-field"><label>LOA Classification</label><select id="eng-loa"><option value="Non-LOA">Non-LOA</option><option value="C1">C1</option><option value="C2">C2</option></select></div>
-            <div class="resource-field"><label>Employment Type</label><select id="eng-employment"><option>Company Employee</option><option>Rental Engineer</option><option>Freelancer</option></select></div>
-            <div class="resource-field"><label>Status</label><select id="eng-status"><option value="available">Available</option><option value="assigned">Assigned</option><option value="leave">On Leave</option><option value="unavailable">Unavailable</option></select></div>
-            <div class="resource-field"><label>Daily Internal Cost (SAR)</label><input id="eng-daily" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Basic Monthly Salary (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Housing & Transport Allowance</label><input id="eng-housing-transport" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Site Allowance</label><input id="eng-site-allowance" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field"><label>Car Allowance</label><input id="eng-car-allowance" type="number" min="0" step="0.01" value="0"></div>
-            <div class="resource-field span-2"><label>Notes</label><textarea id="eng-notes" rows="3" placeholder="Availability, experience, document notes..."></textarea></div>
+            <div class="resource-field span-2"><label for="eng-name">Engineer Name *</label><input id="eng-name" placeholder="Full name"></div>
+            <div class="resource-field"><label for="eng-nationality">Nationality</label><input id="eng-nationality" placeholder="e.g. Egyptian"></div>
+            <div class="resource-field"><label for="eng-iqama">Iqama / ID Number</label><input id="eng-iqama" placeholder="ID number"></div>
+            <div class="resource-field"><label for="eng-employee-no">Employee Number</label><input id="eng-employee-no" placeholder="Employee no."></div>
+            <div class="resource-field"><label for="eng-profession">Profession</label><input id="eng-profession" placeholder="Job profession"></div>
+            <div class="resource-field"><label for="eng-specialization">Specialization</label><select id="eng-specialization"><option>Protection</option><option>Testing & Commissioning</option><option>Transformer</option><option>Switchgear</option><option>Cable Testing</option><option>Solar</option><option>Technician</option><option>Project Management</option><option>Other</option></select></div>
+            <div class="resource-field"><label for="eng-loa">LOA Classification</label><select id="eng-loa"><option value="Non-LOA">Non-LOA</option><option value="C1">C1</option><option value="C2">C2</option></select></div>
+            <div class="resource-field"><label for="eng-employment">Employment Type</label><select id="eng-employment"><option>Company Employee</option><option>Rental Engineer</option><option>Freelancer</option></select></div>
+            <div class="resource-field"><label for="eng-status">Status</label><select id="eng-status"><option value="available">Available</option><option value="assigned">Assigned</option><option value="leave">On Leave</option><option value="unavailable">Unavailable</option></select></div>
+            <div class="resource-field"><label for="eng-daily">Daily Internal Cost (SAR)</label><input id="eng-daily" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label for="eng-monthly">Basic Monthly Salary (SAR)</label><input id="eng-monthly" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label for="eng-overtime">Overtime / Hour (SAR)</label><input id="eng-overtime" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label for="eng-housing-transport">Housing & Transport Allowance</label><input id="eng-housing-transport" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label for="eng-site-allowance">Site Allowance</label><input id="eng-site-allowance" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field"><label for="eng-car-allowance">Car Allowance</label><input id="eng-car-allowance" type="number" min="0" step="0.01" value="0"></div>
+            <div class="resource-field span-2"><label for="eng-notes">Notes</label><textarea id="eng-notes" rows="3" placeholder="Availability, experience, document notes..."></textarea></div>
           </div>
           <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveEngineerRecord()" id="eng-save-btn">Save Engineer</button><button class="btn-outline" type="button" onclick="resetEngineerForm()">Clear</button></div>
         </div>
@@ -576,13 +576,13 @@
     <div id="tab-payroll" style="display:none">
       <div class="resource-toolbar">
         <h3>Monthly Payroll Sheets</h3>
-        <span style="font-size:10.5px;color:var(--gray-500)">Days, overtime and site allowance can be filled from approved attendance.</span>
+        <span style="font-size:11px;color:var(--gray-500)">Days, overtime and site allowance can be filled from approved attendance.</span>
       </div>
       <div class="payroll-page">
         <div class="payroll-controls">
-          <div class="payroll-control"><label>Payroll Month</label><input id="payroll-month" type="month" onchange="payrollMonthChanged()"></div>
-          <div class="payroll-control"><label>Project</label><select id="payroll-project" onchange="payrollProjectChanged()"><option value="">General / Not assigned</option></select></div>
-          <div class="payroll-control"><label>Payroll Divisor</label><input id="payroll-standard-days" type="number" value="30" readonly title="Sky Field payroll is calculated on a fixed 30-day divisor."></div>
+          <div class="payroll-control"><label for="payroll-month">Payroll Month</label><input id="payroll-month" type="month" onchange="payrollMonthChanged()"></div>
+          <div class="payroll-control"><label for="payroll-project">Project</label><select id="payroll-project" onchange="payrollProjectChanged()"><option value="">General / Not assigned</option></select></div>
+          <div class="payroll-control"><label for="payroll-standard-days">Payroll Divisor</label><input id="payroll-standard-days" type="number" value="30" readonly title="Sky Field payroll is calculated on a fixed 30-day divisor."></div>
           <div class="payroll-actions">
             <button class="btn-outline" type="button" onclick="payrollNewSheet()">New Sheet</button>
             <button class="btn-outline" type="button" onclick="payrollLoadProjectEngineers()">Load Engineers</button>
@@ -615,7 +615,7 @@
 
     <!-- EQUIPMENT LIBRARY TAB (module id: costsettings) -->
     <div id="tab-costsettings" style="display:none">
-      <div class="resource-toolbar"><h3>Equipment Library</h3><span style="font-size:11px;color:var(--gray-500)">Devices and prices offered in quotations</span></div> <div class="resource-layout"> <div class="resource-form"> <h4 id="cost-eq-form-title">Add Equipment</h4> <input type="hidden" id="cost-eq-id"> <div class="resource-grid"> <div class="resource-field span-2"><label>Equipment / Kit Name *</label><input id="cost-eq-name" maxlength="160" placeholder="e.g. CPC 100"></div> <div class="resource-field"><label>Manufacturer</label><input id="cost-eq-mfr" maxlength="100" placeholder="e.g. OMICRON"></div> <div class="resource-field"><label>Category</label><input id="cost-eq-category" placeholder="Protection / HV / Transformer..."></div> <div class="resource-field"><label>Price per Day (SAR)</label><input id="cost-eq-daily" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field"><label>Price per Week (SAR)</label><input id="cost-eq-weekly" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field"><label>Price per Month (SAR)</label><input id="cost-eq-monthly" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field span-2 eq-lib-note">Leave a price empty if the device is not rented by that unit. In a quotation you choose days, weeks or months and how many.</div> </div> <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveCostEquipmentRecord()" id="cost-eq-save-btn">Save Equipment</button><button class="btn-outline" type="button" onclick="resetCostEquipmentForm()">Clear</button></div> </div> <div class="resource-card"> <h4>Equipment</h4> <div class="eq-lib-tools"><input id="cost-eq-search" type="search" placeholder="Search equipment, manufacturer, category…" oninput="sfRenderEquipmentLibrary()"><span id="cost-eq-count" class="eq-lib-count"></span></div> <div class="resource-table-wrap eq-lib-wrap"><table class="resource-table"><thead><tr><th>Equipment</th><th>Category</th><th>Day</th><th>Week</th><th>Month</th><th>Actions</th></tr></thead><tbody id="cost-equipment-table-body"></tbody></table></div> </div>
+      <div class="resource-toolbar"><h3>Equipment Library</h3><span style="font-size:11px;color:var(--gray-500)">Devices and prices offered in quotations</span></div> <div class="resource-layout"> <div class="resource-form"> <h4 id="cost-eq-form-title">Add Equipment</h4> <input type="hidden" id="cost-eq-id"> <div class="resource-grid"> <div class="resource-field span-2"><label for="cost-eq-name">Equipment / Kit Name *</label><input id="cost-eq-name" maxlength="160" placeholder="e.g. CPC 100"></div> <div class="resource-field"><label for="cost-eq-mfr">Manufacturer</label><input id="cost-eq-mfr" maxlength="100" placeholder="e.g. OMICRON"></div> <div class="resource-field"><label for="cost-eq-category">Category</label><input id="cost-eq-category" placeholder="Protection / HV / Transformer..."></div> <div class="resource-field"><label for="cost-eq-daily">Price per Day (SAR)</label><input id="cost-eq-daily" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field"><label for="cost-eq-weekly">Price per Week (SAR)</label><input id="cost-eq-weekly" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field"><label for="cost-eq-monthly">Price per Month (SAR)</label><input id="cost-eq-monthly" type="number" min="0" step="0.01" placeholder="0"></div> <div class="resource-field span-2 eq-lib-note">Leave a price empty if the device is not rented by that unit. In a quotation you choose days, weeks or months and how many.</div> </div> <div class="resource-actions"><button class="btn-primary" type="button" onclick="saveCostEquipmentRecord()" id="cost-eq-save-btn">Save Equipment</button><button class="btn-outline" type="button" onclick="resetCostEquipmentForm()">Clear</button></div> </div> <div class="resource-card"> <h4>Equipment</h4> <div class="eq-lib-tools"><input id="cost-eq-search" type="search" placeholder="Search equipment, manufacturer, category…" oninput="sfRenderEquipmentLibrary()"><span id="cost-eq-count" class="eq-lib-count"></span></div> <div class="resource-table-wrap eq-lib-wrap"><table class="resource-table"><thead><tr><th>Equipment</th><th>Category</th><th>Day</th><th>Week</th><th>Month</th><th>Actions</th></tr></thead><tbody id="cost-equipment-table-body"></tbody></table></div> </div>
       </div>
     </div>
 
@@ -707,16 +707,16 @@
       <div class="proj-modal-body">
         <input type="hidden" id="pm-id">
         <div class="proj-field">
-          <label>Project Name *</label>
+          <label for="pm-name">Project Name *</label>
           <input id="pm-name" placeholder="e.g. YANBU Wind Farm T&C">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="proj-field">
-            <label>Client</label>
+            <label for="pm-client">Client</label>
             <input id="pm-client" placeholder="Client company">
           </div>
           <div class="proj-field">
-            <label>Status</label>
+            <label for="pm-status">Status</label>
             <select id="pm-status">
               <option value="active">Active</option>
               <option value="completed">Completed</option>
@@ -726,31 +726,31 @@
         </div>
         <div style="display:grid;grid-template-columns:1.4fr .7fr 1fr;gap:12px">
           <div class="proj-field">
-            <label>Contract Value incl. VAT (SAR)</label>
+            <label for="pm-contract">Contract Value incl. VAT (SAR)</label>
             <input id="pm-contract" type="number" placeholder="0" oninput="pmContractChanged()">
-            <div id="pm-contract-net" style="font-size:10.5px;color:var(--gray-500);margin-top:3px"></div>
+            <div id="pm-contract-net" style="font-size:11px;color:var(--gray-500);margin-top:3px"></div>
           </div>
           <div class="proj-field">
-            <label>VAT %</label>
+            <label for="pm-vat">VAT %</label>
             <input id="pm-vat" type="number" min="0" max="99" step="0.01" placeholder="15" oninput="pmContractChanged()">
           </div>
           <div class="proj-field">
-            <label>Start Date</label>
+            <label for="pm-start">Start Date</label>
             <input id="pm-start" type="date">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="proj-field">
-            <label>Commission % before VAT (عمولة)</label>
+            <label for="pm-commission-pct">Commission % before VAT (عمولة)</label>
             <input id="pm-commission-pct" type="number" placeholder="0" oninput="pmRecalcCommission()">
           </div>
           <div class="proj-field">
-            <label>Commission Amount (SAR)</label>
+            <label for="pm-commission-amt">Commission Amount (SAR)</label>
             <input id="pm-commission-amt" type="number" placeholder="0">
           </div>
         </div>
         <div class="proj-field">
-          <label>Description / Notes</label>
+          <label for="pm-notes">Description / Notes</label>
           <textarea id="pm-notes" rows="2" placeholder="Project notes…"></textarea>
         </div>
         <hr style="border:none;border-top:1px solid var(--gray-200)">
@@ -767,7 +767,7 @@
             <input type="file" id="pm-po-file" accept="application/pdf,image/*" aria-label="PO file" style="font-size:11px;flex:1;min-width:180px">
             <button class="btn-sm" id="pm-po-add-btn" onclick="addProjItem('po')">+ Add PO</button>
           </div>
-          <div style="font-size:10px;color:var(--gray-500);margin-top:3px">Attach the PO as a PDF or an image (up to 25 MB). It is stored securely with the project documents. / أرفق أمر الشراء PDF أو صورة.</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:3px">Attach the PO as a PDF or an image (up to 25 MB). It is stored securely with the project documents. / أرفق أمر الشراء PDF أو صورة.</div>
         </div>
         <!-- Commission Entries -->
         <div class="proj-field">
@@ -780,7 +780,7 @@
             <input id="pm-comm-notes" placeholder="Notes (optional)" style="flex:2;min-width:120px">
             <button class="btn-sm" onclick="addProjItem('comm')">+ Add Commission</button>
           </div>
-          <div style="font-size:10px;color:var(--gray-500);margin-top:2px">Enter a % to auto-suggest the amount from the Contract Value above, or type an amount directly.</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Enter a % to auto-suggest the amount from the Contract Value above, or type an amount directly.</div>
         </div>
         <!-- Payment Installments -->
         <div class="proj-field">
@@ -789,8 +789,8 @@
           <div class="proj-add-row" style="flex-wrap:wrap;gap:4px">
             <input id="pm-pay-label" placeholder="Label (e.g. Advance)" style="flex:2;min-width:120px">
             <input id="pm-pay-amount" type="number" placeholder="Amount (SAR)" style="flex:1;min-width:100px">
-            <input id="pm-pay-date" type="date" style="flex:1;min-width:120px">
-            <select id="pm-pay-status" style="border:1px dashed var(--gray-300);border-radius:5px;padding:5px 8px;font-size:11.5px;outline:none">
+            <input id="pm-pay-date" type="date" aria-label="Payment due date" style="flex:1;min-width:120px">
+            <select id="pm-pay-status" aria-label="Payment status" style="border:1px dashed var(--gray-300);border-radius:5px;padding:5px 8px;font-size:11.5px;outline:none">
               <option value="pending">Pending</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
@@ -809,7 +809,7 @@
           </div>
           <div style="margin-top:4px">
             <input type="file" id="pm-doc-file" multiple style="font-size:11px;color:var(--gray-600)" onchange="handleDocFiles(this)">
-            <div style="font-size:10px;color:var(--gray-500);margin-top:2px">Or upload files (stored in browser)</div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Or upload files (stored in browser)</div>
           </div>
         </div>
       </div>
@@ -966,22 +966,22 @@
         <input type="hidden" id="pi-id">
         <input type="hidden" id="pi-source-id">
         <div class="pi-form-grid">
-          <div class="proj-field"><label>Proforma Invoice Number *</label><input id="pi-number" placeholder="SF-PI-2026-001"></div>
-          <div class="proj-field"><label>Issue Date *</label><input id="pi-date" type="date"></div>
-          <div class="proj-field"><label>Client Name *</label><input id="pi-client" placeholder="Client company"></div>
-          <div class="proj-field"><label>Client VAT Number</label><input id="pi-client-vat" placeholder="VAT registration number"></div>
-          <div class="proj-field span-2"><label>Client Address</label><textarea id="pi-client-address" rows="2" placeholder="Billing address…"></textarea></div>
-          <div class="proj-field"><label>Attention</label><input id="pi-attention" placeholder="Contact person"></div>
-          <div class="proj-field"><label>Client Telephone</label><input id="pi-client-tel" placeholder="05xxxxxxxx"></div>
-          <div class="proj-field"><label>Client Email</label><input id="pi-client-email" type="email" placeholder="contact@client.com"></div>
-          <div class="proj-field"><label>Project Name</label><input id="pi-project" placeholder="Project name"></div>
-          <div class="proj-field span-2"><label>Subject</label><input id="pi-subject" placeholder="Subject / scope summary"></div>
-          <div class="proj-field"><label>Quotation Reference</label><input id="pi-quote-ref" readonly></div>
-          <div class="proj-field"><label>PO / Contract Reference</label><input id="pi-po-ref" placeholder="PO number or contract reference"></div>
+          <div class="proj-field"><label for="pi-number">Proforma Invoice Number *</label><input id="pi-number" placeholder="SF-PI-2026-001"></div>
+          <div class="proj-field"><label for="pi-date">Issue Date *</label><input id="pi-date" type="date"></div>
+          <div class="proj-field"><label for="pi-client">Client Name *</label><input id="pi-client" placeholder="Client company"></div>
+          <div class="proj-field"><label for="pi-client-vat">Client VAT Number</label><input id="pi-client-vat" placeholder="VAT registration number"></div>
+          <div class="proj-field span-2"><label for="pi-client-address">Client Address</label><textarea id="pi-client-address" rows="2" placeholder="Billing address…"></textarea></div>
+          <div class="proj-field"><label for="pi-attention">Attention</label><input id="pi-attention" placeholder="Contact person"></div>
+          <div class="proj-field"><label for="pi-client-tel">Client Telephone</label><input id="pi-client-tel" placeholder="05xxxxxxxx"></div>
+          <div class="proj-field"><label for="pi-client-email">Client Email</label><input id="pi-client-email" type="email" placeholder="contact@client.com"></div>
+          <div class="proj-field"><label for="pi-project">Project Name</label><input id="pi-project" placeholder="Project name"></div>
+          <div class="proj-field span-2"><label for="pi-subject">Subject</label><input id="pi-subject" placeholder="Subject / scope summary"></div>
+          <div class="proj-field"><label for="pi-quote-ref">Quotation Reference</label><input id="pi-quote-ref" readonly></div>
+          <div class="proj-field"><label for="pi-po-ref">PO / Contract Reference</label><input id="pi-po-ref" placeholder="PO number or contract reference"></div>
         </div>
 
         <div class="pi-basis-box">
-          <div class="proj-field"><label>Invoice Amount Basis *</label>
+          <div class="proj-field"><label for="pi-basis">Invoice Amount Basis *</label>
             <select id="pi-basis" onchange="onPiBasisChange()">
               <option value="full">Full Quotation Amount</option>
               <option value="percentage">Fixed Advance Percentage</option>
@@ -990,9 +990,9 @@
             </select>
           </div>
           <div class="pi-basis-fields">
-            <div class="proj-field" id="pi-pct-wrap" style="display:none"><label>Advance Percentage %</label><input id="pi-percentage" type="number" min="0.01" max="100" step="0.01" value="10" oninput="recalcProformaModal()"></div>
-            <div class="proj-field" id="pi-fixed-wrap" style="display:none"><label>Fixed Amount (SAR)</label><input id="pi-fixed-amount" type="number" min="0.01" step="0.01" oninput="recalcProformaModal()"></div>
-            <div class="proj-field" id="pi-fixed-mode-wrap" style="display:none"><label>Fixed Amount Is</label><select id="pi-fixed-mode" onchange="recalcProformaModal()"><option value="beforeVat">Before VAT</option><option value="includingVat">Including VAT</option></select></div>
+            <div class="proj-field" id="pi-pct-wrap" style="display:none"><label for="pi-percentage">Advance Percentage %</label><input id="pi-percentage" type="number" min="0.01" max="100" step="0.01" value="10" oninput="recalcProformaModal()"></div>
+            <div class="proj-field" id="pi-fixed-wrap" style="display:none"><label for="pi-fixed-amount">Fixed Amount (SAR)</label><input id="pi-fixed-amount" type="number" min="0.01" step="0.01" oninput="recalcProformaModal()"></div>
+            <div class="proj-field" id="pi-fixed-mode-wrap" style="display:none"><label for="pi-fixed-mode">Fixed Amount Is</label><select id="pi-fixed-mode" onchange="recalcProformaModal()"><option value="beforeVat">Before VAT</option><option value="includingVat">Including VAT</option></select></div>
           </div>
           <label class="pi-check" style="margin-top:10px"><input type="checkbox" id="pi-include-optional" onchange="handleIncludeOptionalChange()"> Include accepted optional items</label>
           <div id="pi-progress-wrap" style="display:none;margin-top:10px"></div>
@@ -1000,8 +1000,8 @@
         </div>
 
         <div class="pi-form-grid">
-          <div class="proj-field span-2"><label>Payment Description</label><input id="pi-payment-desc" placeholder="e.g. 10% Advance Payment against Quotation No.…"></div>
-          <div class="proj-field span-2"><label>Notes</label><textarea id="pi-notes" rows="3" placeholder="Optional notes shown on the Proforma Invoice…"></textarea></div>
+          <div class="proj-field span-2"><label for="pi-payment-desc">Payment Description</label><input id="pi-payment-desc" placeholder="e.g. 10% Advance Payment against Quotation No.…"></div>
+          <div class="proj-field span-2"><label for="pi-notes">Notes</label><textarea id="pi-notes" rows="3" placeholder="Optional notes shown on the Proforma Invoice…"></textarea></div>
         </div>
 
         <div class="pi-image-row">
@@ -1046,8 +1046,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261027-sidebar"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261023-hp"></script><script src="app-cloud.js?v=20261022-signin"></script><script src="app-ui.js?v=20261027-lang"></script><script src="app-quotation.js?v=20261023-hp"></script><script src="app-projects.js?v=20261023-theme2"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261019-rental-conds"></script><script src="app-setup.js?v=20261027-users"></script>
+<script src="i18n-ar.js?v=20261028-quick"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261028-quick"></script><script src="app-cloud.js?v=20261028-quick"></script><script src="app-ui.js?v=20261027-lang"></script><script src="app-quotation.js?v=20261028-quick"></script><script src="app-projects.js?v=20261028-quick"></script><script src="app-invoices.js?v=20261023-theme"></script><script src="app-payroll-team.js?v=20261028-quick"></script><script src="app-setup.js?v=20261027-users"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261027-approve"></script><script src="analytics.js?v=20261023-theme"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261027-lang"></script><script src="equipment-shell.js?v=20261027-stop"></script><script src="documents-page.js?v=20261027-iqama"></script><script src="users-page.js?v=20261027-roles"></script><script src="side-nav-groups.js?v=20261027-sidebar"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261028-quick"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261028-quick"></script><script src="equipment-shell.js?v=20261028-quick"></script><script src="documents-page.js?v=20261027-iqama"></script><script src="users-page.js?v=20261027-roles"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>

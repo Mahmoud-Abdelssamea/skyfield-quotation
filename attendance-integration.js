@@ -269,7 +269,8 @@ function sfPayrollRule(){
 }
 // A row counts as hand-edited if it differs from its last fill, or (never filled) already holds typed values.
 function sfPayrollRowEdited(r){return r.attFill?SF_PAYROLL_AUTO_FIELDS.some(f=>sfNum(r[f])!==sfNum(r.attFill[f])):(sfNum(r.attendanceDays)>0||sfNum(r.overtimeHours)>0)}
-function sfPayrollStatus(text){const el=document.getElementById('sf-payroll-att-status');if(el)el.textContent=text}
+// The status line sits by the top buttons; a message already shown by the Approve button follows it, so it never goes stale.
+function sfPayrollStatus(text){const el=document.getElementById('sf-payroll-att-status');if(el)el.textContent=text;const near=document.getElementById('sf-payroll-approve-msg');if(near&&!near.hidden)near.textContent=text}
 async function sfPayrollFillFromAttendance({auto=false}={}){
  if(sfPayrollFillBusy){sfPayrollFillAgain=true;return}
  if(!sfCurrentPayroll||!sfDb||!sfCurrentUser||!sfHasAccess('payroll'))return;

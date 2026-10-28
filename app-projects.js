@@ -132,21 +132,21 @@ function renderProjects(){
     const statusLabel = {active:'Active',completed:'Completed',hold:'On Hold'}[p.status]||'Active';
 
     const poHTML = p.pos.length
-      ? p.pos.map((raw,poIndex)=>{const po=sfPoRecord(raw),meta=sfPoMeta(po);return `<div class="proj-po-item" style="flex-wrap:wrap">📄 <span>${escHtml(po.number||'—')}</span>${meta?`<span style="color:var(--gray-500);font-size:10px">${escHtml(meta)}</span>`:''}${po.file?`<button type="button" class="po-file-btn" style="margin-left:auto" onclick="sfOpenProjectPo('${p.id}',${poIndex})">📎 Open PO</button>`:''}</div>`}).join('')
+      ? p.pos.map((raw,poIndex)=>{const po=sfPoRecord(raw),meta=sfPoMeta(po);return `<div class="proj-po-item" style="flex-wrap:wrap">📄 <span>${escHtml(po.number||'—')}</span>${meta?`<span style="color:var(--gray-500);font-size:11px">${escHtml(meta)}</span>`:''}${po.file?`<button type="button" class="po-file-btn" style="margin-left:auto" onclick="sfOpenProjectPo('${p.id}',${poIndex})">📎 Open PO</button>`:''}</div>`}).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No POs added</div>';
 
     const payHTML = p.payments.length
       ? p.payments.map(rawPay=>{const pay=sfNormalizePaymentRecord(rawPay),received=paymentReceivedAmount(pay),balance=paymentRemainingAmount(pay);return`
           <div class="proj-pay-item" style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:6px 8px;flex-wrap:wrap">
             <span style="flex:1;min-width:150px">${escHtml(pay.label)}</span><span style="font-weight:600">Invoice ${fmtSAR(pay.amount)}</span>
-            ${received>0?`<span style="color:#15803d;font-size:10px">Received ${fmtSAR(received)}</span>`:''}${balance>0?`<span style="color:#b45309;font-size:10px">Balance ${fmtSAR(balance)}</span>`:''}
+            ${received>0?`<span style="color:#15803d;font-size:11px">Received ${fmtSAR(received)}</span>`:''}${balance>0?`<span style="color:#b45309;font-size:11px">Balance ${fmtSAR(balance)}</span>`:''}
             <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>${pay.sourceProformaId?invoiceStatusActionHtml(p.id,pay.sourceProformaId,pay.status):''}
-            ${(pay.receipts||[]).length?`<div style="flex-basis:100%;padding-left:8px;color:var(--gray-500);font-size:9.5px">${pay.receipts.map(r=>`${escHtml(r.date||'')} · ${fmtSAR(r.amount)}${r.reference?' · '+escHtml(r.reference):''}`).join('<br>')}</div>`:''}
+            ${(pay.receipts||[]).length?`<div style="flex-basis:100%;padding-left:8px;color:var(--gray-500);font-size:11px">${pay.receipts.map(r=>`${escHtml(r.date||'')} · ${fmtSAR(r.amount)}${r.reference?' · '+escHtml(r.reference):''}`).join('<br>')}</div>`:''}
           </div>`}).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No installments added</div>';
 
     const docHTML = p.docs.length
-      ? p.docs.map((d,di)=>`<div class="proj-doc-item">📎 <button type="button" onclick="openProjectDocument('${p.id}',${di})" style="background:none;border:none;padding:0;color:var(--orange);cursor:pointer;font:inherit;text-align:left;flex:1">${escHtml(d.name)}</button>${d.fromQuoteNumber?` <span style="color:var(--gray-400);font-size:10px">(from ${escHtml(d.fromQuoteNumber)})</span>`:''}</div>`).join('')
+      ? p.docs.map((d,di)=>`<div class="proj-doc-item">📎 <button type="button" onclick="openProjectDocument('${p.id}',${di})" style="background:none;border:none;padding:0;color:var(--orange);cursor:pointer;font:inherit;text-align:left;flex:1">${escHtml(d.name)}</button>${d.fromQuoteNumber?` <span style="color:var(--gray-400);font-size:11px">(from ${escHtml(d.fromQuoteNumber)})</span>`:''}</div>`).join('')
       : '<div style="font-size:11px;color:var(--gray-400)">No documents attached</div>';
 
     const quotesHTML = (p.quotes||[]).length
@@ -154,7 +154,7 @@ function renderProjects(){
           <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px">
             <span class="pay-badge ${qe.type==='invoice'?'paid':'pending'}" style="text-transform:uppercase">${qe.type==='invoice'?'Invoice':'Quote'}</span>
             <span style="flex:1">${escHtml(qe.number)}</span>
-            <span style="color:var(--gray-500);font-size:10px">${escHtml(qe.date||'')}</span>
+            <span style="color:var(--gray-500);font-size:11px">${escHtml(qe.date||'')}</span>
             <span style="font-weight:600">${fmtSAR(qe.total)}</span>
             <button onclick="previewSavedQuotation('${qe.id}')" style="background:none;border:none;color:var(--orange);cursor:pointer;font-size:11px;font-weight:600">View</button>
           </div>`).join('')
@@ -168,8 +168,8 @@ function renderProjects(){
           <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px;flex-wrap:wrap">
             <span class="pay-badge ${escHtml(status)}" style="text-transform:uppercase">${escHtml(status)}</span>
             <span style="flex:1;min-width:120px">${escHtml(pe.number)}</span>
-            <span style="color:var(--gray-500);font-size:10px">${escHtml(pe.date||'')}</span>
-            <span style="color:var(--gray-500);font-size:9px">${escHtml(pe.basis||'')}</span>
+            <span style="color:var(--gray-500);font-size:11px">${escHtml(pe.date||'')}</span>
+            <span style="color:var(--gray-500);font-size:11px">${escHtml(pe.basis||'')}</span>
             <span style="font-weight:600">${fmtSAR(pe.total)}</span>
             ${invoiceStatusActionHtml(p.id,pe.id,status)}
             <button onclick="previewProforma('${pe.id}')" style="background:none;border:none;color:var(--orange);cursor:pointer;font-size:11px;font-weight:600">View</button>
@@ -181,7 +181,7 @@ function renderProjects(){
       ? p.commissions.map(c=>`
           <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px">
             <span style="flex:1">${escHtml(c.label||'Commission')}${c.notes?` <span style="color:var(--gray-400)">— ${escHtml(c.notes)}</span>`:''}</span>
-            ${c.pct?`<span style="color:var(--gray-500);font-size:10px">${parseFloat(c.pct)||0}%</span>`:''}
+            ${c.pct?`<span style="color:var(--gray-500);font-size:11px">${parseFloat(c.pct)||0}%</span>`:''}
             <span style="font-weight:600;color:#f59e0b">${fmtSAR(c.amount)}</span>
           </div>`).join('')
       : '';
@@ -213,7 +213,7 @@ function renderProjects(){
         <div class="proj-comm-list">
           ${p.commissionAmount?`<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--gray-100);border-radius:5px;padding:5px 8px">
             <span style="flex:1">Auto (from linked quotation)</span>
-            <span style="color:var(--gray-500);font-size:10px">${parseFloat(p.commissionPct)||0}%</span>
+            <span style="color:var(--gray-500);font-size:11px">${parseFloat(p.commissionPct)||0}%</span>
             <span style="font-weight:600;color:#f59e0b">${fmtSAR(p.commissionAmount)}</span>
           </div>`:''}
           ${commHTML}
@@ -291,7 +291,7 @@ function renderProjectDetailsPanel(p,m){
   if(sfProjectDetailsPanel==='invoices'){
     const rows=m.invoices.map(pi=>{const pay=(p.payments||[]).find(x=>x.sourceProformaId===pi.id),n=sfNormalizePaymentRecord(pay||{amount:(pi.totals||{}).grandTotal||0}),r=paymentReceivedAmount(n),b=paymentRemainingAmount(n);return `<tr><td>${escHtml(pi.number||'—')}</td><td>${escHtml(pdDate(pi.issueDate))}</td><td>${escHtml(proformaBasisLabel(pi))}</td><td>${fmtSAR(n.amount)}</td><td>${fmtSAR(r)}</td><td>${fmtSAR(b)}</td><td>${pdStatusBadge(n.status)}</td><td><button class="btn-sm" onclick="previewProforma('${pi.id}')">Preview</button></td></tr>`}).join('');
     const receipts=(p.payments||[]).flatMap(pay=>(sfNormalizePaymentRecord(pay).receipts||[]).map(r=>({...r,invoice:pay.label}))).map(r=>`<tr><td>${escHtml(r.invoice||'')}</td><td>${escHtml(pdDate(r.date))}</td><td>${fmtSAR(r.amount)}</td><td>${escHtml(r.method||'')}</td><td>${escHtml(r.reference||'—')}</td></tr>`).join('');
-    return `<div class="pd-panel active"><div class="pd-grid"><div class="pd-card full"><div class="pd-card-hdr"><h3>Invoices</h3><button class="btn-primary" style="padding:6px 10px;font-size:10px" onclick="openProformaFromProject('${p.id}')">+ New Invoice</button></div><div class="pd-card-body">${rows?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Invoice</th><th>Date</th><th>Basis</th><th>Total</th><th>Received</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:empty('No invoices issued for this project.')}</div></div><div class="pd-card full"><div class="pd-card-hdr"><h3>Receipt History</h3></div><div class="pd-card-body">${receipts?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead><tbody>${receipts}</tbody></table></div>`:empty('No payments received yet.')}</div></div></div></div>`;
+    return `<div class="pd-panel active"><div class="pd-grid"><div class="pd-card full"><div class="pd-card-hdr"><h3>Invoices</h3><button class="btn-primary" style="padding:6px 10px;font-size:11px" onclick="openProformaFromProject('${p.id}')">+ New Invoice</button></div><div class="pd-card-body">${rows?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Invoice</th><th>Date</th><th>Basis</th><th>Total</th><th>Received</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:empty('No invoices issued for this project.')}</div></div><div class="pd-card full"><div class="pd-card-hdr"><h3>Receipt History</h3></div><div class="pd-card-body">${receipts?`<div class="pd-table-wrap"><table class="pd-table"><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead><tbody>${receipts}</tbody></table></div>`:empty('No payments received yet.')}</div></div></div></div>`;
   }
   if(sfProjectDetailsPanel==='engineers'){
     const rows=(p.assignedEngineers||[]).map((a,i)=>{const e=sfEngineers.find(x=>x.id===a.engineerId)||{};return `<tr><td>${i+1}</td><td>${escHtml(a.name||e.name||'—')}</td><td>${escHtml(e.specialization||e.profession||'—')}</td><td>${escHtml(e.loa||'—')}</td><td>${escHtml(e.status||'—')}</td><td>${escHtml(a.basis||'—')}</td><td>${sfNum(a.duration)||'—'}</td><td>${fmtSAR(a.rate||0)}</td></tr>`}).join('');
@@ -368,17 +368,17 @@ function pmSuggestCommAmount(){
 }
 function renderPmLists(){
   document.getElementById('pm-po-list').innerHTML=pmTempPOs.map((raw,i)=>{const po=sfPoRecord(raw),meta=sfPoMeta(po);return`
-    <div class="proj-po-item" style="flex-wrap:wrap">📄 <span style="font-weight:600">${escHtml(po.number||'—')}</span>${meta?`<span style="color:var(--gray-500);font-size:10.5px">${escHtml(meta)}</span>`:''}
+    <div class="proj-po-item" style="flex-wrap:wrap">📄 <span style="font-weight:600">${escHtml(po.number||'—')}</span>${meta?`<span style="color:var(--gray-500);font-size:11px">${escHtml(meta)}</span>`:''}
       ${po.file?`<button type="button" class="po-file-btn" onclick="openPmPoFile(${i})">📎 ${escHtml(po.file.name||'PO file')}</button><label class="po-file-btn po-attach">Replace<input type="file" accept="application/pdf,image/*" hidden onchange="sfPmAttachPoFile(${i},this)"></label>`:`<label class="po-file-btn po-attach">📎 Attach file<input type="file" accept="application/pdf,image/*" hidden onchange="sfPmAttachPoFile(${i},this)"></label>`}
       <button onclick="pmTempPOs.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;margin-left:auto" aria-label="Remove PO">×</button></div>`}).join('');
   document.getElementById('pm-comm-list').innerHTML=pmTempComms.map((c,i)=>`
     <div style="display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:5px;padding:5px 8px;font-size:11.5px">
-      <span style="flex:1">${escHtml(c.label)}${c.notes?` <span style="color:var(--gray-500)">— ${escHtml(c.notes)}</span>`:''}</span>${c.pct?`<span style="color:var(--gray-500);font-size:10px">${parseFloat(c.pct)||0}%</span>`:''}
+      <span style="flex:1">${escHtml(c.label)}${c.notes?` <span style="color:var(--gray-500)">— ${escHtml(c.notes)}</span>`:''}</span>${c.pct?`<span style="color:var(--gray-500);font-size:11px">${parseFloat(c.pct)||0}%</span>`:''}
       <span style="font-weight:600;color:#f59e0b">${fmtSAR(c.amount)}</span><button onclick="pmTempComms.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
     </div>`).join('');
   document.getElementById('pm-pay-list').innerHTML=pmTempPays.map((rawPay,i)=>{const pay=sfNormalizePaymentRecord(rawPay),received=paymentReceivedAmount(pay),balance=paymentRemainingAmount(pay);return`
     <div style="display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:5px;padding:5px 8px;font-size:11.5px;flex-wrap:wrap">
-      <span style="flex:1">${escHtml(pay.label)}</span><span style="font-weight:600">${fmtSAR(pay.amount)}</span>${received?`<span style="font-size:10px;color:#15803d">Received ${fmtSAR(received)}</span>`:''}${balance?`<span style="font-size:10px;color:#b45309">Balance ${fmtSAR(balance)}</span>`:''}
+      <span style="flex:1">${escHtml(pay.label)}</span><span style="font-weight:600">${fmtSAR(pay.amount)}</span>${received?`<span style="font-size:11px;color:#15803d">Received ${fmtSAR(received)}</span>`:''}${balance?`<span style="font-size:11px;color:#b45309">Balance ${fmtSAR(balance)}</span>`:''}
       <span class="pay-badge ${escHtml(pay.status)}">${escHtml(pay.status)}</span>${pay.sourceProformaId?(pay.status==='paid'?`<button type="button" class="pay-undo-link" onclick="pmTogglePaymentStatus(${i})">Mark as not paid…</button>`:`<button class="pay-action-btn mark-paid" onclick="pmTogglePaymentStatus(${i})">＋ Record Payment</button>`):''}
       <button onclick="pmTempPays.splice(${i},1);renderPmLists()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button>
     </div>`}).join('');

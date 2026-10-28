@@ -19,7 +19,7 @@ function sfNavStyles(){
   if(document.getElementById('sf-nav-groups-style'))return;
   const s=document.createElement('style');s.id='sf-nav-groups-style';
   s.textContent=`.side-nav-btn[data-folded]{display:none!important}
-.side-nav-folding .side-nav-label{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;padding:10px 10px 8px;border-radius:8px;font-size:10.5px;color:rgba(255,255,255,.62);user-select:none;transition:background .15s,color .15s}
+.side-nav-folding .side-nav-label{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;padding:10px 10px 8px;border-radius:8px;font-size:11px;color:rgba(255,255,255,.62);user-select:none;transition:background .15s,color .15s}
 .side-nav-folding .side-nav-label:hover,.side-nav-folding .side-nav-label:focus-visible{background:rgba(255,255,255,.06);color:#fff;outline:none}
 .side-nav-folding .side-nav-label::after{content:'▾';font-size:12px;line-height:1;transition:transform .2s;opacity:.8}
 .side-nav-folding .side-nav-label[aria-expanded="false"]::after{transform:rotate(-90deg)}

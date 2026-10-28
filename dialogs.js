@@ -2,6 +2,8 @@
 // sfAskPayment: amount, date (date picker, checked), reference and method in one form.
 // sfAskChoice:  pick one item from a list (a project, a quotation) instead of typing its number.
 // Both return a Promise: the entered values, or null when cancelled.
+// sfNotice:     a message at the bottom of the screen in the page language, replacing the browser's alert();
+//               it stays until closed and returns a Promise that resolves when it is closed.
 (function(){
 const ar=()=>typeof sfUiLanguage!=='undefined'&&sfUiLanguage==='ar';
 const L=(en,a)=>ar()?a:en;
@@ -56,4 +58,42 @@ window.sfAskChoice=function({title,items,hint}={}){
   if(s){s.oninput=()=>{const t=s.value.trim().toLowerCase();dlg.querySelectorAll('.sf-dialog-item').forEach(b=>b.hidden=!!t&&!b.textContent.toLowerCase().includes(t))};setTimeout(()=>s.focus(),30)}
  });
 };
+// Messages are written once (mostly in English); SF_NOTICE_AR / SF_NOTICE_EN in i18n-ar.js give the other language.
+function noticeLookup(text){
+ const k=String(text).replace(/\s+/g,' ').trim();if(!k)return '';
+ const [dict,patterns]=ar()?[typeof SF_NOTICE_AR!=='undefined'&&SF_NOTICE_AR,typeof SF_NOTICE_AR_PATTERNS!=='undefined'&&SF_NOTICE_AR_PATTERNS]:[typeof SF_NOTICE_EN!=='undefined'&&SF_NOTICE_EN,typeof SF_NOTICE_EN_PATTERNS!=='undefined'&&SF_NOTICE_EN_PATTERNS];
+ if(dict&&dict[k])return dict[k];
+ for(const [re,rep] of patterns||[])if(re.test(k))return k.replace(re,rep);
+ // Interface labels and messages written in both languages ("Arabic / English").
+ if(ar())return typeof sfUiLookup==='function'?sfUiLookup(k):'';
+ return typeof sfUiEnglishLookup==='function'?sfUiEnglishLookup(k):'';
+}
+function noticeText(message){
+ const s=String(message??'').trim();
+ // A known message, else line by line (a known first line followed by an error detail).
+ return noticeLookup(s)||s.split('\n').map(line=>noticeLookup(line)||line).join('\n');
+}
+window.sfNoticeText=noticeText;
+window.sfNotice=function(message){
+ const text=noticeText(message);
+ return new Promise(resolve=>{
+  // Inside an open modal dialog the rest of the page cannot be clicked, so the message goes in the dialog.
+  const host=document.querySelector('dialog[open]')||document.body;
+  let box=host.querySelector(':scope > .sf-notices');
+  if(!box){box=document.createElement('div');box.className='sf-notices';host.appendChild(box)}
+  // The same message twice (a repeated sync warning) is shown once.
+  if([...box.querySelectorAll('.sf-notice p')].some(p=>p.textContent===text)){resolve();return}
+  const item=document.createElement('div');item.className='sf-notice';item.setAttribute('role','alert');item.dir=ar()?'rtl':'ltr';
+  const p=document.createElement('p'),ok=document.createElement('button');
+  p.textContent=text;ok.type='button';ok.className='btn-primary';ok.textContent=L('OK','حسنًا');
+  item.append(p,ok);box.appendChild(item);
+  const back=document.activeElement;
+  const close=()=>{item.remove();if(!box.children.length)box.remove();if(back&&back.isConnected&&document.activeElement===ok)back.focus({preventScroll:true});resolve()};
+  ok.onclick=close;item.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();close()}});
+  // At most three at a time: the oldest closes.
+  while(box.children.length>3)box.firstElementChild.querySelector('button').click();
+  ok.focus({preventScroll:true});
+ });
+};
+window.alert=message=>{void window.sfNotice(message)};
 })();

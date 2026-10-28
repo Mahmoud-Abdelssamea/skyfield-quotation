@@ -382,7 +382,7 @@ function buildTasks(){
     const qty=actQty[ky]||1;
     const row=document.createElement('div');
     row.className='task-row'+(chk?' checked':'');
-    row.innerHTML=`<input type="checkbox" ${chk?'checked':''}>
+    row.innerHTML=`<input type="checkbox" aria-label="${escHtml(task)}" ${chk?'checked':''}>
       <div><div class="task-name">${escHtml(task)}${custom?'<span class="task-library-badge">Custom</span>':modified?'<span class="task-library-badge">Modified</span>':''}</div><div class="task-code">${escHtml(code)}</div></div>
       <div class="task-dur">${dur}h<div class="task-unit">${escHtml(unit)}</div></div>
       <input class="qty-inp task-qty-input" type="number" min="1" value="${qty}" title="Qty">
@@ -712,8 +712,8 @@ function buildConds(){
       const d=document.createElement('div');
       d.className='cond-item';
       const durationCond={text:durationConditionText('en'),textAr:durationConditionText('ar'),cat:'Duration'};
-      d.innerHTML=`<input type="checkbox" checked disabled>
-        <div style="flex:1"><div class="cond-text"><strong>${conditionCopyHtml(durationCond,false)}</strong></div><div class="cond-cat">${conditionLanguage==='ar'?'يُنشأ تلقائيًا من حقل مدة المشروع أعلاه':conditionLanguage==='both'?'Auto-generated from Project Duration / يُنشأ تلقائيًا من مدة المشروع':'Auto-generated from Project Duration field above'}</div></div>
+      d.innerHTML=`<input type="checkbox" checked disabled aria-labelledby="cond-text-duration">
+        <div style="flex:1"><div class="cond-text" id="cond-text-duration"><strong>${conditionCopyHtml(durationCond,false)}</strong></div><div class="cond-cat">${conditionLanguage==='ar'?'يُنشأ تلقائيًا من حقل مدة المشروع أعلاه':conditionLanguage==='both'?'Auto-generated from Project Duration / يُنشأ تلقائيًا من مدة المشروع':'Auto-generated from Project Duration field above'}</div></div>
         <span></span>`;
       el.appendChild(d);
     }
@@ -721,8 +721,8 @@ function buildConds(){
       const c=conds[i];
       const d=document.createElement('div');
       d.className='cond-item';
-      d.innerHTML=`<input type="checkbox" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked;renderQuot()">
-        <div style="flex:1"><div class="cond-text${isConditionEmphasized(c.cat)?' cond-emphasis':''}">${conditionCopyHtml(c,false)}</div><div class="cond-cat">Condition ${escHtml(numbers[i])} · ${escHtml(conditionCategoryLabel(c.cat))}${c.modified?'<span class="cond-modified">Modified</span>':''}</div></div>
+      d.innerHTML=`<input type="checkbox" aria-labelledby="cond-text-${i}" ${c.enabled?'checked':''} onchange="conds[${i}].enabled=this.checked;renderQuot()">
+        <div style="flex:1"><div class="cond-text${isConditionEmphasized(c.cat)?' cond-emphasis':''}" id="cond-text-${i}">${conditionCopyHtml(c,false)}</div><div class="cond-cat">Condition ${escHtml(numbers[i])} · ${escHtml(conditionCategoryLabel(c.cat))}${c.modified?'<span class="cond-modified">Modified</span>':''}</div></div>
         <div class="cond-actions"><button class="cond-edit" onclick="openConditionEditor(${i})" title="Edit">✎ Edit</button>${c.modified?`<button class="cond-reset" onclick="resetConditionAt(${i})" title="Reset">↺</button>`:''}${c.custom?`<button class="cond-rm" onclick="removeCustomCondition(${i})" title="Remove">×</button>`:''}</div>`;
       el.appendChild(d);
     });

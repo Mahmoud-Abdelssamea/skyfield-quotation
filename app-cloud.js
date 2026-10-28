@@ -983,8 +983,10 @@ function importBackup(input){
       Object.entries(data).forEach(([k,v])=>{
         if(sfShouldSyncKey(k)) localStorage.setItem(k, v);
       });
-      alert('تم استيراد النسخة الاحتياطية بنجاح. سيتم إعادة تحميل الصفحة الآن.');
-      window.sfSkipUnloadWarning=true;location.reload();
+      // Reload after the message is closed (it is shown in the page, not as a blocking browser alert).
+      const reload=()=>{window.sfSkipUnloadWarning=true;location.reload()};
+      const shown=window.sfNotice?.('تم استيراد النسخة الاحتياطية بنجاح. سيتم إعادة تحميل الصفحة الآن.');
+      if(shown)shown.then(reload);else reload();
     }catch(err){
       alert('تعذّر قراءة ملف النسخة الاحتياطية. تأكد أنه ملف JSON صحيح تم تصديره من هذا التطبيق.');
     }finally{
