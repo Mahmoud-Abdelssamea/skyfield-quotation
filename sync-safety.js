@@ -240,9 +240,10 @@ async function sfMergeSharedBeforePush(key){
  if(sfCanon(merged)===sfCanon(remote)){sfPendingClear(key);sfShowUnsavedStatus(false);return false}
  return true;
 }
-let sfSharedRefreshTimer=null;
+let sfSharedRefreshTimer=null,sfSharedRefreshedAt=0;
 async function sfRefreshSharedLists(){
  if(typeof sfDb==='undefined'||!sfDb||!sfCurrentUser)return;
+ sfSharedRefreshedAt=Date.now();
  const keys=Object.keys(SF_SHARED_LISTS).filter(k=>typeof sfShouldSyncKey!=='function'||sfShouldSyncKey(k));
  let remote;try{remote=await sfFetchSharedValues(keys)}catch(_){return}
  const pending=new Set(sfPendingKeys());let changed=false;
@@ -256,9 +257,12 @@ async function sfRefreshSharedLists(){
  if(changed)sfRerenderShared();
 }
 function sfScheduleSharedRefresh(){clearTimeout(sfSharedRefreshTimer);sfSharedRefreshTimer=setTimeout(sfRefreshSharedLists,600)}
+// Coming back to the page checks at most once a minute: focus also fires every time you click from the
+// embedded attendance or equipment section back to the page (one account made 732 checks in a day).
+function sfSharedRefreshOnReturn(){if(Date.now()-sfSharedRefreshedAt>=60000)sfScheduleSharedRefresh()}
 // Listeners only where a page exists (the file is also loaded by Node tests without a document).
 if(typeof document!=='undefined'&&typeof window!=='undefined'){
- document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sfScheduleSharedRefresh()});
- window.addEventListener('focus',sfScheduleSharedRefresh);
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sfSharedRefreshOnReturn()});
+ window.addEventListener('focus',sfSharedRefreshOnReturn);
  setInterval(()=>{if(document.visibilityState==='visible')sfRefreshSharedLists()},120000);
 }

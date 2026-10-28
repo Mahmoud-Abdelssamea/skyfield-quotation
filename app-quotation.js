@@ -1046,6 +1046,8 @@ function showExport(docType='quotation'){
   if(opt.actCostCol) actHeadCells += `<th class="col-total" style="text-align:right">${quotationLabel('Cost (SAR)','التكلفة (ريال)')}</th>`;
 
   let actTableRows='';
+  // A single group named "Scope of Work" would only repeat the section title above the table as a second heading row.
+  const repeatsTitle = cat => Object.keys(catGroups).length===1 && /^(additional )?scope of work$|^نطاق العمل$/i.test(String(cat).trim());
   for(const [cat,rows] of Object.entries(catGroups)){
     const isCustomCat = rows.length && rows[0].isCustom;
     const catLblColspan = actColCount - (opt.actHrsCol?1:0) - (remColCount) - (opt.actCostCol?1:0);
@@ -1053,11 +1055,14 @@ function showExport(docType='quotation'){
     if(opt.actHrsCol) catCells += `<td style="text-align:right">${isCustomCat?quotationLabel('RATE','السعر'):quotationLabel('HOURS','الساعات')}</td>`;
     if(remColCount) catCells += `<td></td>`;
     if(opt.actCostCol) catCells += `<td></td>`;
-    actTableRows+=`<tr class="cat-row">${catCells}</tr>`;
+    if(!repeatsTitle(cat))actTableRows+=`<tr class="cat-row">${catCells}</tr>`;
     rows.forEach(({task,code,q,unit,hrs,cost,isCustom,unitPrice,sn,spec,remark,itemType})=>{
       let cells='';const hierarchyType=itemType||'item';
       if(isCustom){
+        // A main item without specification or remark is a heading: its title uses the full width of the row.
+        const heading=hierarchyType==='main'&&!String(spec||'').trim()&&!String(remark||'').trim();
         cells += `<td class="col-sn" style="text-align:center;font-weight:700;font-size:11px">${escHtml(sn||'')}</td>`;
+        if(heading){actTableRows+=`<tr class="main-sow-row">${cells}<td class="col-item" colspan="${actColCount-snColCount}" style="white-space:pre-line">${escHtml(task)}</td></tr>`;return}
         cells += `<td class="col-item" style="white-space:pre-line">${escHtml(task)}</td>`;
         cells += `<td class="col-spec" style="white-space:pre-line;font-size:10.5px">${escHtml(spec||'')}</td>`;
         if(opt.actCodeCol)cells+='<td class="col-code"></td>';

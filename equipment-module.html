@@ -184,7 +184,6 @@ if(location.pathname.indexOf('skyfield_equipments_system')>=0)location.replace('
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-<script src="xlsx-0.20.3.full.min.js"></script>
 <script src="supabase-js-2.117.2.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1489,6 +1488,7 @@ const AR_TO_EN=Object.freeze({"وضع المعاينة: التسجيل ما زا
   "اختر المستلم أولاً":"Select the recipient first",
   "اختر جهازاً واحداً على الأقل":"Select at least one device",
   "لا توجد بيانات للتصدير":"No data to export",
+  "تعذر تحميل أداة Excel. تحقق من الاتصال وحاول مرة أخرى.":"Could not load the Excel tool. Check the connection and try again.",
   "تم تصدير ملف Excel":"Excel file exported",
   "تم تصدير بيانات المستلمين والمواقع":"Recipient and location data exported",
   "— اختر المهندس —":"— Select engineer —",
@@ -2515,9 +2515,10 @@ function documentListTitle(doc) {
 function documentListHeaders(doc) {
   return ['الاسم','الاسم بالإنجليزية','رقم الجوال', doc === 'iqama' ? 'رقم الإقامة' : 'رقم البطاقة','تاريخ الانتهاء','المتبقي'].map(translateRuntimeText);
 }
-function exportDocumentList(doc) {
+async function exportDocumentList(doc) {
   const rows = documentListRows(doc);
   if(!rows.length){toast('لا توجد بيانات للتصدير');return;}
+  if(!await loadXlsx())return;
   const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet([documentListHeaders(doc), ...rows]);
   ws['!cols'] = [{wch:30},{wch:32},{wch:14},{wch:16},{wch:14},{wch:22}];
   XLSX.utils.book_append_sheet(wb, ws, doc === 'iqama' ? 'Iqama' : 'SEC-ID');
@@ -2564,7 +2565,8 @@ function renderCalibration() {
   labelTableCells(document.getElementById('calibration-table'));
 }
 
-function exportCalibration() {
+async function exportCalibration() {
+  if(!await loadXlsx())return;
   const data = [['رقم الجهاز','اسم الجهاز','الرقم التسلسلي','آخر معايرة','انتهاء المعايرة','الحالة','رقم الشهادة','المعمل / المورد','رابط الشهادة']];
   INVENTORY.forEach(d=>data.push([d.id,d.name,d.serial||'',d.calibrationDate||'',d.calibrationExpiry||'',calibrationState(d).label,d.certificateNo||'',d.calibrationLab||'',d.certificateUrl||'']));
   const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(data);
@@ -2574,7 +2576,8 @@ function exportCalibration() {
   toast('✅ تم تصدير تقرير المعايرة');
 }
 
-function exportDeviceUpdateTemplate() {
+async function exportDeviceUpdateTemplate() {
+  if(!await loadXlsx())return;
   const headers = ['رقم الجهاز','اسم الجهاز (مرجعي)','الرقم التسلسلي (مرجعي)','الماركة / الموديل','المواصفات','المعايرة مطلوبة','تاريخ آخر معايرة','تاريخ انتهاء المعايرة','رقم الشهادة','معمل المعايرة','رابط الشهادة','ملاحظات'];
   const rows = INVENTORY.map(d=>[
     d.id,d.name,d.serial||'',d.brand||'',d.specs||'',d.calibrationRequired?'نعم':'لا',
@@ -2631,6 +2634,7 @@ async function importDeviceUpdates(event){
   const input=event.target,file=input.files?.[0];
   if(!file)return;
   if(!requireEditPermission()){input.value='';return;}
+  if(!await loadXlsx()){input.value='';return;}
   try{
     // cellDates is off: SheetJS turns date cells into local-time Date objects that shift a day in UTC+ zones
     const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
@@ -3467,14 +3471,16 @@ function buildWorkbook() {
   return wb;
 }
 
-function exportExcel() {
+async function exportExcel() {
   if(!RECORDS.length && !INVENTORY.length){toast('لا توجد بيانات للتصدير');return;}
+  if(!await loadXlsx())return;
   const wb = buildWorkbook();
   XLSX.writeFile(wb,"متابعة_الأجهزة_"+new Date().toISOString().slice(0,10)+".xlsx");
   toast('✅ تم تصدير ملف Excel');
 }
 
-function exportExcelSettings() {
+async function exportExcelSettings() {
+  if(!await loadXlsx())return;
   const wb = XLSX.utils.book_new();
 
   // Engineers sheet
@@ -3496,6 +3502,19 @@ function exportExcelSettings() {
 }
 
 // ── Toast ──────────────────────────────────────────────────────
+// The Excel library (about 1MB) loads on the first export or import instead of with the page.
+let xlsxLoading=null;
+async function loadXlsx(){
+  if(window.XLSX)return true;
+  xlsxLoading??=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');s.src='xlsx-0.20.3.full.min.js';
+    s.onload=resolve;s.onerror=()=>{s.remove();xlsxLoading=null;reject();};
+    document.head.appendChild(s);
+  });
+  try{await xlsxLoading;return !!window.XLSX;}
+  catch(_){toast('تعذر تحميل أداة Excel. تحقق من الاتصال وحاول مرة أخرى.');return false;}
+}
+
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = translateRuntimeText(msg); el.classList.add('show');

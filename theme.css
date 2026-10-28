@@ -1,7 +1,6 @@
-/* SKY FIELD — shared look for the main system and the attendance pages: fonts, core colours and summary
-   cards. Loaded last by index.html and attendance-module.html so both use the same values. Customer
+/* SKY FIELD — shared look for the main system and the attendance pages: core colours and summary
+   cards. Loaded last by index.html and attendance-module.html so both use the same values (each page links the fonts in its head). Customer
    documents (quotation, proforma invoice, vouchers) keep their own print styles. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap');
 :root{
   --sf-font:'Inter','Tajawal',sans-serif;
   --sf-navy:#1F3864;--sf-orange:#E8610A;--sf-bg:#F5F5FA;--sf-text:#1A1A2E;--sf-muted:#6B6B80;--sf-line:#E3E6EE;
