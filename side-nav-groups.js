@@ -1,6 +1,6 @@
 'use strict';
 // Sidebar groups for the system administrator, whose menu is long: each heading opens and closes its group; going to a
-// page opens its group, and the open groups are remembered. Every other account keeps the plain list.
+// page opens its group, and the open groups are remembered on this device. Every other account keeps the plain list.
 const SF_NAV_FOLD_FROM=11; // and only when that many menu items are visible
 let sfNavOpen=(()=>{try{const v=JSON.parse(localStorage.getItem('sfNavOpenGroups')||'[]');return Array.isArray(v)?v:[]}catch{return []}})();
 let sfNavActiveGroup='';

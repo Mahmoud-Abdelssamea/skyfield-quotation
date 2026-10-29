@@ -89,9 +89,10 @@ function sfCollectLocalUserData(){
   return result;
 }
 
+// Compared before and after sign-in to decide whether the page must reload.
 function sfLocalSnapshot(){
   const data = sfCollectLocalUserData();
-  return JSON.stringify(Object.keys(data).sort().map(k=>[k,data[k]]));
+  return JSON.stringify(Object.keys(data).filter(k=>!SF_REFRESHED_IN_PLACE_KEYS.has(k)).sort().map(k=>[k,data[k]]));
 }
 
 function sfClearLocalUserData(preservePerRecord=false){
@@ -271,7 +272,8 @@ function sfWriteCloudRowsToLocal(rows,replace=true){ const sfKeep=sfUnsavedCaptu
     // Preserve them during the legacy blob pull so local-only records can be
     // imported additively instead of disappearing before migration.
     if(replace)sfClearLocalUserData(true);
-    (rows||[]).forEach(row=>{ const str=typeof row.value==='string'?row.value:JSON.stringify(row.value); localStorage.setItem(row.key,str); }); sfSharedBaseFromRows(rows); sfUnsavedRestoreLocal(sfKeep); }finally{sfSyncPaused=wasPaused;} }
+    // An old cloud row for a device-only key (e.g. sfNavOpenGroups) must not overwrite this browser's value.
+    (rows||[]).filter(row=>sfIsManagedDataKey(row?.key)).forEach(row=>{ const str=typeof row.value==='string'?row.value:JSON.stringify(row.value); localStorage.setItem(row.key,str); }); sfSharedBaseFromRows(rows); sfUnsavedRestoreLocal(sfKeep); }finally{sfSyncPaused=wasPaused;} }
 
 function sfReloadApplicationStateFromLocal(){
   // Rebuild in-memory collections after a cloud pull. Previously only

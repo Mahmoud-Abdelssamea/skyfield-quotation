@@ -19,7 +19,11 @@ const SF_NORMALIZED_TABLES = {projects:'sf_projects',quotations:'sf_quotations',
 // Commercial access of the signed-in account, read from the database (sf_my_access) at sign-in by unified-shell.js
 // and managed on the Users & Permissions page. Empty when signed out.
 let SF_TEAM_MEMBERS = {};
-const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1']);
+// sfNavOpenGroups (which sidebar groups are open) belongs to each device, not to the whole workspace.
+const SF_LOCAL_ONLY_KEYS = new Set(['sfActiveUserId','sfLastModule','sfNormalizedMigrationV1','sfNavOpenGroups']);
+// Rebuilt in place after sign-in (sfReloadApplicationStateFromLocal and the attendance roster refresh),
+// so a change to them alone does not reload the page.
+const SF_REFRESHED_IN_PLACE_KEYS = new Set(['sfEngineers','sfPayrollSheets','sfDeletedDefaultEngineerIds']);
 // Shared commercial collections must never be uploaded as whole-array blobs:
 // one stale browser could otherwise replace records created by a teammate.
 // Each record is synchronized separately with an optimistic revision check.
