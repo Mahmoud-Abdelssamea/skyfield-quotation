@@ -1255,8 +1255,8 @@ function showExport(docType='quotation'){
     </div>
     <div class="doc-footer">
       <div class="doc-footer-line1">Sky Field Company Limited &nbsp;|&nbsp; شركة سماء الميدان المحدودة</div>
-      <div class="doc-footer-line2">Alqassim - Buraidah Western Ring &nbsp;–&nbsp; C.R. 116010788 &nbsp;–&nbsp; P.O.Box 7599 Al-Qassim 17471, Kingdom of Saudi Arabia</div>
-      <div class="doc-footer-line2">بريدة - الدائري الغربي – س ت 116010788 &nbsp;–&nbsp; ص.ب 7599 القصيم 17471 المملكة العربية السعودية</div>
+      <div class="doc-footer-line2">Alqassim - Buraidah Western Ring &nbsp;–&nbsp; C.R. 1116010788 &nbsp;–&nbsp; P.O.Box 7599 Al-Qassim 17471, Kingdom of Saudi Arabia</div>
+      <div class="doc-footer-line2">بريدة - الدائري الغربي – س ت 1116010788 &nbsp;–&nbsp; ص.ب 7599 القصيم 17471 المملكة العربية السعودية</div>
       <div class="doc-footer-line3">Tel: +966557424134 &nbsp;–&nbsp; Fax: +966163836005 &nbsp;–&nbsp; VAT No: 310049492300003</div>
     </div>
   `;
