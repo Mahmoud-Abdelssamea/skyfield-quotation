@@ -32,3 +32,6 @@ body,button,input,select,textarea{font-family:var(--sf-font)}
 .pd-kpi strong{color:var(--sf-navy);font-size:16px;font-weight:700}
 .pd-kpi .pd-kpi-note{color:var(--sf-muted);font-size:11px}
 .pd-kpi.is-alert{border-inline-start:4px solid var(--sf-alert)}.pd-kpi strong.tone-alert{color:var(--sf-alert-text)}
+/* Amounts stay on one line: SAR and the number together, a little smaller on narrow phones. */
+.dash-kpi .dk-value,.pfs-card .pfs-val{white-space:nowrap}
+@media (max-width:520px){.dash-kpi .dk-value,.pfs-card .pfs-val{font-size:clamp(14px,4.4vw,17px)}}

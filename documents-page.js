@@ -48,7 +48,7 @@ function sfDocsStyles(){
   s.textContent=`#sf-documents-panel{width:100%;min-width:0;display:flex;flex-direction:column;gap:16px}
 .docs-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .docs-kpi{font-family:inherit;text-align:start;background:#fff;border:1px solid var(--sf-line);border-radius:12px;padding:12px 14px;cursor:pointer;border-top:3px solid var(--k);transition:box-shadow .15s,transform .15s}
-.docs-kpi:hover{box-shadow:0 4px 14px rgba(31,56,100,.08);transform:translateY(-1px)}
+.docs-kpi:hover{box-shadow:0 4px 14px rgba(31,56,100,.08)}@media(hover:hover) and (pointer:fine){.docs-kpi:hover{transform:translateY(-1px)}}
 .docs-kpi span{display:block;font-size:12px;font-weight:600;color:var(--sf-muted)}
 .docs-kpi b{display:block;font-size:24px;font-weight:800;color:var(--sf-navy);margin-top:2px}
 .docs-kpi small{display:block;font-size:11px;color:var(--sf-muted);margin-top:2px}

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SKY FIELD – Management System v29</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261030-billing">
+<link rel="stylesheet" href="styles.css?v=20261030-design">
 <script src="supabase-js-2.117.2.js"></script>
 <script src="equipment-library.js?v=20261017-eqlib-rename"></script><script src="sync-safety.js?v=20261028-speed"></script><script src="dialogs.js?v=20261028-quick"></script>
 <script>
@@ -26,7 +26,7 @@
     : null;
   if (!sfDb) console.warn('Supabase not configured — running in local-only mode (data stays on this device/browser).');
 </script>
-<link rel="stylesheet" href="payroll-ui.css?v=20261027-approve"><link rel="stylesheet" href="theme.css?v=20261028-speed">
+<link rel="stylesheet" href="payroll-ui.css?v=20261027-approve"><link rel="stylesheet" href="theme.css?v=20261030-design">
 </head>
 <body data-module="dashboard" class="sf-auth-locked">
 
@@ -626,7 +626,7 @@
       <div class="proj-fin-summary" id="proj-summary"></div>
       <!-- Toolbar -->
       <div class="proj-toolbar">
-        <h3>📁 Project Records</h3>
+        <h3>All projects / كل المشاريع</h3>
         <input class="proj-search" id="proj-search" placeholder="Search projects…" oninput="renderProjects()">
         
       </div>
@@ -663,7 +663,7 @@
     <!-- SAVED QUOTATIONS TAB -->
     <div id="tab-quotes" style="display:none">
       <div class="quote-toolbar">
-        <h3>🧾 Saved Quotations &amp; Legacy Invoice Quotations</h3>
+        <h3>All quotations / كل عروض الأسعار</h3>
         <input class="quote-search" id="quote-search" placeholder="Search quotation / station / client…" oninput="renderSavedQuotations()">
         <button class="btn-outline" style="font-size:12px;padding:6px 12px" onclick="newSeparateQuotation()">+ New Separate Quotation</button>
         <button class="btn-primary" style="font-size:12px;padding:6px 14px" onclick="saveCurrentQuotation(false)">💾 Save Current</button>
@@ -679,7 +679,7 @@
     <!-- PROFORMA INVOICES TAB -->
     <div id="tab-proformas" style="display:none">
       <div class="pi-toolbar">
-        <h3>📄 Proforma Invoices / الفواتير المبدئية</h3>
+        <h3>All invoices / كل الفواتير</h3>
         <input class="pi-search" id="pi-search" placeholder="Search number / client / project…" oninput="renderProformas()">
         <button class="btn-primary" id="pi-from-current-btn" style="font-size:12px;padding:6px 14px;display:none" onclick="createProformaFromCurrent()">+ From Current Project Quotation</button>
       </div>
@@ -1048,8 +1048,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261028-quick"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261030-billing"></script><script src="app-ui.js?v=20261027-lang"></script><script src="app-quotation.js?v=20261030-billing"></script><script src="app-projects.js?v=20261028-quick"></script><script src="app-invoices.js?v=20261030-company"></script><script src="app-payroll-team.js?v=20261028-quick"></script><script src="app-setup.js?v=20261030-billing"></script>
+<script src="i18n-ar.js?v=20261028-quick"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261030-billing"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261030-design"></script><script src="app-projects.js?v=20261028-quick"></script><script src="app-invoices.js?v=20261030-company"></script><script src="app-payroll-team.js?v=20261028-quick"></script><script src="app-setup.js?v=20261030-billing"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261030-billing"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261026-split"></script><script src="unified-shell.js?v=20261028-speed"></script><script src="equipment-shell.js?v=20261028-speed"></script><script src="documents-page.js?v=20261027-iqama"></script><script src="users-page.js?v=20261027-roles"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261030-billing"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261030-design"></script><script src="unified-shell.js?v=20261030-design"></script><script src="equipment-shell.js?v=20261030-design"></script><script src="documents-page.js?v=20261030-design"></script><script src="users-page.js?v=20261027-roles"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>

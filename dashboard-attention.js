@@ -13,8 +13,10 @@ const sar2=n=>'SAR '+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigit
 const esc=s=>typeof escHtml==='function'?escHtml(s):String(s??'');
 const daysSince=d=>{const t=Date.parse(String(d||'').slice(0,10)+'T00:00:00');return Number.isFinite(t)?Math.floor((Date.now()-t)/86400000):null};
 const daysUntil=d=>{const s=daysSince(d);return s===null?null:-s};
-// Already-escaped HTML items (names wrapped in <bdi> so Arabic names keep their order inside English text).
-const namesHtml=list=>list.slice(0,3).join(L(', ','، '))+(list.length>3?L(` and ${list.length-3} more`,` و${list.length-3} غيرها`):'');
+// One chip per person: the name in <bdi> (Arabic names keep their order in English text) and the days left,
+// coloured by urgency, so a mixed Arabic/English list is read person by person instead of as one sentence.
+const dayLabel=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
+const peopleHtml=list=>`<span class="attn-people">${list.slice(0,4).map(c=>`<span class="attn-person${c.days<0?' is-expired':c.days<=7?' is-soon':''}"><bdi>${esc(c.name)}</bdi> <em>${dayLabel(c.days)}</em></span>`).join('')}${list.length>4?`<span class="attn-person-more">${L(`and ${list.length-4} more`,`و${list.length-4} غيرهم`)}</span>`:''}</span>`;
 const names=list=>esc(list.slice(0,3).join(L(', ','، ')))+(list.length>3?L(` and ${list.length-3} more`,` و${list.length-3} غيرها`):'');
 const attendanceAdmin=()=>typeof sfUnifiedProfile!=='undefined'&&sfUnifiedProfile?.role==='admin'&&!(typeof sfAttendanceOnly!=='undefined'&&sfAttendanceOnly)&&typeof sfDb!=='undefined'&&!!sfDb;
 
@@ -45,10 +47,10 @@ function attendanceItems(d){
  if(d.periods)out.push({sev:'mid',title:L(`${d.periods} attendance period${d.periods>1?'s':''} awaiting approval`,`${d.periods} فترة حضور بانتظار الاعتماد`),detail:L(`${d.days} day${d.days>1?'s':''} from ${d.engineers} engineer${d.engineers>1?'s':''}${d.months>1?` across ${d.months} months`:''}. Payroll only counts approved days.`,`${d.days} يوم من ${d.engineers} مهندس${d.months>1?` في ${d.months} شهور`:''}. الرواتب لا تحسب إلا الأيام المعتمدة.`),go:'timesheets-pending',btn:L('Review','مراجعة')});
  if(d.pendingExp)out.push({sev:'mid',title:L(`${d.pendingExp} expense${d.pendingExp>1?'s':''} awaiting approval`,`${d.pendingExp} مصروف بانتظار الاعتماد`),detail:L(`${sar2(d.pendingAmt)} in total.`,`بإجمالي ${sar2(d.pendingAmt)}.`),go:'timesheets',btn:L('Review','مراجعة')});
  if(d.unsettled)out.push({sev:'info',title:L(`${d.unsettled} approved expense${d.unsettled>1?'s':''} not settled`,`${d.unsettled} مصروف معتمد لم يُصفَّ`),detail:L(`${sar2(d.unsettledAmt)} owed to engineers. Export them for accounting from Timesheets & Approvals.`,`${sar2(d.unsettledAmt)} مستحقة للمهندسين. صدّرها للحسابات من التايم شيت والاعتمادات.`),go:'timesheets',btn:L('Open','فتح')});
- if(d.secCards&&d.secCards.length){const n=d.secCards.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
-  out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office: ','ذكّرهم بإرسال البطاقة إلى مكتب القصيم: ')+namesHtml(d.secCards.map(c=>`<bdi>${esc(c.name)}</bdi> (${label(c.days)})`)),go:'documents',btn:L('Open Iqama & SEC-ID','فتح الإقامات والبطاقات')});}
- if(d.iqamas&&d.iqamas.length){const n=d.iqamas.length,label=x=>x<0?L('expired','منتهية'):x===0?L('today','اليوم'):L(`${x} day${x>1?'s':''}`,`${x} يوم`);
-  out.push({sev:d.iqamas.some(c=>c.days<=7)?'high':'mid',title:L(`${n} Iqama${n>1?'s':''} expiring within 45 days`,`${n} إقامة تنتهي خلال 45 يومًا`),detail:L('Start the renewal for: ','ابدأ إجراءات التجديد لـ: ')+namesHtml(d.iqamas.map(c=>`<bdi>${esc(c.name)}</bdi> (${label(c.days)})`)),go:'documents',btn:L('Open Iqama & SEC-ID','فتح الإقامات والبطاقات')});}
+ if(d.secCards&&d.secCards.length){const n=d.secCards.length;
+  out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office:','ذكّرهم بإرسال البطاقة إلى مكتب القصيم:')+peopleHtml(d.secCards),go:'documents',btn:L('Open Iqama & SEC-ID','فتح الإقامات والبطاقات')});}
+ if(d.iqamas&&d.iqamas.length){const n=d.iqamas.length;
+  out.push({sev:d.iqamas.some(c=>c.days<=7)?'high':'mid',title:L(`${n} Iqama${n>1?'s':''} expiring within 45 days`,`${n} إقامة تنتهي خلال 45 يومًا`),detail:L('Start the renewal for:','ابدأ إجراءات التجديد لـ:')+peopleHtml(d.iqamas),go:'documents',btn:L('Open Iqama & SEC-ID','فتح الإقامات والبطاقات')});}
  if(d.noLocation&&d.noLocation.length)out.push({sev:'high',title:L(`${d.noLocation.length} project${d.noLocation.length>1?'s':''} without a location`,`${d.noLocation.length} مشروع بلا موقع`),detail:L('Engineers cannot record site days on: ','لا يستطيع المهندسون تسجيل أيام موقع على: ')+names(d.noLocation),go:'attendancesettings',btn:L('Set location','تحديد الموقع')});
  return out;
 }

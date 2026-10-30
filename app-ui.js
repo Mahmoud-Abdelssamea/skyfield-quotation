@@ -141,7 +141,7 @@ function renderDashboard(){
           <button class="dash-action" onclick="showTab('proformas',document.querySelector('.side-nav-btn[data-module=proformas]'))">▧ Invoice register</button>
         </div>
         <div class="dash-panel-hdr" style="border-top:1px solid var(--gray-200)"><h3>Recent Invoices</h3></div>
-        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · ${escHtml(pi.issueDate||pi.date||'')}</div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.totals||{}).grandTotal||(pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div> </div> </div>`; if(typeof sfRenderAttention==='function')sfRenderAttention();
+        <div class="dash-list">${recentInvoices.length?recentInvoices.map(pi=>{const st=invoicePaymentStatus(pi);return `<div class="dash-row"><div class="dash-row-main"><div class="dash-row-title">${escHtml(pi.number||'Invoice')}</div><div class="dash-row-sub">${escHtml(pi.clientName||pi.client||'')} · <span class="dash-date">${escHtml(pi.issueDate||pi.date||'')}</span></div></div><span class="pay-badge ${escHtml(st)}">${escHtml(st)}</span><strong>${fmtSAR((pi.totals||{}).grandTotal||(pi.amounts||{}).grandTotal||pi.total||0)}</strong></div>`}).join(''):'<div class="dash-empty">No invoices issued yet.</div>'}</div> </div> </div>`; if(typeof sfRenderAttention==='function')sfRenderAttention();
 }
 
 function showTab(name,btn){

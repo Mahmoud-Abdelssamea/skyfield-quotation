@@ -211,7 +211,7 @@ html[dir="ltr"] .card-header>.btn[style*="margin-right:auto"]{margin-right:0!imp
 .app-header h1{font-size:16px;font-weight:600;letter-spacing:.3px}
 .app-header .badge{background:var(--gold);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
 nav{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 28px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
-.nav-tab{padding:14px 22px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;font-weight:500;white-space:nowrap}
+.nav-tab{padding:14px 22px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .2s,border-color .2s;font-weight:500;white-space:nowrap}
 .nav-tab:hover{color:var(--accent)}
 .nav-tab.active{color:var(--accent);border-bottom-color:var(--gold);font-weight:600}
 .page{display:none;padding:28px;max-width:1600px;margin:0 auto}
@@ -250,7 +250,7 @@ select{cursor:pointer}
 
 /* Buttons */
 .btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
-.btn{font-family:inherit;font-size:14px;font-weight:600;padding:10px 22px;border-radius:8px;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn{font-family:inherit;font-size:14px;font-weight:600;padding:10px 22px;border-radius:8px;cursor:pointer;border:none;transition:background-color .2s,color .2s,border-color .2s;display:flex;align-items:center;gap:6px}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:hover{background:#0a2a50}
 .btn-save{background:var(--gold);color:#fff}
@@ -413,7 +413,8 @@ html{scroll-behavior:smooth}
 .dashboard-head h2{font-size:24px;color:var(--dark);margin-bottom:4px}
 .dashboard-head p{font-size:13px;color:var(--muted)}
 .dashboard-date{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:20px;padding:7px 13px;white-space:nowrap}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+/* Narrow enough minimum that all seven cards share one row on a laptop instead of leaving one alone. */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:14px;margin-bottom:20px}
 .kpi-card{background:#fff;border:1px solid rgba(197,202,233,.75);border-radius:14px;padding:17px;box-shadow:0 4px 16px rgba(15,52,96,.06);position:relative;overflow:hidden}
 .kpi-card:after{content:"";position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--kpi,#0F3460)}
 .kpi-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px}
@@ -421,8 +422,9 @@ html{scroll-behavior:smooth}
 .kpi-hint{font-size:11px;color:#8b8b8b;margin-top:8px}
 .dashboard-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
 .quick-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.quick-action{border:1px solid var(--border);background:var(--light);border-radius:10px;padding:14px;text-align:right;cursor:pointer;font-family:inherit;color:var(--dark);transition:.2s}
-.quick-action:hover{border-color:var(--accent);transform:translateY(-1px)}
+.quick-action{border:1px solid var(--border);background:var(--light);border-radius:10px;padding:14px;text-align:right;cursor:pointer;font-family:inherit;color:var(--dark);transition:border-color .2s,transform .2s}
+.quick-action:hover{border-color:var(--accent)}
+@media(hover:hover) and (pointer:fine){.quick-action:hover{transform:translateY(-1px)}}
 .quick-action strong{display:block;font-size:13px;margin-bottom:4px}
 .quick-action span{font-size:11px;color:var(--muted)}
 .alert-list{display:flex;flex-direction:column;gap:8px}
@@ -451,6 +453,7 @@ html{scroll-behavior:smooth}
   .nav-tab{padding:13px 14px}
   .page{padding:18px}
   .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi-grid>:last-child:nth-child(odd){grid-column:1/-1}
   .dashboard-grid{grid-template-columns:1fr}
 }
 @media(max-width:600px){
@@ -491,6 +494,9 @@ html{scroll-behavior:smooth}
   .cards-on-phone td.no-print button{flex:1;justify-content:center}
   .cards-on-phone .devices-cell{display:flex;flex-wrap:wrap;gap:4px}
 }
+/* A pressed button gives way slightly; reduced motion removes movement (zero specificity, as on the main site). */
+:where(button:not(:disabled),.btn,.quick-action,[role="button"]):active{scale:.97}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -554,7 +560,7 @@ html{scroll-behavior:smooth}
     <button onclick="syncAllData().then(ok=>{if(ok){updateRecId();renderInventory();renderLog();}})" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;font-family:inherit">🔄 مزامنة</button>
     <button class="admin-only" onclick="openSupabaseSettings()" style="background:#E94560;border:none;color:#fff;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;font-family:inherit">⚙️ Supabase</button>
     <span class="badge b-teal" id="user-role-badge">—</span>
-    <span class="badge" id="total-lbl">0 سجل</span>
+    <span class="badge" id="total-lbl">0 حركة</span>
     <button onclick="logout()" title="تسجيل الخروج" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-family:inherit">خروج</button>
   </div>
 </div>
@@ -1459,10 +1465,10 @@ const AR_TO_EN=Object.freeze({"وضع المعاينة: التسجيل ما زا
   "يلزم تسجيل الدخول":"Sign-in required",
   "جاري المزامنة...":"Syncing...",
   "تم نقل البيانات الحالية إلى Supabase":"Current data migrated to Supabase",
-  "✓ متزامن مع Supabase":"✓ Synced with Supabase",
+  "✓ محدّث":"✓ Up to date",
   "فشل المزامنة":"Sync failed",
   "جاري الحفظ...":"Saving...",
-  "✓ محفوظ في Supabase":"✓ Saved in Supabase",
+  "✓ محفوظ":"✓ Saved",
   "خطأ في الحفظ":"Save error",
   "تعذر الحذف من Supabase":"Could not delete from Supabase",
   "أدخل الرابط والمفتاح أولًا":"Enter the URL and key first",
@@ -1714,7 +1720,7 @@ function translateRuntimeText(value){
   const text=prefix?source.slice(prefix.length):source;
   if(AR_TO_EN[text])return prefix+AR_TO_EN[text];
   const rules=[
-    [/^(\d+) سجل$/,(_,n)=>`${n} records`],
+    [/^(\d+) حركة$/,(_,n)=>`${n} movements`],
     [/^(\d+) جهاز$/,(_,n)=>`${n} devices`],
     [/^جهاز رقم (\d+)$/,(_,n)=>`Device ${n}`],
     [/^(\d+) يوم$/,(_,n)=>`${n} days`],
@@ -2083,7 +2089,7 @@ async function saveSingleDeviceToCloud(device,{silent=false}={}) {
   }
   if(!res.error){
     applyServerDevices([res.data]);setPendingDevice(device.id,false);LAST_SUPABASE_ERROR='';saveToStorage();
-    if(!silent)showSyncBadge('✓ محفوظ في Supabase','#155724','#D4EDDA');
+    if(!silent)showSyncBadge('✓ محفوظ','#155724','#D4EDDA');
     return true;
   }
   LAST_SUPABASE_ERROR=res.transient?'تعذر الوصول إلى Supabase بعد 3 محاولات':rpcErrorMessage(res.error);
@@ -2154,7 +2160,7 @@ async function syncFromCloud() {
     saveEngineers();saveLocations();saveToStorage();
     refreshEngDropdowns();refreshLocationSelects();renderEngTable();renderLocations();
     updateRecId();renderInventory();renderDevicesMgmt();renderLog();renderDashboard();renderCalibration();
-    showSyncBadge('✓ متزامن مع Supabase','#155724','#D4EDDA');
+    showSyncBadge('✓ محدّث','#155724','#D4EDDA');
     return true;
   } catch(e) {
     showSyncBadge('فشل المزامنة','#721c24','#F8D7DA');
@@ -2919,7 +2925,7 @@ function updateRecId() {
   // The database gives the record number when the movement is saved, so two people never get the same one.
   document.getElementById('f-recid').textContent = translateRuntimeText('يُحدَّد عند الحفظ');
   const pending=getPendingMovements().length;
-  document.getElementById('total-lbl').textContent = RECORDS.length+' سجل'+(pending?` + ${pending} بانتظار الحفظ`:'');
+  document.getElementById('total-lbl').textContent = RECORDS.length+' حركة'+(pending?` + ${pending} بانتظار الحفظ`:'');
 }
 
 function nextRecordId() {

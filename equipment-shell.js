@@ -68,8 +68,9 @@ function sfEquipmentCopyStatus(){
   const d=document.getElementById('sf-equipment-frame')?.contentDocument,sync=d?.getElementById('sync-badge'),count=d?.getElementById('total-lbl');
   const syncEl=document.getElementById('sf-eq-sync'),countEl=document.getElementById('sf-eq-count'),refresh=document.getElementById('sf-eq-refresh');
   if(refresh){refresh.innerHTML='↻ <span>'+sfEquipmentT('Refresh','تحديث')+'</span>';refresh.title=sfEquipmentT('Refresh the equipment data','تحديث بيانات الأجهزة')}
-  if(syncEl){const text=sync?.textContent?.trim()||'';syncEl.textContent=text;syncEl.hidden=!text;
-    const bg=sync?String(sync.style.background||''):'';syncEl.className='sf-eq-chip'+(/F8D7DA|248, 215, 218/i.test(bg)?' bad':/FFF3CD|255, 243, 205/i.test(bg)?' warn':'')}
+  // The page header already says "Saved securely": the equipment chip only appears for a warning or an error.
+  if(syncEl){const text=sync?.textContent?.trim()||'',bg=sync?String(sync.style.background||''):'',ok=/D4EDDA|212, 237, 218/i.test(bg);
+    syncEl.textContent=text;syncEl.hidden=!text||ok;syncEl.className='sf-eq-chip'+(/F8D7DA|248, 215, 218/i.test(bg)?' bad':/FFF3CD|255, 243, 205/i.test(bg)?' warn':'')}
   if(countEl){const text=count?.textContent?.trim()||'';countEl.textContent=text;countEl.hidden=!text}
 }
 let sfEquipmentObserver=null;
@@ -149,7 +150,7 @@ showTab=function(name,button){
   if(!frame.getAttribute('src')){
     sfEquipmentFrameReady=false;
     frame.onload=()=>{sfEquipmentFrameReady=true;sfEquipmentOpenTab();sfEquipmentWatchStatus();sfEquipmentCopyStatus();sfEquipmentViewport()};
-    frame.src='equipment-module.html?v=20261028-speed&lang='+(sfUiLanguage==='ar'?'ar':'en');
+    frame.src='equipment-module.html?v=20261030-design&lang='+(sfUiLanguage==='ar'?'ar':'en');
   }else sfEquipmentOpenTab();
   closeSidebar();window.scrollTo({top:0,behavior:'smooth'});
 };

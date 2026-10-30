@@ -1553,7 +1553,7 @@ function renderSavedQuotations(){
   grid.innerHTML=filtered.map(r=>{
     const isInv=r.type==='invoice';
     return `<div class="quote-card ${r.id===activeQuoteId?'active-record':''}">
-      <div class="quote-card-hdr"><div class="quote-no">${escHtml(r.number)}</div><span class="quote-type ${isInv?'invoice':'quotation'}">${isInv?'Legacy Invoice':'Quotation'}</span></div>
+      <div class="quote-card-hdr"><div class="quote-no">${escHtml(r.number)}</div>${isInv?'<span class="quote-type invoice">Legacy Invoice</span>':''}</div>
       <div class="quote-card-body">
         <div class="quote-line"><span>Client</span><strong>${escHtml(r.client||'-')}</strong></div>
         <div class="quote-line"><span>Project</span><strong>${escHtml(r.project||'-')}</strong></div>
