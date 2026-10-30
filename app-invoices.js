@@ -812,8 +812,6 @@ async function linkProformaToProject(id){
   if(syncResult.conflicts.some(item=>item.id===pi.id)||syncResult.errors.some(item=>item.id===pi.id))return;
   syncProformaToProject(pi);renderSavedQuotations();renderProformas();updateProformaAvailabilityControls();alert('Proforma Invoice and its source quotation are linked to '+chosen.name+'.');
 }
-// Name under "Prepared By" on printed proforma invoices (an invoice's own preparedBy, if ever set, comes first).
-const SF_PROFORMA_PREPARED_BY='Rabie Shaban';
 function previewProforma(id){
   const pi=proformaInvoices.find(p=>p.id===id);if(!pi)return;activeProformaId=id;
   const c=proformaCompanySettings,logo=document.querySelector('.logo-wrap img')?.src||'';
@@ -876,7 +874,7 @@ function previewProforma(id){
       </div>
       ${pi.notes?`<div class="pi-notes"><strong>Notes:</strong><br>${multilineHtml(pi.notes)}</div>`:''}
       <div class="pi-signatures">
-        <div class="pi-sig-box"><div class="label">Prepared By</div><div style="margin-top:24px">${escHtml(pi.preparedBy||SF_PROFORMA_PREPARED_BY)}</div><div style="margin-top:14px">Date: ${escHtml(pi.issueDate||'')}</div></div>
+        <div class="pi-sig-box"><div class="label">Prepared By</div><div style="margin-top:24px">${escHtml(pi.preparedBy||'Sky Field Company Limited')}</div><div style="margin-top:14px">Date: ${escHtml(pi.issueDate||'')}</div></div>
         <div class="pi-sig-box"><div class="label">Authorized Signature</div>${proformaSignature?`<img src="${proformaSignature}">`:'<div class="pi-sig-placeholder">Signature</div>'}</div>
         <div class="pi-sig-box"><div class="label">Company Stamp</div>${proformaStamp?`<img src="${proformaStamp}">`:'<div class="pi-sig-placeholder">Company Stamp</div>'}</div>
       </div>
