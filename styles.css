@@ -682,6 +682,11 @@
   .pi-live-box.total { background:var(--navy); }
   .pi-live-box.total .lbl { color:rgba(255,255,255,.65); }
   .pi-live-box.total .val { color:var(--gold); }
+  .pi-invoiced-note { display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:10px;padding:8px 10px;background:var(--white);border:1px solid var(--gray-200);border-radius:7px;font-size:12px;color:var(--gray-700); }
+  .pi-invoiced-note:empty { display:none; }
+  .pi-invoiced-note button { border:1px solid var(--orange);background:var(--orange-light);color:var(--orange-dark);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer; }
+  .pi-invoiced-note.over { border-color:#f59e0b;background:#fffbeb; }
+  .pi-invoiced-warn { flex-basis:100%;color:#b45309;font-weight:700; }
   .pi-progress-table { width:100%;border-collapse:collapse;font-size:11px;background:var(--white);border:1px solid var(--gray-200);border-radius:8px;overflow:hidden; }
   .pi-progress-table th,.pi-progress-table td { padding:6px 8px;border-bottom:1px solid var(--gray-200);text-align:left; }
   .pi-progress-table th { background:var(--gray-100);font-size:11px;text-transform:uppercase;color:var(--gray-500);font-weight:700; }

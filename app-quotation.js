@@ -959,7 +959,7 @@ function showExport(docType='quotation'){
   const qoRef=escHtml(document.getElementById('qo-ref').value.trim());
   const rawQno=document.getElementById('qno').value||'SF-Q-2025-001';
   const qno=escHtml(isInvoice ? invoiceNumberFromQuote(rawQno) : rawQno);
-  const dt=document.getElementById('qdate').value||new Date().toISOString().slice(0,10);
+  const dt=document.getElementById('qdate').value||sfRiyadhToday();
   const prepName=escHtml(document.getElementById('prep-name').value.trim());
   const prepEmail=escHtml(document.getElementById('prep-email').value.trim());
   const substation=escHtml(document.getElementById('substation').value.trim())||'132 / 33 / 13.8 kV Substation';
@@ -1427,7 +1427,7 @@ function buildQuoteRecordFromCurrent(forceNew=false, forceType){
     project: snap.meta['proj-name'] || '',
     station: snap.meta['station-name'] || '',
     subject: snap.meta['qo-ref'] || '',
-    date: snap.meta.qdate || new Date().toISOString().slice(0,10),
+    date: snap.meta.qdate || sfRiyadhToday(),
     total: totals.tot,
     items: totals.items,
     sourceQuotation: existing?.sourceQuotation || '',
@@ -1491,7 +1491,7 @@ function newSeparateQuotation(){
   generateNextQuoteNumber(true);
   const st=document.getElementById('station-name'); if(st)st.value='';
   const subj=document.getElementById('qo-ref'); if(subj)subj.value='';
-  document.getElementById('qdate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('qdate').value=sfRiyadhToday();
   updateActiveQuoteNote();
   showTab('activities',document.querySelector('.tab-btn[onclick*="activities"]'));
 }
@@ -1520,7 +1520,7 @@ async function sfStartNewQuotation(){
   clearAll();
   ['client','client-attn','client-tel','client-email','station-name','qo-ref'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   ['proj-name','substation','discount-value','commission','profit'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=el.defaultValue});
-  const qdate=document.getElementById('qdate');if(qdate)qdate.value=new Date().toISOString().slice(0,10);
+  const qdate=document.getElementById('qdate');if(qdate)qdate.value=sfRiyadhToday();
   try{updateLcApplicantFromClient()}catch(e){}
   showTab('activities',document.querySelector('.side-nav-btn[data-module=activities]'));
   updateActiveQuoteNote();

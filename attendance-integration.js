@@ -240,7 +240,6 @@ const SF_PAYROLL_LEAVES={annual:'سنوية / Annual',sick:'مرضية / Sick',e
 const SF_PAYROLL_DEFAULT_RULE={mode:'month_minus_absence',paidLeave:['annual','sick','emergency']};
 const SF_PAYROLL_AUTO_FIELDS=['attendanceDays','overtimeHours','siteAllowance'];
 let sfPayrollFillBusy=false,sfPayrollFillAgain=false;
-function sfRiyadhToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 function sfMonthDays(month){const [y,m]=month.split('-').map(Number),n=new Date(Date.UTC(y,m,0)).getUTCDate();return Array.from({length:n},(_,i)=>month+'-'+String(i+1).padStart(2,'0'))}
 function sfPayrollAttendanceSummary(records,month,rule,standardDays,today){
  const S=Math.max(1,Math.min(31,Number(standardDays)||30)),paid=new Set(rule?.paidLeave||[]),mode=rule?.mode||'month_minus_absence';

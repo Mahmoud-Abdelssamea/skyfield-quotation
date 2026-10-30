@@ -49,6 +49,8 @@ function removeSelectedEquipment(i){
   delete selEq[i];delete eqQty[i];buildEq();recalc();renderQuot();
 }
 function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+// Today's date in Saudi Arabia (toISOString() gives the UTC date, a day behind between midnight and 3 AM).
+function sfRiyadhToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 
 
 // ══════════════════════════════════════════════════════════════════════════════

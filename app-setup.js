@@ -506,7 +506,7 @@ sfPayrollSheets.forEach(sh=>(sh.rows||[]).forEach(r=>{if(r.carAllowance==null)r.
 if(sfCurrentPayroll?.rows)(sfCurrentPayroll.rows||[]).forEach(r=>{if(r.carAllowance==null)r.carAllowance=sfNum(r.siteCar);if(r.siteAllowance==null)r.siteAllowance=0;});
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-document.getElementById('qdate').value=new Date().toISOString().slice(0,10);
+document.getElementById('qdate').value=sfRiyadhToday();
 importSkyFieldEngineers(false);
 updatePaymentTermControls();buildCatList();buildTasks();buildEq();buildConds();buildCustomSOWList();renderQuoteAttachments();renderEngineers();renderCostLibrary();renderCostPlan();
 generateNextQuoteNumber();

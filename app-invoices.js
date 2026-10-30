@@ -131,7 +131,7 @@ function createInvoiceFromQuotation(id){
   const snap=deepClone(src.snapshot);
   snap.type='invoice';
   snap.meta.qno = invoiceNumberFromQuote(snap.meta?.qno || src.number);
-  snap.meta.qdate = new Date().toISOString().slice(0,10);
+  snap.meta.qdate = sfRiyadhToday();
   snap.meta['qo-ref'] = snap.meta['qo-ref'] ? ('Invoice Quotation – '+snap.meta['qo-ref']) : 'Invoice Quotation';
   const rec={
     id:'inv_'+Date.now(), type:'invoice', number:snap.meta.qno, client:src.client, project:src.project,
@@ -456,10 +456,38 @@ function resolvedProformaCalculation(pi){
   }
   return current;
 }
+// Everything already invoiced against the same quotation (the other invoices, incl. VAT). Monthly rentals are invoiced
+// against one quotation, so going past its total only asks for confirmation; it is never blocked.
+function sfInvoicedForQuote(src,excludeId){
+  if(!src)return 0;
+  return roundMoney(proformaInvoices.reduce((sum,p)=>p&&p.id!==excludeId&&(p.sourceQuoteId||'')===(src.id||'')?sum+(parseFloat(resolvedProformaCalculation(p).grandTotal)||0):sum,0));
+}
+function piInvoicedStatus(calc){
+  const before=sfInvoicedForQuote(piWorkingSource,document.getElementById('pi-id').value),full=roundMoney(calc.fullGrandTotal);
+  return {before,full,remaining:roundMoney(Math.max(0,full-before)),after:roundMoney(before+(parseFloat(calc.grandTotal)||0))};
+}
+function piRenderInvoicedNote(calc){
+  const el=document.getElementById('pi-invoiced-note');if(!el)return;
+  const s=piInvoicedStatus(calc),over=s.after>s.full+0.01,ar=sfUiLanguage==='ar';
+  el.className='pi-invoiced-note'+(over?' over':'');
+  el.innerHTML=(ar?`<span>تمت فوترة <strong>${fmtPiSAR(s.before)}</strong> من ${fmtPiSAR(s.full)} (شامل الضريبة) على هذا العرض · المتبقي: <strong>${fmtPiSAR(s.remaining)}</strong></span>`
+      :`<span>Already invoiced for this quotation: <strong>${fmtPiSAR(s.before)}</strong> of ${fmtPiSAR(s.full)} (incl. VAT) · Remaining: <strong>${fmtPiSAR(s.remaining)}</strong></span>`)
+    +(s.before>0&&s.remaining>0.005?`<button type="button" onclick="piFillRemaining()">${ar?'فوترة المتبقي':'Invoice the remaining'} ${fmtPiSAR(s.remaining)}</button>`:'')
+    +(over?`<div class="pi-invoiced-warn">${ar?`بهذه الفاتورة يصبح الإجمالي ${fmtPiSAR(s.after)}، أي أكثر من قيمة العرض.`:`With this invoice the total becomes ${fmtPiSAR(s.after)}, more than the quotation.`}</div>`:'');
+}
+// Fills the exact remaining balance (incl. VAT) as a fixed amount, so the invoices add up to the quotation total.
+function piFillRemaining(){
+  if(!piWorkingSource)return;
+  const s=piInvoicedStatus(calculateProforma(piWorkingSource.snapshot||piWorkingSource.quoteSnapshot||{},currentPiOptions()));
+  if(s.remaining<=0.005)return;
+  document.getElementById('pi-basis').value='fixed';document.getElementById('pi-fixed-mode').value='includingVat';
+  document.getElementById('pi-fixed-amount').value=s.remaining.toFixed(2);onPiBasisChange();
+}
 function recalcProformaModal(){
   if(!piWorkingSource)return;
   updatePiBasisUI();
   const calc=calculateProforma(piWorkingSource.snapshot||piWorkingSource.quoteSnapshot||{},currentPiOptions());
+  piRenderInvoicedNote(calc);
   if(currentPiOptions().basis==='progress'){
     const rowsMap={};(calc.lineItems||[]).forEach(li=>{rowsMap[progressItemKey(li)]=li;});
     document.querySelectorAll('#pi-progress-wrap tr[data-key]').forEach(tr=>{
@@ -507,7 +535,7 @@ async function openProformaFromQuotation(id){
   clearPiModal();activeProformaId='';piWorkingSource=src;
   const m=src.snapshot?.meta||{};
   document.getElementById('pi-number').value=await nextProformaNumber(false);
-  document.getElementById('pi-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('pi-date').value=sfRiyadhToday();
   document.getElementById('pi-source-id').value=src.id;
   document.getElementById('pi-client').value=m.client||src.client||'';
   document.getElementById('pi-attention').value=m['client-attn']||'';
@@ -600,11 +628,18 @@ function validateProforma(calc){
 async function saveProforma(openPreview){
   if(!piWorkingSource)return;
   if(!canCreateProformaFromQuote(piWorkingSource)){alert('A Proforma Invoice can only be saved for a quotation linked to an existing Project.');return;}
-  const pendingExistingId=document.getElementById('pi-id').value,piNoEl=document.getElementById('pi-number');
-  if(!pendingExistingId&&piNoEl&&/^SF-PI-\d{4}-\d+$/i.test(piNoEl.value.trim())&&!sfReservedDocumentNumbers.has(piNoEl.value.trim()))piNoEl.value=await nextProformaNumber(true);
+  const existingId=document.getElementById('pi-id').value,piNoEl=document.getElementById('pi-number');
+  const autoNumber=()=>!existingId&&/^SF-PI-\d{4}-\d+$/i.test(piNoEl.value.trim())&&!sfReservedDocumentNumbers.has(piNoEl.value.trim());
+  // A colleague may have used the suggested number meanwhile: suggest the next one (nothing is reserved yet).
+  if(autoNumber()&&proformaInvoices.some(p=>String(p.number||'').toLowerCase()===piNoEl.value.trim().toLowerCase()))piNoEl.value=await nextProformaNumber(false);
   const opts=currentPiOptions(),calc=calculateProforma(piWorkingSource.snapshot||piWorkingSource.quoteSnapshot||{},opts),err=validateProforma(calc);if(err){alert(err);return;}
-  const existingId=document.getElementById('pi-id').value;
   const src=piWorkingSource, old=existingId?proformaInvoices.find(p=>p.id===existingId):null;
+  const inv=piInvoicedStatus(calc),q=src.number||src.snapshot?.meta?.qno||'';
+  if(inv.after>inv.full+0.01&&!confirm(sfUiLanguage==='ar'
+    ?`تمت فوترة ${fmtPiSAR(inv.before)} من ${fmtPiSAR(inv.full)} على عرض السعر ${q}. هذه الفاتورة (${fmtPiSAR(calc.grandTotal)}) تجعل الإجمالي ${fmtPiSAR(inv.after)}، أي أكثر من قيمة العرض.\n\nهل تريد المتابعة؟ (مثلاً إيجار شهري يُفوتر على نفس العرض)`
+    :`Already invoiced against quotation ${q}: ${fmtPiSAR(inv.before)} of ${fmtPiSAR(inv.full)}. This invoice (${fmtPiSAR(calc.grandTotal)}) brings the total to ${fmtPiSAR(inv.after)}, more than the quotation.\n\nContinue anyway? (For example, a monthly rental invoiced against the same quotation.)`))return;
+  // The number is reserved only once the form is complete, so a failed check or a closed dialog skips no number.
+  if(autoNumber())piNoEl.value=await nextProformaNumber(true);
   const rec={
     id:existingId||('pi_'+Date.now()),type:'proforma',number:document.getElementById('pi-number').value.trim(),issueDate:document.getElementById('pi-date').value,
     clientName:document.getElementById('pi-client').value.trim(),clientAddress:document.getElementById('pi-client-address').value.trim(),clientVat:document.getElementById('pi-client-vat').value.trim(),

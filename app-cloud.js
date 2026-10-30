@@ -1050,13 +1050,15 @@ function syncProjectFromQuotation(rec){
   return proj;
 }
 function progressLegacyKey(item){ return (item.sn||'')+'|'+(item.description||''); }
+// Same content whatever the key order (records read back from the database come with their keys reordered).
+function sfSameData(a,b){const norm=v=>Array.isArray(v)?v.map(norm):v&&typeof v==='object'?Object.keys(v).sort().reduce((o,k)=>(o[k]=norm(v[k]),o),{}):v;return JSON.stringify(norm(a))===JSON.stringify(norm(b))}
 function syncProformaToProject(pi){
   if(!pi.projectId)return null;const p=projects.find(x=>x.id===pi.projectId);if(!p)return null;
   p.proformas=Array.isArray(p.proformas)?p.proformas:[];
   p.payments=Array.isArray(p.payments)?p.payments:[];
   const calc=resolvedProformaCalculation(pi);
   const entry={id:pi.id,number:pi.number,date:pi.issueDate,total:calc.grandTotal,beforeVat:calc.totalAfterDiscount,vat:calc.vatAmount,basis:proformaBasisLabel(pi),sourceQuoteId:pi.sourceQuoteId};
-  const idx=p.proformas.findIndex(x=>x.id===pi.id);if(idx>=0)p.proformas[idx]=entry;else p.proformas.push(entry);
+  const idx=p.proformas.findIndex(x=>x.id===pi.id);
   const payIdx=p.payments.findIndex(x=>x.sourceProformaId===pi.id);
   const oldPay=payIdx>=0?p.payments[payIdx]:null;
   const previous=sfNormalizePaymentRecord(oldPay||{});
@@ -1064,6 +1066,9 @@ function syncProformaToProject(pi){
     ...previous,id:previous.id||('pay_'+pi.id),label:'Invoice '+pi.number,amount:calc.grandTotal,date:pi.issueDate,
     sourceProformaId:pi.id,receipts:previous.receipts||[]
   });
+  // Already up to date (the repair at every page open lands here): no new project revision and no upload.
+  if(idx>=0&&payIdx>=0&&sfSameData(p.proformas[idx],entry)&&sfSameData(previous,payEntry))return p;
+  if(idx>=0)p.proformas[idx]=entry;else p.proformas.push(entry);
   if(payIdx>=0)p.payments[payIdx]=payEntry;else p.payments.push(payEntry);
   p.updatedAt=new Date().toISOString();saveProjects();if(document.getElementById('proj-grid'))renderProjects();return p;
 }
