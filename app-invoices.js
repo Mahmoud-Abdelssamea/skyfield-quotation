@@ -798,7 +798,7 @@ function previewProforma(id){
     ${hasPriceCol?`<td class="num" style="width:12%">${x.showUnitPrice!==false?fmtMoney(isProgress?(x.contractLineTotal||x.baseLineTotal||0):x.unitPrice):''}</td>`:''}
     ${isProgress?`<td class="center" style="width:7%">${fmtMoney(x.priorPct||0)}%</td><td class="center" style="width:7%">${fmtMoney(x.currentPct||0)}%</td><td class="center" style="width:7%">${fmtMoney(x.deltaPct||0)}%</td>`:''}
     ${hasTotalCol?`<td class="num" style="width:13%">${x.showTotal!==false?fmtMoney(x.total):''}</td>`:''}</tr>`).join('');
-  const supplierRows=infoRow('Supplier Name',c.nameEn)+infoRow('الاسم بالعربية',c.nameAr)+infoRow('Supplier Address',c.addressEn)+infoRow('العنوان',c.addressAr)+infoRow('Supplier VAT No.',c.vat)+infoRow('Telephone',c.telephone)+infoRow('Fax',c.fax);
+  const supplierRows=infoRow('Supplier Name',c.nameEn)+infoRow('الاسم بالعربية',c.nameAr)+infoRow('Supplier Address',c.addressEn)+infoRow('العنوان',c.addressAr)+infoRow('Testing Department',c.officeEn)+infoRow('قسم الاختبارات',c.officeAr)+infoRow('Supplier C.R. No.',c.cr)+infoRow('Unified National No.',c.unifiedNo)+infoRow('Supplier VAT No.',c.vat)+infoRow('Telephone',c.telephone)+infoRow('Fax',c.fax);
   const clientRows=infoRow('Client Name',pi.clientName)+infoRow('Client Address',pi.clientAddress)+infoRow('Client VAT No.',pi.clientVat)+infoRow('Attention',pi.attention)+infoRow('Telephone',pi.clientTel)+infoRow('Email',pi.clientEmail);
   const t=resolved;
   document.getElementById('pi-preview-doc').innerHTML=`
@@ -844,7 +844,7 @@ function previewProforma(id){
         <div class="pi-sig-box"><div class="label">Company Stamp</div>${proformaStamp?`<img src="${proformaStamp}">`:'<div class="pi-sig-placeholder">Company Stamp</div>'}</div>
       </div>
     </div>
-    <div class="pi-doc-footer"><strong>${escHtml(c.nameEn)} · ${escHtml(c.nameAr)}</strong><br>Tel: ${escHtml(c.telephone)} &nbsp; | &nbsp; Fax: ${escHtml(c.fax)} &nbsp; | &nbsp; VAT No.: ${escHtml(c.vat)}</div>`;
+    <div class="pi-doc-footer"><strong>${escHtml(c.nameEn)} · ${escHtml(c.nameAr)}</strong><br>Tel: ${escHtml(c.telephone)} &nbsp; | &nbsp; Fax: ${escHtml(c.fax)} &nbsp; | &nbsp; C.R. No.: ${escHtml(c.cr)} &nbsp; | &nbsp; VAT No.: ${escHtml(c.vat)}</div>`;
   const old=document.getElementById('export-preview');old.classList.remove('print-active');old.style.display='none';
   const el=document.getElementById('proforma-preview');el.classList.add('print-active');el.style.display='block';sfApplyPreviewTitle('proforma');renderProformas();
 }

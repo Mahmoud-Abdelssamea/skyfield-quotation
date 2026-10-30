@@ -453,7 +453,12 @@ const DEFAULT_PROFORMA_COMPANY = {
   vat:'310049492300003',
   addressEn:'Al-Dawadmi, Hittin District, Prince Mashhoor Bin Abdulaziz Street, Saudi Arabia',
   addressAr:'الدوادمي - حي حطين - شارع الأمير مشهور بن عبدالعزيز - المملكة العربية السعودية',
-  telephone:'+966 55 742 4134',
+  // Registered (national) address above; the Testing Department works from the Riyadh office.
+  officeEn:'Riyadh - Al-Malaz, Salah Salem Street, Al-Falih',
+  officeAr:'الرياض - الملز - شارع صلاح سالم - الفالح',
+  cr:'1116010788',
+  unifiedNo:'7001697346',
+  telephone:'+966 55 119 9411',
   fax:'+966 16 383 6005'
 };
 let proformaCompanySettings = Object.assign({}, DEFAULT_PROFORMA_COMPANY, JSON.parse(localStorage.getItem('sfProformaCompanySettings')||'{}'));
