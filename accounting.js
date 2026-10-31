@@ -195,19 +195,23 @@ function positionInvoice(){
 }
 function showDialog(){const d=A('acctInvoiceDialog');if(!d.open){returnFocus=document.activeElement;positionInvoice();if(window.frameElement){hostOverflow=window.parent.document.body.style.overflow;window.parent.document.body.style.overflow='hidden'}d.showModal();A('acctInvoiceTitle').focus?.({preventScroll:true})}}
 function closeInvoice(force=false){
- if(!force&&(busy||(detailDirty&&!confirm(T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?')))))return false;
+ if(!force&&busy)return false;
+ // Unsaved changes: the panel closes after "Discard".
+ if(!force&&detailDirty){void mayDiscardDetail().then(ok=>{if(ok&&!busy)closeInvoice(true)});return false}
  ++panelRequest;detail=null;detailDirty=false;batchRows=null;A('acctBatchPanel').hidden=true;A('acctBatchForm').reset();closeEditor();closeFeedback();A('acctReopenPanel').hidden=true;A('acctHistory').hidden=true;
  if(A('acctInvoiceDialog').open)A('acctInvoiceDialog').close();if(hostOverflow!==null){window.parent.document.body.style.overflow=hostOverflow;hostOverflow=null;}if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});returnFocus=null;return true;
 }
-function preparePanel(r){
- if(busy)return false;if(detailDirty&&!confirm(T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?')))return false;
+// Unsaved payment details: true when there are none, or after "Discard".
+async function mayDiscardDetail(){return !detailDirty||await sfAsk(T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'),{ok:T('ترك التغييرات','Discard'),danger:true})}
+async function preparePanel(r){
+ if(busy||!(await mayDiscardDetail())||busy)return false;
  ++panelRequest;closeEditor();closeFeedback();A('acctHistory').hidden=true;A('acctReopenPanel').hidden=true;batchRows=null;A('acctBatchPanel').hidden=true;detailDirty=false;detail={...r};
  showDialog();A('acctDetailHistory').hidden=A('acctDetailReceipt').hidden=false;
  A('acctInvoiceTitle').textContent=T('تفاصيل الفاتورة','Invoice details')+' · '+r.engineer_name;
  A('acctInvoiceSummary').innerHTML=`<b>${esc(r.project_name||T('مصروف عام','General expense'))}</b><br>${esc(r.day)} · SAR ${esc(money(r.amount))} · ${esc(status(r.status))}<br>${esc(r.description||'')}<br>${esc(r.accounting_comment||'')}`;
  activeTab(null);A('acctDetailPayment').hidden=A('acctDetailFeedback').hidden=!payable(r);A('acctDetailReopen').hidden=!['changes_requested','cancelled'].includes(r.status);A('acctDialogMessage').textContent='';return true;
 }
-function openInvoice(r){if(stale||busy)return;if(payable(r))openEditor(r);else if(preparePanel(r)&&['changes_requested','cancelled'].includes(r.status)){activeTab('acctDetailReopen');A('acctReopenForm').reset();A('acctReopenPanel').hidden=false}}
+async function openInvoice(r){if(stale||busy)return;if(payable(r))await openEditor(r);else if(await preparePanel(r)&&['changes_requested','cancelled'].includes(r.status)){activeTab('acctDetailReopen');A('acctReopenForm').reset();A('acctReopenPanel').hidden=false}}
 async function reopenInvoice(e){
  e.preventDefault();if(!detail||busy||!permitted())return;const row={...detail},user=me.user_id,message=A('acctReopenNote').value.trim();
  if(!message||message.length>500){note(T('اكتب سبب التراجع بحد أقصى 500 حرف.','Enter the reason, up to 500 characters.'),true);return}
@@ -216,8 +220,8 @@ async function reopenInvoice(e){
  catch(error){completion=errorText(error);failed=true}
  finally{busy=false;A('acctSaveReopen').disabled=false;if(me?.user_id===user){if(!detail)await refreshQueue();note(completion,failed)}}
 }
-function openBatch(){
- const rows=selectedRows();if(stale||busy||!rows.length)return;if(detailDirty&&!confirm(T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?')))return;
+async function openBatch(){
+ const rows=selectedRows();if(stale||busy||!rows.length||!(await mayDiscardDetail())||busy)return;
  ++panelRequest;closeEditor();closeFeedback();A('acctHistory').hidden=true;A('acctReopenPanel').hidden=true;detail=null;detailDirty=false;batchRows=rows.map(r=>({...r}));
  showDialog();activeTab(null);for(const t of [...dialogTabs,'acctDetailReceipt'])A(t).hidden=true;A('acctDialogMessage').textContent='';
  const total=rows.reduce((t,r)=>t+Number(r.amount),0);
@@ -232,7 +236,7 @@ async function saveBatch(e){
  const payment={date:f.elements.payment_date.value,reference:f.elements.reference.value.trim(),note:f.elements.note.value.trim()||null,file:f.elements.proof.files[0]};
  if(!payment.file||payment.file.size>5242880||!['image/jpeg','image/png','application/pdf'].includes(payment.file.type)){note(T('إثبات التحويل مطلوب: PDF أو JPG أو PNG حتى 5MB.','A payment proof is required: PDF/JPG/PNG up to 5MB.'),true);return}
  if(!payment.date||payment.date>today()||payment.date<'2000-01-01'||!payment.reference){note(T('أدخل تاريخ سداد صحيحًا ومرجع التحويل.','Enter a valid payment date and transfer reference.'),true);return}
- if(!confirm(T(`تأكيد تسجيل سداد ${money(total)} ريال إلى ${rows[0].engineer_name} عن ${rows.length} فاتورة؟ لا ينفّذ النظام تحويلًا بنكيًا.`,`Record one payment of SAR ${money(total)} to ${rows[0].engineer_name} for ${rows.length} invoices? No bank transfer will be executed.`)))return;
+ if(!(await sfAsk(T(`تسجيل سداد ${money(total)} ريال إلى ${rows[0].engineer_name} عن ${rows.length} فاتورة؟`,`Record one payment of SAR ${money(total)} to ${rows[0].engineer_name} for ${rows.length} invoices?`),{message:T('لا ينفّذ النظام تحويلًا بنكيًا.','No bank transfer will be executed.'),ok:T('تسجيل السداد','Record payment')}))||busy)return;
  busy=true;const button=A('acctSaveBatch');button.disabled=true;let completion='',failed=false;
  try{
   const batch=crypto.randomUUID(),path=user+'/batch/'+batch+'/'+crypto.randomUUID();
@@ -245,8 +249,8 @@ async function saveBatch(e){
  }catch(error){completion=errorText(error);failed=true;if(/ACCOUNTING_STALE|EXPENSE_NOT_APPROVED|EXPENSE_SETTLED|BATCH_EXISTS/.test(String(error.message)))stale=true}
  finally{busy=false;button.disabled=false;if(me?.user_id===user){render();if(!batchRows)await refreshQueue();if(completion)note(completion,failed)}}
 }
-function openEditor(r){
- if(stale||busy||!payable(r)||!preparePanel(r))return;closeFeedback();activeTab('acctDetailPayment');editing={...r};const f=A('acctPaymentForm');f.reset();
+async function openEditor(r){
+ if(stale||busy||!payable(r)||!(await preparePanel(r)))return;closeFeedback();activeTab('acctDetailPayment');editing={...r};const f=A('acctPaymentForm');f.reset();
  A('acctEditTitle').textContent=r.engineer_name+' · '+T(money(r.amount)+' ريال','SAR '+money(r.amount));
  A('acctNextStatus').value=r.status==='paid'?'paid':'awaiting';
  f.elements.payment_date.value=today();f.elements.payment_date.max=today();f.elements.note.value=r.note||'';
@@ -260,7 +264,7 @@ function updatePaymentFields(){
 function closeEditor(){editing=null;A('acctEditPanel').hidden=true;A('acctPaymentForm').reset()}
 async function savePayment(e){
  e.preventDefault();if(!editing||busy||!permitted())return;const row={...editing},user=me.user_id,f=e.target;
- const next=A('acctNextStatus').value;if(next==='paid'&&!confirm(T(`تأكيد تسجيل سداد ${money(row.amount)} ريال إلى ${row.engineer_name}؟ لا ينفّذ النظام تحويلًا بنكيًا.`,`Record payment of SAR ${money(row.amount)} to ${row.engineer_name}? No bank transfer will be executed.`)))return;
+ const next=A('acctNextStatus').value;if(next==='paid'&&!(await sfAsk(T(`تسجيل سداد ${money(row.amount)} ريال إلى ${row.engineer_name}؟`,`Record payment of SAR ${money(row.amount)} to ${row.engineer_name}?`),{message:T('لا ينفّذ النظام تحويلًا بنكيًا.','No bank transfer will be executed.'),ok:T('تسجيل السداد','Record payment')}))||busy)return;
  if(!['awaiting','paid'].includes(next)){note(T('اختر حالة سداد صحيحة.','Choose a valid payment status.'),true);return;}
  const payment={date:f.elements.payment_date.value,reference:f.elements.reference.value.trim(),note:f.elements.note.value.trim()||null,file:f.elements.proof.files[0]};
  busy=true;let completion='',failed=false;const button=A('acctSavePayment');button.disabled=true;
@@ -281,12 +285,12 @@ async function savePayment(e){
  finally{busy=false;button.disabled=false;if(me?.user_id===user){render();if(!editing)await refreshQueue();if(completion)note(completion,failed)}}
 }
 function closeFeedback(){feedback=null;A('acctFeedbackPanel').hidden=true;A('acctFeedbackForm').reset()}
-function openFeedback(r){if(stale||busy||!payable(r)||!preparePanel(r))return;closeEditor();activeTab('acctDetailFeedback');feedback={...r};A('acctFeedbackForm').reset();A('acctFeedbackAction').value='comment';A('acctFeedbackTitle').textContent=r.engineer_name+' · '+T(money(r.amount)+' ريال','SAR '+money(r.amount));A('acctFeedbackPanel').hidden=false}
+async function openFeedback(r){if(stale||busy||!payable(r)||!(await preparePanel(r)))return;closeEditor();activeTab('acctDetailFeedback');feedback={...r};A('acctFeedbackForm').reset();A('acctFeedbackAction').value='comment';A('acctFeedbackTitle').textContent=r.engineer_name+' · '+T(money(r.amount)+' ريال','SAR '+money(r.amount));A('acctFeedbackPanel').hidden=false}
 async function sendFeedback(e){
  e.preventDefault();if(!feedback||busy||!permitted())return;
  const row={...feedback},user=me.user_id,action=A('acctFeedbackAction').value,message=A('acctFeedbackNote').value.trim();
  if(!message||message.length>500){note(T('اكتب التعليق أو السبب بحد أقصى 500 حرف.','Enter a comment or reason, up to 500 characters.'),true);return}
- if(action==='cancelled'&&!confirm(T('تأكيد إلغاء الفاتورة ومنع سدادها؟ سيظهر السبب للمهندس.','Cancel this invoice and block payment? The engineer will see the reason.')))return;
+ if(action==='cancelled'&&!(await sfAsk(T('إلغاء الفاتورة ومنع سدادها؟','Cancel this invoice and block payment?'),{message:T('سيظهر السبب للمهندس.','The engineer will see the reason.'),ok:T('إلغاء الفاتورة','Cancel invoice'),cancel:T('رجوع','Go back'),danger:true}))||busy)return;
  busy=true;A('acctSendFeedback').disabled=true;let completion='',failed=false;
  try{
   await checked(db.rpc('sf_accounting_feedback',{p_id:row.expense_id,p_expected_revision:row.revision,p_action:action,p_note:message}));
@@ -294,14 +298,14 @@ async function sendFeedback(e){
  }catch(error){completion=errorText(error);failed=true;if(/ACCOUNTING_STALE|EXPENSE_NOT_APPROVED|EXPENSE_SETTLED/.test(String(error.message)))closeFeedback()}
  finally{busy=false;A('acctSendFeedback').disabled=false;if(me?.user_id===user){if(!feedback)await refreshQueue();note(completion,failed)}}
 }
-async function history(r){if(!preparePanel(r))return;activeTab('acctDetailHistory');const id=r.expense_id,token=panelRequest;const rows=await checked(db.rpc('sf_accounting_history',{p_id:r.expense_id}));
+async function history(r){if(!(await preparePanel(r)))return;activeTab('acctDetailHistory');const id=r.expense_id,token=panelRequest;const rows=await checked(db.rpc('sf_accounting_history',{p_id:r.expense_id}));
  if(detail?.expense_id!==id||token!==panelRequest)return;A('acctHistory').hidden=false;A('acctHistoryRows').innerHTML=rows.map(h=>`<tr><td>${esc(historyStatus(h.action))}</td><td>${esc(h.actor||'')}</td><td>${esc(new Date(h.at).toLocaleString(language==='en'?'en-GB':'ar-SA',{timeZone:'Asia/Riyadh'}))}</td><td>${esc(h.note||h.reference||'')}</td></tr>`).join('')||`<tr><td colspan="4">${esc(T('لا توجد إجراءات حسابات بعد.','No accounting actions yet.'))}</td></tr>`;
  A('acctHistoryTitle').textContent=r.engineer_name+' · '+r.expense_id;
 }
 async function action(e){const b=e.target.closest('[data-acct-action]');
- if(!b){if(e.target.closest('details,summary,input,label,a,button'))return;const row=e.target.closest('tr[data-row]'),r=row&&items.find(x=>x.expense_id===row.dataset.row);if(r)try{openInvoice(r)}catch(error){note(errorText(error),true)}return}
+ if(!b){if(e.target.closest('details,summary,input,label,a,button'))return;const row=e.target.closest('tr[data-row]'),r=row&&items.find(x=>x.expense_id===row.dataset.row);if(r)try{await openInvoice(r)}catch(error){note(errorText(error),true)}return}
  const r=items.find(x=>x.expense_id===b.dataset.id);if(!r)return;b.closest('details')?.removeAttribute('open');
- b.disabled=true;try{const kind=b.dataset.acctAction;if(kind==='details')openInvoice(r);else if(kind==='receipt'||kind==='proof')await openFile(r,kind==='proof');else if(kind==='feedback')openFeedback(r);else if(kind==='edit')openEditor(r);else if(kind==='pay'){openEditor(r);if(editing){A('acctNextStatus').value='paid';updatePaymentFields()}}else if(kind==='history')await history(r);else if(kind==='print')printRows([r]);else if(kind==='batch')printBatch(r)}catch(error){note(errorText(error),true)}finally{b.disabled=false}
+ b.disabled=true;try{const kind=b.dataset.acctAction;if(kind==='details')await openInvoice(r);else if(kind==='receipt'||kind==='proof')await openFile(r,kind==='proof');else if(kind==='feedback')await openFeedback(r);else if(kind==='edit')await openEditor(r);else if(kind==='pay'){await openEditor(r);if(editing){A('acctNextStatus').value='paid';updatePaymentFields()}}else if(kind==='history')await history(r);else if(kind==='print')printRows([r]);else if(kind==='batch')printBatch(r)}catch(error){note(errorText(error),true)}finally{b.disabled=false}
 }
 function renderAccounts(){
  A('acctSetup').hidden=me?.role!=='admin';if(me?.role!=='admin')return;
@@ -327,12 +331,19 @@ A('acctInvoiceDialog').oninput=()=>{detailDirty=true};
 A('acctDetailPayment').onclick=()=>{if(detail)openEditor(detail)};A('acctDetailFeedback').onclick=()=>{if(detail)openFeedback(detail)};
 A('acctDetailHistory').onclick=()=>{if(detail)void history(detail).catch(e=>note(errorText(e),true))};
 A('acctDetailReceipt').onclick=()=>{if(detail)void openFile(detail).catch(e=>note(errorText(e),true))};
-A('acctDetailReopen').onclick=()=>{if(detail&&preparePanel(detail)){activeTab('acctDetailReopen');A('acctReopenForm').reset();A('acctReopenPanel').hidden=false}};
+A('acctDetailReopen').onclick=async()=>{if(detail&&await preparePanel(detail)){activeTab('acctDetailReopen');A('acctReopenForm').reset();A('acctReopenPanel').hidden=false}};
 A('acctReopenForm').onsubmit=reopenInvoice;
 A('acctRows').onclick=action;A('acctRefresh').onclick=()=>void refreshQueue();
-A('acctMonth').onchange=()=>{if((editing||feedback)&&!confirm(T('لديك بيانات سداد لم تحفظ. هل تريد تركها؟','Discard the unsaved payment details?'))){A('acctMonth').value=A('acctMonth').dataset.previous||'';return}closeEditor();closeFeedback();A('acctPeriod').value=A('acctMonth').value?'month':'all';A('acctPeriod').dataset.previous=A('acctPeriod').value;A('acctDateLabel').hidden=true;A('acctMonthLabel').hidden=!A('acctMonth').value;A('acctMonth').disabled=false;A('acctMonth').dataset.previous=A('acctMonth').value;A('acctHistory').hidden=true;void refreshQueue()};
-A('acctPeriod').onchange=()=>{if(busy)return;if((editing||feedback)&&!confirm(T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))){A('acctPeriod').value=A('acctPeriod').dataset.previous||'all';return}closeEditor();closeFeedback();const mode=A('acctPeriod').value;A('acctPeriod').dataset.previous=mode;A('acctDateLabel').hidden=!['day','week'].includes(mode);A('acctMonthLabel').hidden=mode!=='month';A('acctMonth').disabled=mode!=='month';if(mode==='month')A('acctMonth').value=A('acctMonth').value||today().slice(0,7);else A('acctMonth').value='';A('acctDate').value=A('acctDate').value||today();void refreshQueue()};
-A('acctDate').onchange=()=>{if(busy)return;if((editing||feedback)&&!confirm(T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))){A('acctDate').value=A('acctDate').dataset.previous||today();return}closeEditor();closeFeedback();A('acctDate').dataset.previous=A('acctDate').value;void refreshQueue()};
+// A filter changed while payment details are unsaved: the old value stays until "Discard", then the new one applies.
+async function filterChangeConfirmed(el,fallback,question){
+ if(!(editing||feedback))return true;
+ const next=el.value;el.value=el.dataset.previous||fallback;
+ if(!(await sfAsk(question,{ok:T('ترك التغييرات','Discard'),danger:true})))return false;
+ el.value=next;return true;
+}
+A('acctMonth').onchange=async()=>{if(!(await filterChangeConfirmed(A('acctMonth'),'',T('لديك بيانات سداد لم تحفظ. هل تريد تركها؟','Discard the unsaved payment details?'))))return;closeEditor();closeFeedback();A('acctPeriod').value=A('acctMonth').value?'month':'all';A('acctPeriod').dataset.previous=A('acctPeriod').value;A('acctDateLabel').hidden=true;A('acctMonthLabel').hidden=!A('acctMonth').value;A('acctMonth').disabled=false;A('acctMonth').dataset.previous=A('acctMonth').value;A('acctHistory').hidden=true;void refreshQueue()};
+A('acctPeriod').onchange=async()=>{if(busy||!(await filterChangeConfirmed(A('acctPeriod'),'all',T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))))return;closeEditor();closeFeedback();const mode=A('acctPeriod').value;A('acctPeriod').dataset.previous=mode;A('acctDateLabel').hidden=!['day','week'].includes(mode);A('acctMonthLabel').hidden=mode!=='month';A('acctMonth').disabled=mode!=='month';if(mode==='month')A('acctMonth').value=A('acctMonth').value||today().slice(0,7);else A('acctMonth').value='';A('acctDate').value=A('acctDate').value||today();void refreshQueue()};
+A('acctDate').onchange=async()=>{if(busy||!(await filterChangeConfirmed(A('acctDate'),today(),T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))))return;closeEditor();closeFeedback();A('acctDate').dataset.previous=A('acctDate').value;void refreshQueue()};
 A('acctFeedbackForm').onsubmit=sendFeedback;A('acctCancelFeedback').onclick=()=>closeInvoice();
 A('acctState').onchange=render;A('acctProject').onchange=render;A('acctSearch').oninput=render;
 A('acctNextStatus').onchange=updatePaymentFields;
@@ -343,12 +354,12 @@ A('acctCancelEdit').onclick=()=>closeInvoice();A('acctPaymentForm').onsubmit=sav
 A('acctRows').onchange=e=>{const c=e.target.closest?.('[data-acct-select]');if(!c||busy)return;if(c.checked)selected.add(c.dataset.acctSelect);else selected.delete(c.dataset.acctSelect);render()};
 A('acctBulkClear').onclick=()=>{selected.clear();render()};
 A('acctBulkAll').onclick=()=>{const owner=selectedRows()[0]?.user_id;if(!owner)return;for(const r of filtered())if(payable(r)&&r.user_id===owner&&selected.size<100)selected.add(r.expense_id);render()};
-A('acctBulkPay').onclick=()=>{try{openBatch()}catch(error){note(errorText(error),true)}};
+A('acctBulkPay').onclick=()=>openBatch().catch(error=>note(errorText(error),true));
 A('acctBatchForm').onsubmit=saveBatch;A('acctCancelBatch').onclick=()=>closeInvoice();
 A('acctCloseHistory').onclick=()=>closeInvoice();
 // New accountants are created on the Users & Permissions page (one place for every account).
 A('acctAddAccount').onclick=()=>{try{if(window.parent!==window&&typeof window.parent.showTab==='function'){window.parent.showTab('users');return}}catch{}location.href='index.html#users'};
-A('acctAccounts').onclick=async e=>{const b=e.target.closest('[data-disable-accountant]');if(!b||me?.role!=='admin'||!confirm(T('إيقاف صلاحية هذا المحاسب فورًا مع الاحتفاظ بسجل عملياته؟','Disable this accountant immediately and keep their audit history?')))return;
+A('acctAccounts').onclick=async e=>{const b=e.target.closest('[data-disable-accountant]');if(!b||me?.role!=='admin'||!(await sfAsk(T('إيقاف صلاحية هذا المحاسب فورًا؟','Disable this accountant immediately?'),{message:T('يُحتفظ بسجل عملياته.','Their audit history is kept.'),ok:T('إيقاف المحاسب','Disable accountant'),danger:true})))return;
  b.disabled=true;try{await engineerAccountAction({action:'disable-accountant',user_id:b.dataset.disableAccountant});members=await checked(db.from('sf_daily_members').select('*'));renderAccounts();note(T('تم إيقاف حساب المحاسب.','Accountant disabled.'))}catch(error){note(errorText(error),true);b.disabled=false}};
 A('acctPasswordForm').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;
  try{await checked(db.auth.updateUser({password:f.elements.password.value}));f.reset();note(T('تم تغيير كلمة المرور.','Password changed.'))}catch(error){note(errorText(error),true)}finally{b.disabled=false}};

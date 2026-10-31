@@ -32,7 +32,7 @@ async function save(e){
  if(!v.p_note||v.p_note.length>500){say(T('اكتب سبب التسجيل، بحد أقصى 500 حرف.','Enter a reason, up to 500 characters.'),true);return}
  if(preview.replaced&&!E('aaReplace').checked)return;
  const name=members.find(m=>m.user_id===v.p_user_id)?.name||'',count=preview.days.length;
- if(!confirm(T(`حفظ واعتماد ${count} يوم للمهندس ${name}؟ ستُستبدل الحالات المعروضة في المعاينة.`,`Save and approve ${count} days for ${name}? Existing statuses shown in the preview will be replaced.`)))return;
+ if(!(await sfAsk(T(`حفظ واعتماد ${count} يوم للمهندس ${name}؟`,`Save and approve ${count} days for ${name}?`),{message:T('ستُستبدل الحالات المعروضة في المعاينة.','Existing statuses shown in the preview will be replaced.'),ok:T('حفظ واعتماد','Save and approve')}))||busy||!preview)return;
  const user=me.user_id,snapshot=preview.rows.map(r=>({id:r.id,revision:r.period_revision}));busy=true;E('aaFields').disabled=true;E('aaSave').disabled=true;
  try{await checked(db.rpc('sf_admin_set_absence',{...v,p_existing:snapshot}));if(me?.user_id!==user)return;invalidate();say(T('تم حفظ الغياب / الإجازة واعتماده.','Absence / leave saved and approved.'));window.sfEmbeddedReviewChanged?.();try{await refresh({quiet:true})}catch{say(T('تم الحفظ. اضغط تحديث لإعادة تحميل القائمة.','Saved. Refresh to reload the list.'))}}
  catch(e){invalidate();say(errorText(e),true)}finally{busy=false;E('aaFields').disabled=false}

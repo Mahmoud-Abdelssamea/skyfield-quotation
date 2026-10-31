@@ -60,13 +60,13 @@ window.sfAskChoice=function({title,items,hint}={}){
  });
 };
 // sfConfirm: a yes/no question in the page language, replacing the browser's confirm(). Resolves true or false.
-// {title, message, ok, danger}: the question as the title, details below, the button named after the action;
+// {title, message, ok, cancel, danger}: the question as the title, details below, the buttons named after the actions;
 // a destructive action gets a red button and the focus starts on Cancel, so Enter never deletes by accident.
-window.sfConfirm=function({title,message='',ok,danger=false}={}){
+window.sfConfirm=function({title,message='',ok,cancel,danger=false}={}){
  const head=title||message,body=title?message:'';
  return openDialog(`<div class="sf-dialog-form sf-confirm" role="alertdialog" aria-labelledby="sf-confirm-title">
   <h3 id="sf-confirm-title">${esc(noticeText(head))}</h3>${body?`<p class="sf-dialog-note sf-confirm-body">${esc(noticeText(body))}</p>`:''}
-  <div class="sf-dialog-actions"><button type="button" class="btn-outline" data-dlg-cancel>${esc(L('Cancel','إلغاء'))}</button><button type="button" class="btn-primary${danger?' sf-btn-danger':''}" data-dlg-ok>${esc(ok||L('Continue','متابعة'))}</button></div>
+  <div class="sf-dialog-actions"><button type="button" class="btn-outline" data-dlg-cancel>${esc(cancel||L('Cancel','إلغاء'))}</button><button type="button" class="btn-primary${danger?' sf-btn-danger':''}" data-dlg-ok>${esc(ok||L('Continue','متابعة'))}</button></div>
  </div>`,(dlg,finish)=>{
   dlg.querySelector('[data-dlg-ok]').onclick=()=>finish(true);
   setTimeout(()=>dlg.querySelector(danger?'[data-dlg-cancel]':'[data-dlg-ok]')?.focus(),30);

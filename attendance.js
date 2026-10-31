@@ -173,7 +173,7 @@ function renderPeriodBulkBar(){
 async function approveSelectedPeriods(){
  const groups=approvalGroups.filter(g=>selectedPeriods.has(g.key)&&bulkSelectable(g));if(!groups.length||bulkApproving)return;
  const days=groups.reduce((t,g)=>t+g.rows.length,0),total=groups.filter(g=>g.costed).reduce((t,g)=>t+Number(g.total||0),0);
- if(!confirm(language==='en'?`Approve ${groups.length} periods (${days} days)${salaryInfo?` — total to projects SAR ${money(total)}`:''}?`:`اعتماد ${groups.length} فترة (${days} يوم)${salaryInfo?` — الإجمالي على المشاريع ${money(total)} ريال`:''}؟`))return;
+ if(!(await sfAsk(language==='en'?`Approve ${groups.length} periods (${days} days)?`:`اعتماد ${groups.length} فترة (${days} يوم)؟`,{message:salaryInfo?(language==='en'?`Total to projects: SAR ${money(total)}`:`الإجمالي على المشاريع: ${money(total)} ريال`):'',ok:language==='en'?'Approve':'اعتماد'}))||bulkApproving)return;
  bulkApproving=true;renderPeriodBulkBar();let ok=0,changed=0;const failed=[];
  try{for(const g of groups){
   try{await checked(db.rpc('sf_review_attendance_period',{p_rows:g.rows.map(r=>({id:r.id,revision:r.period_revision})),p_review:'approved',p_note:null}));ok++;selectedPeriods.delete(g.key)}
@@ -278,7 +278,7 @@ async function reviewPeriod(group,review,note){
 async function handlePeriodAction(b){
  if(b.dataset.periodApprove!==undefined){
   const g=approvalGroups[Number(b.dataset.periodApprove)];
-  if(g&&!confirm(tr('اعتماد الفترة')+` ${g.from} → ${g.to} (${g.rows.length} ${tr('يوم')})`+(g.costed?` — ${tr('الإجمالي على المشروع')}: ${sar(g.total)}`:'')+'؟'))return true;
+  if(g&&!(await sfAsk(tr('اعتماد الفترة')+` ${g.from} → ${g.to} (${g.rows.length} ${tr('يوم')})`+(language==='en'?'?':'؟'),{message:g.costed?`${tr('الإجمالي على المشروع')}: ${sar(g.total)}`:'',ok:language==='en'?'Approve':'اعتماد'})))return true;
   b.disabled=true;try{await reviewPeriod(g,'approved')}finally{b.disabled=false}return true;
  }
  if(b.dataset.periodReject!==undefined){rejectingPeriod=approvalGroups[Number(b.dataset.periodReject)]?.key||'';renderApprovalTable();return true}
@@ -382,7 +382,7 @@ async function handleExpenseAction(b){
   b.disabled=true;try{await setExpenseReview(rec('expenseRejectConfirm'),'rejected',note)}finally{b.disabled=false}return true;
  }
  if(b.dataset.expenseWithdraw!==undefined){
-  const r=rec('expenseWithdraw');if(!r||!confirm(tr('سحب هذا المصروف؟ سيُحذف الطلب ولن يُراجع.')))return true;
+  const r=rec('expenseWithdraw');if(!r||!(await sfAsk(tr('سحب هذا المصروف؟ سيُحذف الطلب ولن يُراجع.'),{ok:language==='en'?'Withdraw':'سحب',danger:true})))return true;
   try{await checked(db.rpc('sf_withdraw_expense',{p_id:r.id}))}catch(error){throw expenseError(error)}
   if(editingExpense?.id===r.id){editingExpense=null;renderExpenseEditBanner()}
   message('تم سحب المصروف.');await refresh();return true;
@@ -445,7 +445,7 @@ $('loginForm').onsubmit=e=>{e.preventDefault();run(async()=>{
  try{const code=$('email').value.trim();await checked(db.auth.signInWithPassword({email:code.includes('@')?code:code.toLowerCase()+'@engineers.skyfield.invalid',password:$('password').value}));$('password').value='';await load()}
  finally{button.disabled=false}
 })};
-$('logout').onclick=()=>{if(monthBusy||!mayDiscardForm()||(window.sfAccountingHasDraft?.()&&!confirm(tr('لديك تغييرات لم تحفظ. هل تريد تركها؟'))))return;run(async()=>{await checked(db.auth.signOut());periodFormDirty=false;location.reload()})};
+$('logout').onclick=async()=>{if(monthBusy||!(await mayDiscardForm())||(window.sfAccountingHasDraft?.()&&!(await askDiscard())))return;run(async()=>{await checked(db.auth.signOut());periodFormDirty=false;location.reload()})};
 db.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'){window.sfAccountingClose?.();me=null;members=[];records=[];monthSaved.clear();editingPeriod=null;periodFormDirty=false;showPortal(false);}});
 
 function submit(form,fn){form.onsubmit=e=>{e.preventDefault();run(async()=>{const b=form.querySelector('button');b.disabled=true;try{await fn(form);message(form.id==='memberForm'?'تم حفظ بيانات المهندس.':'تم الحفظ وإرسال الطلب للاعتماد.');await refresh()}finally{b.disabled=false}})}}
@@ -462,7 +462,7 @@ submit($('memberForm'),async f=>{
  if(window.sfSaveSupplemental)await window.sfSaveSupplemental(v.user_id,updates);
  await reloadEngineerDirectory();$('editEngineerPanel').hidden=true;
 });
-$('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(await handlePeriodAction(b))return;if(await handleExpenseAction(b))return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!confirm(tr('السكن خارج الرياض الذي توفره الشركة منفصل عن بدل السكن في الراتب، ويُحمّل على المشروع. تأكد فقط أن نفس السكن ونفس الفترة لم يُعتمدا من قبل. هل تعتمد؟')))return;await setExpenseReview(r,b.dataset.value);}});
+$('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(await handlePeriodAction(b))return;if(await handleExpenseAction(b))return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!(await sfAsk(language==='en'?'Approve this housing expense?':'اعتماد مصروف السكن هذا؟',{message:tr('السكن خارج الرياض الذي توفره الشركة منفصل عن بدل السكن في الراتب، ويُحمّل على المشروع. تأكد فقط أن نفس السكن ونفس الفترة لم يُعتمدا من قبل. هل تعتمد؟'),ok:language==='en'?'Approve':'اعتماد'})))return;await setExpenseReview(r,b.dataset.value);}});
 $('refresh').onclick=()=>run(refresh);$('month').onchange=()=>run(refresh);
 $('export').onclick=()=>{const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=approvalType!=='expenses'?exportPeriodRows():[['المهندس','التاريخ','البند','المشروع','المبلغ','الحالة','ساعات إضافية','التصفية','تاريخ التصفية'],...filteredApprovalRecords().map(({r})=>[members.find(m=>m.user_id===r.user_id)?.name,r.day,r.label,projects.find(p=>p.id===r.project_id)?.name||'عام',r.amount,labels[r.review],r.overtime||0,r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'',r.settled_at||''])];const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='skyfield-'+approvalType+'-'+$('month').value+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 $('language').value=language;$('loginLanguage').value=language;function changeLanguage(value){language=value;$('language').value=value;$('loginLanguage').value=value;localStorage.setItem('sf-language',language);translateUI();renderSecCardBanner();window.sfAccountingLanguageChanged?.();if(me?.role==='accountant')return;if(me)run(async()=>{renderMonthEntries();updateRangeControls();populateProjectSelect($('expenseForm'));renderProjectChoices();renderEngineerList();renderTimesheetControls();await refresh()})};$('language').onchange=()=>changeLanguage($('language').value);$('loginLanguage').onchange=()=>changeLanguage($('loginLanguage').value);new MutationObserver(()=>translateUI()).observe(document.body,{childList:true,subtree:true});translateUI();
@@ -639,9 +639,11 @@ async function loadAttendanceMonth(resetForm=true){
  }catch(error){monthlyNotice('تعذر تحميل الشهر. اضغط تحديث للمحاولة مجددًا.');throw error}
  finally{monthBusy=false;renderMonthEntries();}
 }
-function mayDiscardForm(){return !periodFormDirty||confirm(tr('لديك تغييرات لم تحفظ. هل تريد تركها؟'))}
-function startPeriodEdit(group){
- if(monthBusy||!monthReady||group.rows.some(r=>r.review==='approved')||!mayDiscardForm())return;
+// Unsaved changes: asked in the main page's dialog; true when there is nothing to lose, or after "Discard".
+function askDiscard(){return sfAsk(tr('لديك تغييرات لم تحفظ. هل تريد تركها؟'),{ok:language==='en'?'Discard':'ترك التغييرات',danger:true})}
+async function mayDiscardForm(){return !periodFormDirty||await askDiscard()}
+async function startPeriodEdit(group){
+ if(monthBusy||!monthReady||group.rows.some(r=>r.review==='approved')||!(await mayDiscardForm()))return;
  editingPeriod={...group,rows:group.rows.map(row=>({...row}))};const row=group.rows[0];
  $('rangeFrom').value=group.from;$('rangeTo').value=group.to;$('rangeStatus').value=['inside','outside'].includes(row.status)?'site':row.status;$('rangeLeave').value=row.leave_type||'annual';
  $('rangeProject').innerHTML=monthProjectOptions(row.project_id);$('rangeProject').value=row.project_id||'';$('includeFriday').checked=!(group.skipFriday||group.skipWeekend);
@@ -686,14 +688,14 @@ async function savePeriod(remove=false,group=editingPeriod){
 $('rangeStatus').onchange=updateRangeControls;$('rangeProject').addEventListener('change',applyProjectLocation);$('rangeHasOvertime').onchange=updateRangeControls;
 $('rangeForm').addEventListener('input',()=>{periodFormDirty=true});$('rangeForm').addEventListener('change',()=>{periodFormDirty=true});
 $('rangeForm').onsubmit=event=>{event.preventDefault();run(()=>savePeriod())};
-$('cancelPeriodEdit').onclick=()=>{if(mayDiscardForm()){resetPeriodForm();renderMonthEntries()}};
-$('monthEntryRows').onclick=event=>{
+$('cancelPeriodEdit').onclick=async()=>{if(await mayDiscardForm()){resetPeriodForm();renderMonthEntries()}};
+$('monthEntryRows').onclick=async event=>{
  const button=event.target.closest('button');if(!button||monthBusy||!monthReady)return;
  if(button.dataset.editPeriod!==undefined)startPeriodEdit(periodGroups[Number(button.dataset.editPeriod)]);
- if(button.dataset.deletePeriod!==undefined){const group=periodGroups[Number(button.dataset.deletePeriod)];if(group&&!group.rows.some(row=>row.review==='approved')&&mayDiscardForm()&&confirm(tr('هل تريد مسح الفترة بالكامل؟')+'\n'+group.from+' → '+group.to+' · '+group.rows.length+' '+tr('أيام')))run(()=>savePeriod(true,group));}
+ if(button.dataset.deletePeriod!==undefined){const group=periodGroups[Number(button.dataset.deletePeriod)];if(group&&!group.rows.some(row=>row.review==='approved')&&await mayDiscardForm()&&await sfAsk(tr('هل تريد مسح الفترة بالكامل؟'),{message:group.from+' → '+group.to+' · '+group.rows.length+' '+tr('أيام'),ok:language==='en'?'Delete period':'مسح الفترة',danger:true}))run(()=>savePeriod(true,group));}
 };
-$('attendanceMonth').onchange=()=>{if(!mayDiscardForm()){$('attendanceMonth').value=attendanceMonthKey;return}run(()=>loadAttendanceMonth(true))};
-$('reloadAttendance').onclick=()=>{if(mayDiscardForm())run(async()=>{await loadAttendanceMonth(true);message('')})};
+$('attendanceMonth').onchange=async()=>{const next=$('attendanceMonth').value;if(periodFormDirty){$('attendanceMonth').value=attendanceMonthKey;if(!(await mayDiscardForm()))return;$('attendanceMonth').value=next}run(()=>loadAttendanceMonth(true))};
+$('reloadAttendance').onclick=async()=>{if(await mayDiscardForm())run(async()=>{await loadAttendanceMonth(true);message('')})};
 $('quickTimesheet').onclick=()=>run(async()=>{
  if(monthBusy||!monthReady||!me)return;
  $('month').value=attendanceMonthKey;renderTimesheetControls();$('timesheetEngineer').value=me.user_id;$('timesheetProject').value='all';$('timesheetReview').value=$('quickExportReview').value;
@@ -737,7 +739,7 @@ Object.assign(translations,{'يحتاج انتباه':'Needs attention','الب�
 // Accounts (engineers, accountants and the others) are created in one place: the Users & Permissions page.
 $('showCreateEngineer').onclick=()=>{try{if(window.parent!==window&&typeof window.parent.showTab==='function'){window.parent.showTab('users');return}}catch{}location.href='index.html#users'};
 $('cancelEditEngineer').onclick=()=>{$('engineerPasswordForm').reset();$('editEngineerPanel').hidden=true};
-$('members').onclick=e=>{
+$('members').onclick=async e=>{
  const edit=e.target.closest('[data-edit-member]'),remove=e.target.closest('[data-remove-member]');
  if(edit){const member=activeEngineer(edit.dataset.editMember);if(!member)return;
   for(const k of ['user_id','engineer_id','name','inside_rate','outside_rate','overtime_rate','sec_card_no','sec_card_expiry','contact_email'])$('memberForm').elements[k].value=member[k]??'';setCardManaged(false);run(async()=>{const link=await checked(db.from('eq_recipients').select('id').eq('member_user_id',member.user_id).maybeSingle());if($('memberForm').elements.user_id.value===member.user_id)setCardManaged(!!link)});
@@ -745,7 +747,7 @@ $('members').onclick=e=>{
   if(window.sfLoadSupplemental)run(()=>window.sfLoadSupplemental(member));
   $('editEngineerPanel').hidden=false;$('editEngineerPanel').scrollIntoView({behavior:'smooth',block:'start'});$('memberForm').elements.name.focus({preventScroll:true});
  }
- if(remove){const member=activeEngineer(remove.dataset.removeMember);if(!member||!confirm(member.name+' ('+member.engineer_id+')\n'+tr('سيتم إيقاف حساب المهندس وحذفه من القائمة النشطة مع الاحتفاظ بسجلاته السابقة. هل تريد المتابعة؟')))return;
+ if(remove){const member=activeEngineer(remove.dataset.removeMember);if(!member||!(await sfAsk(language==='en'?`Remove ${member.name} (${member.engineer_id})?`:`حذف ${member.name} (${member.engineer_id})؟`,{message:tr('سيتم إيقاف حساب المهندس وحذفه من القائمة النشطة مع الاحتفاظ بسجلاته السابقة. هل تريد المتابعة؟'),ok:language==='en'?'Remove engineer':'حذف المهندس',danger:true})))return;
   run(async()=>{remove.disabled=true;try{await checked(db.rpc('sf_archive_attendance_engineer',{engineer_user_id:member.user_id}));$('editEngineerPanel').hidden=true;$('engineerPasswordForm').reset();await reloadEngineerDirectory();message('تم حذف المهندس من القائمة وإيقاف حسابه. سجلاته السابقة محفوظة.')}finally{remove.disabled=false}});
  }
 };
@@ -848,7 +850,7 @@ $('teamApprovalRows').onclick=e=>run(async()=>{
  const approving=b.dataset.teamApprove!==undefined;
  const note=approving?null:$('teamRejectReason')?.value.trim();
  if(!approving&&!note){message('اكتب سبب الرفض.');return}
- if(approving&&!confirm(tr('اعتماد الفترة')+' '+g.from+' → '+g.to+'؟'))return;
+ if(approving&&!(await sfAsk(tr('اعتماد الفترة')+' '+g.from+' → '+g.to+(language==='en'?'?':'؟'),{ok:language==='en'?'Approve':'اعتماد'})))return;
  if(teamReviewBusy.has(g.key)||teamLoadedMonth!==$('teamApprovalMonth').value)return;
  teamReviewBusy.add(g.key);b.disabled=true;
  try{
@@ -865,7 +867,8 @@ Object.assign(translations,{'تعذر تحميل اعتمادات الفريق. 
  'الفترات المعروضة':'Displayed periods','لا توجد فترات لفريقك مطابقة للاختيارات.':'No matching team periods.',
  'تحديث اعتمادات الفريق':'Refresh team approvals','تم حفظ المشاريع وقادة المشاريع المختارين.':'Saved project settings and leaders.'});
 function setAttendanceView(view,updateHash=true){
- if(view!=='accountingSection'&&window.sfAccountingHasDraft?.()){if(!confirm(tr('لديك تغييرات لم تحفظ. هل تريد تركها؟')))return;window.sfAccountingDiscardDraft?.()}
+ // Unsaved payment details: the page changes only after "Discard" (the draft is then gone, so the check passes).
+ if(view!=='accountingSection'&&window.sfAccountingHasDraft?.()){void askDiscard().then(ok=>{if(!ok)return;window.sfAccountingDiscardDraft?.();setAttendanceView(view,updateHash)});return}
  const panels=['dailySection','expenseSection','monthlySection','admin','engineersSection','accountingSection'];
  if(me?.role==='accountant')view='accountingSection';
  if(view==='accountingSection'&&!['admin','accountant'].includes(me?.role)&&!(me?.role==='engineer'&&me?.can_accounting===true))view='dailySection';

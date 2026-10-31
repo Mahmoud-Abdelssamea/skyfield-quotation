@@ -18,6 +18,9 @@ function sfEmbeddedNavigate(panel){sfHost.sfUnifiedNavigateFromModule(window,pan
 function sfEmbeddedRosterChanged(){sfHost.sfUnifiedRosterChanged(window)}
 async function sfEmbeddedSalaryInfo(){try{return await sfHost.sfUnifiedSalaryPackages(window)}catch(error){console.warn('Salary data unavailable for approvals',error);return null}}
 function sfEmbeddedReviewChanged(){try{sfHost.sfUnifiedReviewChanged(window)}catch(error){console.warn('Project cost refresh skipped',error)}}
+// Yes/no questions open the main page's dialog, which covers this frame too (one inside the frame, which is as tall as
+// its content, could open off-screen). Resolves true or false; options: {message, ok, cancel, danger}.
+function sfAsk(title,options={}){return sfHost.sfConfirm({title,...options})}
 function sfMeasureModule(){requestAnimationFrame(()=>{const h=document.querySelector('main')?.getBoundingClientRect().height||300;sfHost.sfUnifiedResize(window,h)})}
 new ResizeObserver(sfMeasureModule).observe(document.querySelector('main'));
 window.addEventListener('error',()=>sfMeasureModule());
