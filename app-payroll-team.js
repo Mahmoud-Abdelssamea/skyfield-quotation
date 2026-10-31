@@ -52,7 +52,7 @@ function editEngineerRecord(id){const x=sfEngineers.find(e=>e.id===id);if(!x)ret
 async function deleteEngineerRecord(id){
   if(!sfHasAccess('engineers')){alert('Your account does not have access to Engineers.');return;}
   const x=sfEngineers.find(e=>e.id===id);
-  if(!x||!confirm('Delete engineer '+x.name+'?'))return;
+  if(!x||!(await sfConfirm({title:sfLang('Delete engineer '+x.name+'?','حذف المهندس '+x.name+'؟'),ok:sfLang('Delete','حذف'),danger:true})))return;
 
   const previousEngineers=sfEngineers.slice();
   const previousDeletedIds=new Set(sfDeletedDefaultEngineerIds);
@@ -171,7 +171,7 @@ async function payrollSaveSheet(){
 }
 
 function payrollLoadSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(!x)return;sfCurrentPayroll=deepClone(x);payrollRender();window.scrollTo({top:0,behavior:'smooth'})}
-function payrollDeleteSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(x?.status==='approved'){alert('لا يمكن حذف كشف معتمد. يلزم إجراء تصحيح موثق.');return;}if(!x||!confirm('Delete this monthly sheet?'))return;sfPayrollSheets=sfPayrollSheets.filter(s=>s.id!==id);projects.forEach(p=>{p.actualExpenses=(p.actualExpenses||[]).filter(e=>e.sourceId!==id)});saveProjects();payrollSaveStore();if(sfCurrentPayroll?.id===id)payrollNewSheet()}
+async function payrollDeleteSheet(id){const x=sfPayrollSheets.find(s=>s.id===id);if(x?.status==='approved'){alert('لا يمكن حذف كشف معتمد. يلزم إجراء تصحيح موثق.');return;}if(!x||!(await sfConfirm({title:sfLang('Delete this monthly sheet?','حذف كشف هذا الشهر؟'),ok:sfLang('Delete sheet','حذف الكشف'),danger:true})))return;sfPayrollSheets=sfPayrollSheets.filter(s=>s.id!==id);projects.forEach(p=>{p.actualExpenses=(p.actualExpenses||[]).filter(e=>e.sourceId!==id)});saveProjects();payrollSaveStore();if(sfCurrentPayroll?.id===id)payrollNewSheet()}
 function payrollApproveCurrent(){if(!sfCurrentPayroll)return;sfCurrentPayroll.status='approved';payrollSaveSheet()}
 function payrollRenderSaved(){const root=document.getElementById('payroll-saved-list');if(!root)return;const q=(document.getElementById('payroll-search')?.value||'').toLowerCase();const list=sfPayrollSheets.filter(s=>{const p=projects.find(x=>x.id===s.projectId);return[s.month,p?.name,s.status].join(' ').toLowerCase().includes(q)});root.innerHTML=list.length?list.map(s=>{const p=projects.find(x=>x.id===s.projectId);const total=(s.rows||[]).reduce((a,r)=>a+payrollCalcStandalone(r,s.standardDays).net,0);return`<div class="payroll-sheet-card"><strong>${escHtml(s.month)} — ${escHtml(p?.name||'General')}</strong><small>${s.rows.length} employees · ${fmtSAR(total)} · ${escHtml(s.status||'draft')}</small><div class="payroll-sheet-card-actions"><button class="btn-sm" onclick="payrollLoadSheet('${s.id}')">Open</button><button class="btn-sm" onclick="payrollExportXlsx('${s.id}')">Excel</button>${s.status==='approved'?'':`<button class="btn-sm" onclick="payrollDeleteSheet('${s.id}')">Delete</button>`}</div></div>`}).join(''):'<div class="empty-resource" style="grid-column:1/-1">No monthly sheets saved yet.</div>';updateSidebarCounts()}
 function payrollSheetForAction(id){return id?sfPayrollSheets.find(x=>x.id===id):sfCurrentPayroll}

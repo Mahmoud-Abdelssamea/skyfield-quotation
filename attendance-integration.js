@@ -472,7 +472,9 @@ payrollApproveCurrent=async function(){
   sfPayrollStatus(text);sfPayrollApproveNotice(text);return;
  }
  if(sheet.month===sfRiyadhToday().slice(0,7)||sheet.rows.some(r=>r.attSummary?.unrecorded)){
-  if(!confirm('تأكيد مراجعة الشهر: الأيام غير المسجلة والأيام المتبقية لا تخصم تلقائيًا، وتُحسب ضمن الراتب الثابت. هل راجعت الغياب والإجازات قبل الاعتماد؟'))return;
+  if(!(await sfConfirm({title:sfLang('Did you review absences and leave before approving?','هل راجعت الغياب والإجازات قبل الاعتماد؟'),
+    message:sfLang('Unrecorded and remaining days are not deducted automatically; they are paid as part of the fixed salary.','الأيام غير المسجلة والأيام المتبقية لا تخصم تلقائيًا، وتُحسب ضمن الراتب الثابت.'),
+    ok:sfLang('Approve month','اعتماد الشهر')})))return;
  }
  if(!sheet.rows.length||!sfValidatePayrollUnique(sheet))return;
  sheet.status='approved';return await sfSimplePayrollSaveBase();

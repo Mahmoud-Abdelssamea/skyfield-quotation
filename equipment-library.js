@@ -126,7 +126,7 @@ function editCostEquipmentRecord(id){
  sfEqField('cost-eq-form-title').textContent='Edit Equipment';sfEqField('cost-eq-save-btn').textContent='Update Equipment';
  sfEqField('cost-eq-name')?.scrollIntoView({behavior:'smooth',block:'center'});sfEqField('cost-eq-name')?.focus();
 }
-function saveCostEquipmentRecord(){
+async function saveCostEquipmentRecord(){
  const name=(sfEqField('cost-eq-name')?.value||'').trim();
  if(!name){alert('Equipment name is required.');sfEqField('cost-eq-name')?.focus();return}
  const read=id=>{const t=(sfEqField(id)?.value||'').trim();if(!t)return 0;const n=parseFloat(t);return Number.isFinite(n)&&n>=0?n:NaN};
@@ -134,13 +134,14 @@ function saveCostEquipmentRecord(){
  if([day,week,month].some(Number.isNaN)){alert('Prices must be numbers of 0 or more.');return}
  if(!(day>0||week>0||month>0)){alert('Enter at least one price: per day, per week or per month.');sfEqField('cost-eq-daily')?.focus();return}
  const id=sfEquipmentEditingId||('eq_'+Date.now()+'_'+Math.floor(Math.random()*100000));
- if(sfEquipmentLibrary().some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase())&&!confirm(`"${name}" already exists in the library. Save another device with the same name?`))return;
+ if(sfEquipmentLibrary().some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase())&&!(await sfConfirm({title:sfLang(`"${name}" is already in the library. Save another device with the same name?`,`«${name}» موجود بالفعل في المكتبة. حفظ جهاز آخر بنفس الاسم؟`),ok:sfLang('Save anyway','حفظ على أي حال')})))return;
  sfEquipmentWrite({v:2,id,kit:name,mfr:(sfEqField('cost-eq-mfr')?.value||'').trim(),category:(sfEqField('cost-eq-category')?.value||'').trim(),daily:day,weekly:week,monthly:month});
  resetCostEquipmentForm();sfEquipmentAfterChange();
 }
-function deleteCostEquipmentRecord(id){
+async function deleteCostEquipmentRecord(id){
  const x=sfEquipmentLibrary().find(e=>e.id===String(id));if(!x)return;
- if(!confirm(`Delete "${x.name}" from the equipment library?\nIt will no longer appear in new quotations. Saved quotations keep it.`))return;
+ if(!(await sfConfirm({title:sfLang(`Delete "${x.name}" from the equipment library?`,`حذف «${x.name}» من مكتبة المعدات؟`),
+   message:sfLang('It will no longer appear in new quotations. Saved quotations keep it.','لن يظهر في عروض الأسعار الجديدة، والعروض المحفوظة تحتفظ به.'),ok:sfLang('Delete','حذف'),danger:true})))return;
  sfEquipmentWrite({id:x.id,deleted:true});if(sfEquipmentEditingId===x.id)resetCostEquipmentForm();sfEquipmentAfterChange();
 }
 function sfRenderEquipmentLibrary(){

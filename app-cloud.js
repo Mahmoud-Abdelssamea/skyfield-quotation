@@ -230,7 +230,9 @@ async function sfUpdateRecoveredPassword(event){
 
 async function sfLogout(){
   if(!sfDb)return;
-  try{await sfRetryUnsaved()}catch(e){} const sfLeft=sfUnsavedCount(); if(!confirm(sfLeft?`${sfLeft} change${sfLeft>1?'s have':' has'} not reached the server yet (no connection). Logging out now will lose ${sfLeft>1?'them':'it'}.\n\nLog out anyway?`:'Log out from the secure Sky Field system?'))return; if(sfLeft)localStorage.removeItem(SF_UNSAVED_STORE);
+  try{await sfRetryUnsaved()}catch(e){} const sfLeft=sfUnsavedCount(); if(!(await sfConfirm(sfLeft?{title:sfLang('Log out anyway?','تسجيل الخروج على أي حال؟'),
+    message:sfLang(`${sfLeft} change${sfLeft>1?'s have':' has'} not reached the server yet (no connection). Logging out now will lose ${sfLeft>1?'them':'it'}.`,`${sfLeft} تعديل لم يصل إلى الخادم بعد (لا يوجد اتصال). تسجيل الخروج الآن سيفقدها.`),ok:sfLang('Log out','تسجيل الخروج'),danger:true}
+    :{title:sfLang('Log out from the secure Sky Field system?','تسجيل الخروج من نظام سكاي فيلد؟'),ok:sfLang('Log out','تسجيل الخروج')})))return; if(sfLeft)localStorage.removeItem(SF_UNSAVED_STORE);
   setCloudStatus('saving','Signing out…');
   try{
     if(sfDataUserId())sessionStorage.removeItem('sfHydrationSnapshot:'+sfDataUserId());
@@ -886,9 +888,9 @@ function setCloudStatus(state,label){
   el.className='cloud-chip '+(state||'');
   const txt=el.querySelector('.cloud-label'); if(txt)txt.textContent=label||'Cloud';
 }
-function restoreDefaultScopeActivity(id){
+async function restoreDefaultScopeActivity(id){
   const item=scopeActivityItemById(id),base=baseScopeActivityById(id);
-  if(!item||item.custom||!item.modified||!base||!confirm('Restore the original values for this activity?'))return;
+  if(!item||item.custom||!item.modified||!base||!(await sfConfirm({title:sfLang('Restore the original values for this activity?','استرجاع القيم الأصلية لهذا النشاط؟'),ok:sfLang('Restore','استرجاع')})))return;
   localStorage.setItem(SF_SCOPE_ACTIVITY_KEY_PREFIX+item.id,JSON.stringify({id:item.id,deleted:true,updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''}));
   const oldKey=k(item.cat,item.code),newKey=k(base.cat,base.code);
   if(selActs[oldKey]){
@@ -923,7 +925,8 @@ async function migrateLegacyDocumentsToStorage(){
   savedQuotes.forEach(q=>(q.snapshot?.attachments||[]).forEach(d=>{if(!d.storagePath&&String(d.url||'').startsWith('data:'))candidates++}));
   projects.forEach(p=>(p.docs||[]).forEach(d=>{if(!d.storagePath&&String(d.url||'').startsWith('data:'))candidates++}));
   if(!candidates){alert('No legacy Base64 documents were found. New uploads are already stored in Supabase Storage.');return}
-  if(!confirm(`Move ${candidates} legacy document reference(s) to private Supabase Storage? Keep a JSON backup until the migration is verified.`))return;
+  if(!(await sfConfirm({title:sfLang(`Move ${candidates} legacy document reference(s) to private storage?`,`نقل ${candidates} مستند قديم إلى التخزين الخاص؟`),
+    message:sfLang('Keep a JSON backup until the migration is verified.','احتفظ بنسخة احتياطية JSON حتى تتأكد من النقل.'),ok:sfLang('Move documents','نقل المستندات')})))return;
   setCloudStatus('saving','Migrating legacy documents…');
   let migrated=0,failed=0;const quoteDocumentMap=new Map();
   for(const q of savedQuotes){
@@ -1007,12 +1010,14 @@ function importBackup(input){
   const file=input.files&&input.files[0];
   if(!file) return;
   const reader=new FileReader();
-  reader.onload=e=>{
+  reader.onload=async e=>{
     try{
       const payload=JSON.parse(e.target.result);
       const data=payload.data||payload; // allow raw dumps too
       if(!data || typeof data!=='object') throw new Error('Invalid backup file.');
-      if(!confirm('سيتم استبدال بيانات المشاريع وعروض الأسعار المحفوظة الحالية بالبيانات الموجودة في هذا الملف. هل تريد المتابعة؟')) { input.value=''; return; }
+      if(!(await sfConfirm({title:sfLang('Replace the current data with this backup?','استبدال البيانات الحالية بهذه النسخة الاحتياطية؟'),
+        message:sfLang('The saved projects and quotations will be replaced with the data in this file.','سيتم استبدال بيانات المشاريع وعروض الأسعار المحفوظة الحالية بالبيانات الموجودة في هذا الملف.'),
+        ok:sfLang('Replace data','استبدال البيانات'),danger:true}))) { input.value=''; return; }
       Object.entries(data).forEach(([k,v])=>{
         if(sfShouldSyncKey(k)) localStorage.setItem(k, v);
       });

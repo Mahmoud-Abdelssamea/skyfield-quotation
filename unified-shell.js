@@ -49,7 +49,11 @@ function sfUnifiedApplyAccess(){
 function sfUnifiedRefreshNavGroups(){for(const label of document.querySelectorAll('.side-nav .side-nav-label')){let el=label.nextElementSibling,any=false;while(el&&!el.classList.contains('side-nav-label')){if(el.classList.contains('side-nav-btn')&&el.style.display!=='none'&&!el.hidden)any=true;el=el.nextElementSibling}label.style.display=any?'':'none'}}
 sfApplyRoleAccess=function(){if(!sfAttendanceOnly)sfUnifiedBaseAccess();sfUnifiedApplyAccess()};
 showTab=function(name,button){
- if(sfUnifiedRoute==='accounting'&&name!=='accounting'){const f=document.getElementById('sf-unified-frame')?.contentWindow;if(f?.sfAccountingHasDraft?.()){if(!confirm(sfUiLanguage==='ar'?'لديك بيانات سداد لم تحفظ. هل تريد تركها؟':'Discard the unsaved payment details?'))return;f.sfAccountingDiscardDraft?.()}}
+ // Unsaved payment details: the page changes only after "Discard" (the draft is then gone, so the check passes).
+ if(sfUnifiedRoute==='accounting'&&name!=='accounting'){const f=document.getElementById('sf-unified-frame')?.contentWindow;if(f?.sfAccountingHasDraft?.()){
+  sfConfirm({title:sfLang('Discard the unsaved payment details?','لديك بيانات سداد لم تحفظ. هل تريد تركها؟'),ok:sfLang('Discard','تركها'),danger:true})
+   .then(ok=>{if(!ok)return;f.sfAccountingDiscardDraft?.();showTab(name,button)});
+  return}}
  if(!sfAuthReady){sfUnifiedDesired=location.hash.slice(1)||sfUnifiedDesired;return;}
  if(!sfUnifiedAllowed(name)){
   name=sfUnifiedHome();

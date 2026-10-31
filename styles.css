@@ -1209,3 +1209,7 @@
 /* Quotation cards: Open and Preview on the first row, the next step with ⋯ beside it on the second. */
 #quote-grid .quote-actions .btn-quote-load,#quote-grid .quote-actions .btn-quote-preview{flex:1 1 40%}
 #quote-grid .quote-actions .btn-quote-invoice,#quote-grid .quote-actions .btn-quote-copy{flex:1 1 60%}
+/* Confirmation dialog: details keep their line breaks; a destructive action is red. */
+.sf-confirm .sf-confirm-body{white-space:pre-line;font-size:13px;color:var(--gray-700);line-height:1.5}
+.sf-dialog .sf-btn-danger{background:#b91c1c;border-color:#b91c1c;color:#fff}
+.sf-dialog .sf-btn-danger:hover{background:#991b1b}

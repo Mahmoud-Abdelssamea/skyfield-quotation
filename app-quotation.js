@@ -350,8 +350,8 @@ function saveScopeActivity(){
   }
   activeCat=cat;closeScopeActivityForm();refreshScopeActivityUi();
 }
-function deleteScopeActivity(id){
-  const item=scopeActivityItemById(id);if(!item?.custom||!confirm('Delete this added activity from the Scope of Work list?'))return;
+async function deleteScopeActivity(id){
+  const item=scopeActivityItemById(id);if(!item?.custom||!(await sfConfirm({title:sfLang('Delete this added activity from the Scope of Work list?','حذف هذا النشاط المضاف من قائمة نطاق العمل؟'),ok:sfLang('Delete','حذف'),danger:true})))return;
   localStorage.setItem(SF_SCOPE_ACTIVITY_KEY_PREFIX+item.id,JSON.stringify({id:item.id,deleted:true,updatedAt:new Date().toISOString(),updatedBy:sfCurrentUser?.email||''}));
   const key=k(item.cat,item.code);delete selActs[key];delete actQty[key];
   if(editingScopeActivityId===item.id)closeScopeActivityForm();refreshScopeActivityUi();
@@ -498,11 +498,11 @@ function addCustomSubItem(parentId){
   buildCustomSOWList();recalc();renderQuot();
   setTimeout(()=>document.querySelector(`[data-csw-id="${child.id}"] textarea.csw-item`)?.focus(),0);
 }
-function removeCustomSOW(id){
+async function removeCustomSOW(id){
   const item=customSOW.find(c=>c.id===id);if(!item)return;
   if(customSOWType(item)==='main'){
     const count=customSOW.filter(c=>c.parentId===id).length;
-    if(count&&!confirm(`Remove this main item and its ${count} sub-item(s)?`))return;
+    if(count&&!(await sfConfirm({title:sfLang(`Remove this main item and its ${count} sub-item(s)?`,`حذف هذا البند الرئيسي و${count} بند فرعي تحته؟`),ok:sfLang('Remove','حذف'),danger:true})))return;
     customSOW=customSOW.filter(c=>c.id!==id&&c.parentId!==id);
   }else{
     const parentId=item.parentId||'';
@@ -660,13 +660,21 @@ function conditionTemplate(type){
 }
 // Drafts belong to the current quotation only; switching templates never silently loses edits.
 let conditionTypeDrafts=new Map();
+// The switch waits for the answer: the list shows the current type meanwhile, and after "Switch type" the change is
+// made through the global setConditionType again (other files wrap it), with the question already answered.
+let sfConditionSwitchConfirmed=false;
 function setConditionType(type, preserveCustom=false){
   const next=conditionTypeKey(type),sel=document.getElementById('condition-type');
   if(next===conditionType&&conds.length)return;
-  if(conds.length&&!confirm(sfUiLanguage==='ar'
-    ?'تغيير نوع العرض سيعرض شروط النوع الجديد. ستبقى تعديلات النوع الحالي محفوظة عند الرجوع إليه في هذا العرض. هل تريد المتابعة؟'
-    :'Switch quotation type? The new type has its own terms. Your current edits will be restored when you switch back in this quotation.')){
-    if(sel)sel.value=conditionType;return false;
+  if(conds.length&&!sfConditionSwitchConfirmed){
+    if(sel)sel.value=conditionType;
+    sfConfirm({title:sfLang('Switch quotation type?','تغيير نوع العرض؟'),
+      message:sfLang('The new type has its own terms. Your current edits will be restored when you switch back in this quotation.','سيعرض النوع الجديد شروطه. ستبقى تعديلات النوع الحالي محفوظة عند الرجوع إليه في هذا العرض.'),
+      ok:sfLang('Switch type','تغيير النوع')}).then(ok=>{
+      if(!ok)return;sfConditionSwitchConfirmed=true;
+      try{if(sel)sel.value=next;setConditionType(type,preserveCustom)}finally{sfConditionSwitchConfirmed=false}
+    });
+    return false;
   }
   conditionTypeDrafts.set(conditionType,JSON.parse(JSON.stringify(conds)));
   const custom=preserveCustom?conds.filter(c=>c.custom||c.cat==='Custom'):[];
@@ -777,7 +785,7 @@ function resetConditionEditor(){
   if(conditionEditorMode==='add'){document.getElementById('condition-edit-en').value='';document.getElementById('condition-edit-ar').value='';return}
   resetConditionAt(conditionEditorIndex);closeConditionEditor();
 }
-function removeCustomCondition(index){const c=conds[index];if(!c?.custom)return;if(confirm('Remove this custom condition?')){conds.splice(index,1);buildConds();renderQuot()}}
+async function removeCustomCondition(index){const c=conds[index];if(!c?.custom)return;if(await sfConfirm({title:sfLang('Remove this custom condition?','حذف هذا الشرط المضاف؟'),ok:sfLang('Remove','حذف'),danger:true})){conds.splice(index,1);buildConds();renderQuot()}}
 function saveConditionAsCompanyDefault(){
   if(!sfIsAdmin()){alert('Only an Administrator can change company defaults.');return}
   const c=conds[conditionEditorIndex];if(!c||c.custom||c.cat==='Payment – Selected')return;
@@ -1480,7 +1488,8 @@ function duplicateQuotation(id){
 }
 async function deleteSavedQuotation(id){
   const rec=savedQuotes.find(q=>q.id===id); if(!rec)return;
-  if(!confirm(sfUiLanguage==='ar'?`حذف ${rec.type==='invoice'?'فاتورة العرض':'عرض السعر'} ${rec.number}${rec.client?' للعميل '+rec.client:''}؟ لا يمكن التراجع عن الحذف.`:`Delete ${rec.type==='invoice'?'invoice quotation':'quotation'} ${rec.number}${rec.client?' for '+rec.client:''}? This cannot be undone.`)) return;
+  if(!(await sfConfirm({title:sfUiLanguage==='ar'?`حذف ${rec.type==='invoice'?'فاتورة العرض':'عرض السعر'} ${rec.number}${rec.client?' للعميل '+rec.client:''}؟`:`Delete ${rec.type==='invoice'?'invoice quotation':'quotation'} ${rec.number}${rec.client?' for '+rec.client:''}?`,
+    message:sfLang('This cannot be undone.','لا يمكن التراجع عن الحذف.'),ok:sfLang('Delete quotation','حذف العرض'),danger:true}))) return;
   savedQuotes=savedQuotes.filter(q=>q.id!==id); if(activeQuoteId===id)activeQuoteId='';
   await saveSavedQuotes(); renderSavedQuotations(); updateActiveQuoteNote();
   const result=await sfSyncQuoteDelete(rec);
@@ -1488,17 +1497,6 @@ async function deleteSavedQuotation(id){
     alert('This quotation was changed by another team member just now, so it was not deleted. The latest version has been reloaded.');
     await sfHydrateQuotationsFromRemote(); renderSavedQuotations(); updateActiveQuoteNote();
   }
-}
-function newSeparateQuotation(){
-  if((Object.keys(selActs).length||Object.keys(selEq).length||customSOW.length) && confirm('Save the current quotation before creating a new separate one?')) saveCurrentQuotation(false);
-  activeQuoteId='';
-  clearAll();
-  generateNextQuoteNumber(true);
-  const st=document.getElementById('station-name'); if(st)st.value='';
-  const subj=document.getElementById('qo-ref'); if(subj)subj.value='';
-  document.getElementById('qdate').value=sfRiyadhToday();
-  updateActiveQuoteNote();
-  showTab('activities',document.querySelector('.tab-btn[onclick*="activities"]'));
 }
 // Unsaved-change tracking for the editor: a fingerprint of its contents is taken
 // after a quotation is loaded, saved or started, and compared before discarding it.
@@ -1516,10 +1514,10 @@ async function sfStartNewQuotation(){
   const ar=sfUiLanguage==='ar',rec=activeQuoteId?savedQuotes.find(q=>q.id===activeQuoteId):null;
   if(sfQuoteHasUnsavedChanges()){
     const name=rec?rec.number:(ar?'العرض الحالي':'the current quotation');
-    if(confirm(ar?`لديك تعديلات غير محفوظة على ${name}. هل تريد حفظها قبل بدء عرض جديد؟`:`You have unsaved changes on ${name}. Save them before starting a new quotation?`)){
+    if(await sfConfirm({title:ar?`حفظ تعديلات ${name}؟`:`Save the changes to ${name}?`,message:ar?`لديك تعديلات غير محفوظة على ${name}. هل تريد حفظها قبل بدء عرض جديد؟`:`You have unsaved changes on ${name}. Save them before starting a new quotation?`,ok:ar?'حفظ':'Save'})){
       await saveCurrentQuotation(false);
       if(sfQuoteHasUnsavedChanges())return; // not saved (nothing to save, or a conflict): stay on it
-    }else if(!confirm(ar?'هل تريد تجاهل التعديلات وبدء عرض سعر جديد فارغ؟':'Discard the changes and start a new blank quotation?'))return;
+    }else if(!(await sfConfirm({title:ar?'هل تريد تجاهل التعديلات وبدء عرض سعر جديد فارغ؟':'Discard the changes and start a new blank quotation?',ok:ar?'تجاهل التعديلات':'Discard changes',danger:true})))return;
   }
   activeQuoteId='';
   clearAll();

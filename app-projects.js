@@ -497,7 +497,8 @@ async function saveProjModal(){
 
 async function deleteProject(id){
   const project=projects.find(p=>p.id===id);if(!project)return;
-  if(!confirm(sfUiLanguage==='ar'?`حذف المشروع «${project.name||''}»${project.client?' للعميل '+project.client:''}؟ لا يمكن التراجع عن الحذف.`:`Delete project "${project.name||''}"${project.client?' for '+project.client:''}? This cannot be undone.`)) return;
+  if(!(await sfConfirm({title:sfUiLanguage==='ar'?`حذف المشروع «${project.name||''}»${project.client?' للعميل '+project.client:''}؟`:`Delete project "${project.name||''}"${project.client?' for '+project.client:''}?`,
+    message:sfLang('This cannot be undone.','لا يمكن التراجع عن الحذف.'),ok:sfLang('Delete project','حذف المشروع'),danger:true}))) return;
   const deletion=await sfSyncProjectDelete(project);
   if(!deletion.ok&&deletion.status==='conflict'){
     sfApplyProjectConflict({id,status:'conflict',remote:deletion.remote});sfCachePerRecordCollection('sfProjects',projects);renderProjects();

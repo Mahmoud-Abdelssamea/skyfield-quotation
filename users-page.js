@@ -229,7 +229,7 @@ function sfUsersOptionText(area,value){
 const SF_USERS_SAVED=()=>({ok:true,text:sfUsersT('Saved. It applies the next time this account opens the site.','تم الحفظ. يسري التغيير عند فتح الحساب للموقع مرة أخرى.')});
 async function sfUsersSetAccess(id,area,value){
   const u=sfUsersRows.find(r=>r.user_id===id);if(!u)return;
-  if(!confirm(sfUsersT('Commercial pages','الأقسام التجارية')+` — ${sfUsersName(u)}: ${sfUsersOptionText(area,value)}?`)){sfUsersRender();return}
+  if(!(await sfConfirm({title:sfUsersT('Commercial pages','الأقسام التجارية')+` — ${sfUsersName(u)}: ${sfUsersOptionText(area,value)}?`,ok:sfUsersT('Save','حفظ')}))){sfUsersRender();return}
   const {error}=await sfDb.rpc('sf_users_set_access',{p_user:id,p_area:area,p_value:value||null});
   sfUsersNote=error?{ok:false,text:sfUsersError(error)}:SF_USERS_SAVED();
   await sfUsersLoad();
@@ -237,8 +237,9 @@ async function sfUsersSetAccess(id,area,value){
 async function sfUsersToggleRole(id,role){
   const u=sfUsersRows.find(r=>r.user_id===id);if(!u||sfUsersRoleBlocked(u,role))return;
   const on=!sfUsersRoles(u)[role],name=sfUsersName(u),label=sfUsersRoleName(role);
-  const extra=!on&&role==='employee'&&!sfUsersRoles(u).accountant?sfUsersT(' The attendance account is archived (records are kept).',' حساب الحضور هيتأرشف (السجلات محفوظة).'):'';
-  if(!confirm((on?sfUsersT(`Give ${name} the role "${label}"?`,`إضافة دور «${label}» لـ ${name}؟`):sfUsersT(`Remove the role "${label}" from ${name}?`,`إزالة دور «${label}» من ${name}؟`))+extra))return;
+  const extra=!on&&role==='employee'&&!sfUsersRoles(u).accountant?sfUsersT('The attendance account is archived (records are kept).','حساب الحضور هيتأرشف (السجلات محفوظة).'):'';
+  if(!(await sfConfirm({title:on?sfUsersT(`Give ${name} the role "${label}"?`,`إضافة دور «${label}» لـ ${name}؟`):sfUsersT(`Remove the role "${label}" from ${name}?`,`إزالة دور «${label}» من ${name}؟`),
+    message:extra,ok:on?sfUsersT('Give role','إضافة الدور'):sfUsersT('Remove role','إزالة الدور'),danger:!on})))return;
   const {error}=await sfDb.rpc('sf_users_set_role',{p_user:id,p_role:role,p_on:on});
   sfUsersNote=error?{ok:false,text:sfUsersError(error)}:SF_USERS_SAVED();
   await sfUsersLoad();
@@ -267,8 +268,9 @@ async function sfUsersAction(act,id){
     }
     if(act==='suspend'||act==='unsuspend'){
       const suspend=act==='suspend';
-      if(!confirm(suspend?sfUsersT(`Suspend ${sfUsersName(u)}? Sign-in is blocked; the data and permissions stay, and reactivating restores them.`,`إيقاف ${sfUsersName(u)}؟ يتمنع الدخول، والبيانات والصلاحيات تفضل زي ما هي وترجع عند التفعيل.`)
-        :sfUsersT(`Reactivate ${sfUsersName(u)}?`,`تفعيل ${sfUsersName(u)}؟`)))return;
+      if(!(await sfConfirm(suspend?{title:sfUsersT(`Suspend ${sfUsersName(u)}?`,`إيقاف ${sfUsersName(u)}؟`),
+          message:sfUsersT('Sign-in is blocked; the data and permissions stay, and reactivating restores them.','يتمنع الدخول، والبيانات والصلاحيات تفضل زي ما هي وترجع عند التفعيل.'),ok:sfUsersT('Suspend','إيقاف'),danger:true}
+        :{title:sfUsersT(`Reactivate ${sfUsersName(u)}?`,`تفعيل ${sfUsersName(u)}؟`),ok:sfUsersT('Reactivate','تفعيل')})))return;
       await sfUsersInvoke({action:'set-suspended',user_id:id,suspended:suspend});
       sfUsersNote={ok:true,text:suspend?sfUsersT('Account suspended.','تم إيقاف الحساب.'):sfUsersT('Account reactivated.','تم تفعيل الحساب.')};return void await sfUsersLoad();
     }

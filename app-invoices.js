@@ -635,9 +635,10 @@ async function saveProforma(openPreview){
   const opts=currentPiOptions(),calc=calculateProforma(piWorkingSource.snapshot||piWorkingSource.quoteSnapshot||{},opts),err=validateProforma(calc);if(err){alert(err);return;}
   const src=piWorkingSource, old=existingId?proformaInvoices.find(p=>p.id===existingId):null;
   const inv=piInvoicedStatus(calc),q=src.number||src.snapshot?.meta?.qno||'';
-  if(inv.after>inv.full+0.01&&!confirm(sfUiLanguage==='ar'
-    ?`تمت فوترة ${fmtPiSAR(inv.before)} من ${fmtPiSAR(inv.full)} على عرض السعر ${q}. هذه الفاتورة (${fmtPiSAR(calc.grandTotal)}) تجعل الإجمالي ${fmtPiSAR(inv.after)}، أي أكثر من قيمة العرض.\n\nهل تريد المتابعة؟ (مثلاً إيجار شهري يُفوتر على نفس العرض)`
-    :`Already invoiced against quotation ${q}: ${fmtPiSAR(inv.before)} of ${fmtPiSAR(inv.full)}. This invoice (${fmtPiSAR(calc.grandTotal)}) brings the total to ${fmtPiSAR(inv.after)}, more than the quotation.\n\nContinue anyway? (For example, a monthly rental invoiced against the same quotation.)`))return;
+  if(inv.after>inv.full+0.01&&!(await sfConfirm({title:sfLang('This invoice goes past the quotation total. Continue?','هذه الفاتورة تتجاوز قيمة العرض. هل تريد المتابعة؟'),message:sfUiLanguage==='ar'
+    ?`تمت فوترة ${fmtPiSAR(inv.before)} من ${fmtPiSAR(inv.full)} على عرض السعر ${q}. هذه الفاتورة (${fmtPiSAR(calc.grandTotal)}) تجعل الإجمالي ${fmtPiSAR(inv.after)}، أي أكثر من قيمة العرض.\n\n(مثلاً إيجار شهري يُفوتر على نفس العرض)`
+    :`Already invoiced against quotation ${q}: ${fmtPiSAR(inv.before)} of ${fmtPiSAR(inv.full)}. This invoice (${fmtPiSAR(calc.grandTotal)}) brings the total to ${fmtPiSAR(inv.after)}, more than the quotation.\n\n(For example, a monthly rental invoiced against the same quotation.)`,
+    ok:sfLang('Save invoice','حفظ الفاتورة')})))return;
   // The number is reserved only once the form is complete, so a failed check or a closed dialog skips no number.
   if(autoNumber())piNoEl.value=await nextProformaNumber(true);
   const rec={
@@ -683,11 +684,13 @@ async function recordInvoicePayment(projectId,sourceProformaId){
   Object.assign(payment,sfNormalizePaymentRecord(payment));payment.receivedDate=date;payment.paymentReference=reference;payment.paymentMethod=method;
   project.updatedAt=new Date().toISOString();saveProjects();renderProjects();renderProformas();if(document.body.dataset.module==='dashboard')renderDashboard();
 }
-function setInvoicePaymentStatus(projectId,sourceProformaId,newStatus){
+async function setInvoicePaymentStatus(projectId,sourceProformaId,newStatus){
   if(newStatus==='paid')return recordInvoicePayment(projectId,sourceProformaId);
   const rec=getInvoicePaymentRecord(projectId,sourceProformaId);if(!rec){alert('The linked payment record could not be found.');return}
   const{project,payment}=rec,ar=sfUiLanguage==='ar',received=paymentReceivedAmount(payment),number=(proformaInvoices.find(x=>x.id===sourceProformaId)||{}).number||payment.label||'';
-  if(!confirm(ar?`إرجاع الفاتورة ${number} إلى غير مدفوعة؟\n\nسيتم مسح ${received>0?'الإيصالات المسجلة بقيمة '+fmtPiSAR(received):'حالة الدفع'}. استخدم هذا فقط إذا سُجّلت الدفعة بالخطأ.`:`Mark invoice ${number} as not paid?\n\nThis clears ${received>0?'the recorded receipt(s) of '+fmtPiSAR(received):'the paid status'}. Use this only if the payment was recorded by mistake.`))return;
+  if(!(await sfConfirm({title:ar?`إرجاع الفاتورة ${number} إلى غير مدفوعة؟`:`Mark invoice ${number} as not paid?`,
+    message:ar?`سيتم مسح ${received>0?'الإيصالات المسجلة بقيمة '+fmtPiSAR(received):'حالة الدفع'}. استخدم هذا فقط إذا سُجّلت الدفعة بالخطأ.`:`This clears ${received>0?'the recorded receipt(s) of '+fmtPiSAR(received):'the paid status'}. Use this only if the payment was recorded by mistake.`,
+    ok:ar?'إرجاع إلى غير مدفوعة':'Mark as not paid',danger:true})))return;
   payment.receipts=[];payment.receivedAmount=0;payment.status='pending';payment.receivedDate='';payment.paymentReference='';payment.paymentMethod='';
   project.updatedAt=new Date().toISOString();saveProjects();renderProjects();renderProformas();if(document.body.dataset.module==='dashboard')renderDashboard();
 }
@@ -782,8 +785,10 @@ async function deleteProforma(id){
   const pi=proformaInvoices.find(p=>p.id===id);if(!pi)return;
   const linkedProject=projects.find(p=>p.id===pi.projectId);
   const linkedPayment=(linkedProject?.payments||[]).find(x=>x.sourceProformaId===id);
-  if(linkedPayment?.status==='paid'&&!confirm('This invoice is marked as PAID. Deleting it will also remove the linked payment record. Continue?'))return;
-  if(!confirm(sfUiLanguage==='ar'?`حذف فاتورة البروفورما ${pi.number}${pi.clientName?' للعميل '+pi.clientName:''}؟ لا يمكن التراجع عن الحذف.`:`Delete Proforma Invoice ${pi.number}${pi.clientName?' for '+pi.clientName:''}? This cannot be undone.`))return;
+  // One question: a paid invoice says so in the details.
+  const paidNote=linkedPayment?.status==='paid'?sfLang('This invoice is marked as PAID. Deleting it will also remove the linked payment record.\n','هذه الفاتورة مسجلة كمدفوعة. حذفها سيحذف سجل الدفعة المرتبط بها أيضًا.\n'):'';
+  if(!(await sfConfirm({title:sfUiLanguage==='ar'?`حذف فاتورة البروفورما ${pi.number}${pi.clientName?' للعميل '+pi.clientName:''}؟`:`Delete Proforma Invoice ${pi.number}${pi.clientName?' for '+pi.clientName:''}?`,
+    message:paidNote+sfLang('This cannot be undone.','لا يمكن التراجع عن الحذف.'),ok:sfLang('Delete invoice','حذف الفاتورة'),danger:true})))return;
   const deletion=await sfSyncInvoiceDelete(pi);
   if(!deletion.ok&&deletion.status==='conflict'){
     sfApplyInvoiceConflict({id,status:'conflict',remote:deletion.remote});sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices);renderProformas();
@@ -913,7 +918,9 @@ function projectInvoiceTotal(p){return (p.payments||[]).reduce((a,x)=>a+sfNum(x.
 async function pmTogglePaymentStatus(index){
   const pay=sfNormalizePaymentRecord(pmTempPays[index]);if(!pay)return;
   if(pay.status==='paid'){
-    if(!confirm(sfUiLanguage==='ar'?`إرجاع ${pay.label||'الدفعة'} إلى غير مدفوعة؟ سيتم مسح الإيصالات المسجلة بقيمة ${fmtPiSAR(paymentReceivedAmount(pay))} عند حفظ المشروع.`:`Mark ${pay.label||'this payment'} as not paid? The recorded receipt(s) of ${fmtPiSAR(paymentReceivedAmount(pay))} are cleared when you save the project.`))return;pay.receipts=[];
+    if(!(await sfConfirm({title:sfUiLanguage==='ar'?`إرجاع ${pay.label||'الدفعة'} إلى غير مدفوعة؟`:`Mark ${pay.label||'this payment'} as not paid?`,
+      message:sfUiLanguage==='ar'?`سيتم مسح الإيصالات المسجلة بقيمة ${fmtPiSAR(paymentReceivedAmount(pay))} عند حفظ المشروع.`:`The recorded receipt(s) of ${fmtPiSAR(paymentReceivedAmount(pay))} are cleared when you save the project.`,
+      ok:sfLang('Mark as not paid','إرجاع إلى غير مدفوعة'),danger:true})))return;pay.receipts=[];
   }else{
     const entry=await sfAskPayment({remaining:paymentRemainingAmount(pay),title:'Record payment received'});if(!entry)return;
     pay.receipts=Array.isArray(pay.receipts)?pay.receipts:[];pay.receipts.push({id:'rcpt_'+Date.now(),amount:roundMoney(entry.amount),date:entry.date,reference:entry.reference,method:entry.method,createdAt:new Date().toISOString()});

@@ -2,6 +2,7 @@
 // sfAskPayment: amount, date (date picker, checked), reference and method in one form.
 // sfAskChoice:  pick one item from a list (a project, a quotation) instead of typing its number.
 // Both return a Promise: the entered values, or null when cancelled.
+// sfConfirm:    a yes/no question replacing the browser's confirm(); resolves true or false.
 // sfNotice:     a message at the bottom of the screen in the page language, replacing the browser's alert();
 //               it stays until closed and returns a Promise that resolves when it is closed.
 (function(){
@@ -58,6 +59,21 @@ window.sfAskChoice=function({title,items,hint}={}){
   if(s){s.oninput=()=>{const t=s.value.trim().toLowerCase();dlg.querySelectorAll('.sf-dialog-item').forEach(b=>b.hidden=!!t&&!b.textContent.toLowerCase().includes(t))};setTimeout(()=>s.focus(),30)}
  });
 };
+// sfConfirm: a yes/no question in the page language, replacing the browser's confirm(). Resolves true or false.
+// {title, message, ok, danger}: the question as the title, details below, the button named after the action;
+// a destructive action gets a red button and the focus starts on Cancel, so Enter never deletes by accident.
+window.sfConfirm=function({title,message='',ok,danger=false}={}){
+ const head=title||message,body=title?message:'';
+ return openDialog(`<div class="sf-dialog-form sf-confirm" role="alertdialog" aria-labelledby="sf-confirm-title">
+  <h3 id="sf-confirm-title">${esc(noticeText(head))}</h3>${body?`<p class="sf-dialog-note sf-confirm-body">${esc(noticeText(body))}</p>`:''}
+  <div class="sf-dialog-actions"><button type="button" class="btn-outline" data-dlg-cancel>${esc(L('Cancel','إلغاء'))}</button><button type="button" class="btn-primary${danger?' sf-btn-danger':''}" data-dlg-ok>${esc(ok||L('Continue','متابعة'))}</button></div>
+ </div>`,(dlg,finish)=>{
+  dlg.querySelector('[data-dlg-ok]').onclick=()=>finish(true);
+  setTimeout(()=>dlg.querySelector(danger?'[data-dlg-cancel]':'[data-dlg-ok]')?.focus(),30);
+ }).then(answer=>answer===true);
+};
+window.sfLang=L; // sfLang('English','عربي'): the text in the page language, for questions written in both
+
 // Messages are written once (mostly in English); SF_NOTICE_AR / SF_NOTICE_EN in i18n-ar.js give the other language.
 function noticeLookup(text){
  const k=String(text).replace(/\s+/g,' ').trim();if(!k)return '';
