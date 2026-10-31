@@ -344,12 +344,39 @@ function sfQuoteSyncPayloadKey(rec){
   const {_syncRevision,_syncUpdatedAt,_syncDeletedAt,_syncState,...rest}=rec||{};
   try{return JSON.stringify(rest);}catch(e){return String(rec&&rec.id||'');}
 }
+// The server list of one record kind, downloading only what changed (supabase/2026-10-31-commercial-changes.sql):
+// the manifest gives each live record's id and revision; a record this browser already holds at that revision, and
+// that is not waiting to be uploaded, is kept as it is; the others are fetched by id. Deleted records are absent
+// from the manifest, so they drop out as with the full list. The full list is used when this browser has no copy,
+// its copy was made under a different access level (limited accounts get records without internal costs), most
+// records changed, or the database does not have the new functions yet.
+function sfMissingRpc(error,name){return error?.code==='PGRST202'||new RegExp(name).test(String(error?.message||''))}
+async function sfFetchChangedRecords(kind,listRpc,byIdsRpc,fromRow,localList){
+  const access=sfIsLimitedMember()?'limited':'full',accessKey='commercialCacheAccess:'+kind; // not an "sf" key, so never synced
+  const done=list=>{try{localStorage.setItem(accessKey,access)}catch(_){}return list};
+  const full=async()=>{const {data,error}=await sfDb.rpc(listRpc,{p_include_deleted:false});if(error)throw error;return done((data||[]).map(fromRow))};
+  const local=(Array.isArray(localList)?localList:[]).filter(r=>r&&r.id!=null&&r._syncRevision!=null);
+  let cachedAccess='';try{cachedAccess=localStorage.getItem(accessKey)||''}catch(_){}
+  if(!local.length||cachedAccess!==access)return full();
+  const {data:manifest,error}=await sfDb.rpc('sf_commercial_manifest',{p_kind:kind});
+  if(error){if(sfMissingRpc(error,'sf_commercial_manifest'))return full();throw error}
+  const dirty=sfDirtyIds(kind),have=new Map(local.map(r=>[String(r.id),r])),keep=new Map(),need=[];
+  for(const m of manifest||[]){const id=String(m.record_id),mine=have.get(id);
+    if(mine&&Number(mine._syncRevision)===Number(m.record_revision)&&!dirty.has(id))keep.set(id,mine);else need.push(id)}
+  if(need.length>Math.max(10,(manifest||[]).length/2))return full();
+  if(need.length){
+    const {data,error:byIdError}=await sfDb.rpc(byIdsRpc,{p_ids:need});
+    if(byIdError){if(sfMissingRpc(byIdError,byIdsRpc))return full();throw byIdError}
+    (data||[]).map(fromRow).forEach(r=>keep.set(String(r.id),r));
+  }
+  return done((manifest||[]).map(m=>keep.get(String(m.record_id))).filter(Boolean)); // newest first, as the full list
+}
 // Replaces the in-memory/local list with the authoritative shared copy from
 // the server. Called after login, on manual pull, and after a conflict.
 async function sfHydrateQuotationsFromRemote(){
   if(!sfDb||!sfCurrentUser)return false;
   try{
-    const sfBefore=Array.isArray(savedQuotes)?savedQuotes.slice():[],since=Date.now(); const {data,error}=await sfDb.rpc('sf_quote_list',{p_include_deleted:false}); if(error)throw error; const server=(data||[]).map(sfQuoteRecordFromRow);
+    const sfBefore=Array.isArray(savedQuotes)?savedQuotes.slice():[],since=Date.now(); const server=await sfFetchChangedRecords('quotes','sf_quote_list','sf_quote_list_by_ids',sfQuoteRecordFromRow,savedQuotes);
     const snapshots=new Map(server.map(r=>[r.id,sfQuoteSyncPayloadKey(r)]));savedQuotes=sfMergeTouched('quotes',server,savedQuotes,since,snapshots,sfQuoteSyncSnapshots);sfQuoteSyncSnapshots=snapshots;
     const wasPaused=sfSyncPaused;sfSyncPaused=true;
     try{localStorage.setItem('sfSavedQuotations',JSON.stringify(savedQuotes));} finally{sfSyncPaused=wasPaused;} sfKeepUnsavedRecords('quotes',sfBefore); return true; }catch(error){ console.warn('Quotation cloud list unavailable, keeping local cache.',error);
@@ -468,13 +495,13 @@ function sfCachePerRecordCollection(key,records){
 async function sfHydrateProjectsFromRemote(){
   if(!sfDb||!sfCurrentUser)return false;
   try{
-    const sfBefore=Array.isArray(projects)?projects.slice():[],since=Date.now(); const {data,error}=await sfDb.rpc('sf_project_list',{p_include_deleted:false});if(error)throw error; const server=(data||[]).map(sfSharedRecordFromRow).map(sfNormalizeProjectRecord); const snapshots=new Map(server.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); projects=sfMergeTouched('projects',server,projects,since,snapshots,sfProjectSyncSnapshots); sfProjectSyncSnapshots=snapshots; sfCachePerRecordCollection('sfProjects',projects); sfKeepUnsavedRecords('projects',sfBefore); return true;
+    const sfBefore=Array.isArray(projects)?projects.slice():[],since=Date.now(); const server=(await sfFetchChangedRecords('projects','sf_project_list','sf_project_list_by_ids',sfSharedRecordFromRow,projects)).map(sfNormalizeProjectRecord); const snapshots=new Map(server.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); projects=sfMergeTouched('projects',server,projects,since,snapshots,sfProjectSyncSnapshots); sfProjectSyncSnapshots=snapshots; sfCachePerRecordCollection('sfProjects',projects); sfKeepUnsavedRecords('projects',sfBefore); return true;
   }catch(error){console.warn('Project record sync is unavailable; keeping the local cache.',error);return false}
 }
 async function sfHydrateInvoicesFromRemote(){
   if(!sfDb||!sfCurrentUser)return false;
   try{
-    const sfBefore=Array.isArray(proformaInvoices)?proformaInvoices.slice():[],since=Date.now(); const {data,error}=await sfDb.rpc('sf_invoice_list',{p_include_deleted:false});if(error)throw error; const server=(data||[]).map(sfSharedRecordFromRow); const snapshots=new Map(server.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); proformaInvoices=sfMergeTouched('invoices',server,proformaInvoices,since,snapshots,sfInvoiceSyncSnapshots); sfInvoiceSyncSnapshots=snapshots; sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices); sfKeepUnsavedRecords('invoices',sfBefore); return true;
+    const sfBefore=Array.isArray(proformaInvoices)?proformaInvoices.slice():[],since=Date.now(); const server=await sfFetchChangedRecords('invoices','sf_invoice_list','sf_invoice_list_by_ids',sfSharedRecordFromRow,proformaInvoices); const snapshots=new Map(server.map(record=>[record.id,sfRecordSyncPayloadKey(record)])); proformaInvoices=sfMergeTouched('invoices',server,proformaInvoices,since,snapshots,sfInvoiceSyncSnapshots); sfInvoiceSyncSnapshots=snapshots; sfCachePerRecordCollection('sfProformaInvoices',proformaInvoices); sfKeepUnsavedRecords('invoices',sfBefore); return true;
   }catch(error){console.warn('Proforma Invoice record sync is unavailable; keeping the local cache.',error);return false}
 }
 async function sfImportLegacyProjects(records){
