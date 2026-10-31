@@ -9,6 +9,14 @@ const sfUnifiedBaseShow=showTab,sfUnifiedBaseUnlock=sfUnlockApp,sfUnifiedBaseLoc
 // Commercial access fills SF_TEAM_MEMBERS, read by the commercial pages through sfTeamMember(); an account with only an
 // equipment role opens the equipment / Iqama pages alone.
 let sfUnifiedAccess=null;
+// While a section opens: a grey outline of the page (title, summary cards, rows) and the name of what is loading.
+function sfUnifiedLoadingHtml(){
+ const title=String(document.getElementById('app-page-title')?.textContent||'').trim(),ar=sfUiLanguage==='ar';
+ const label=title?(ar?'جاري تحميل '+title+'…':'Loading '+title+'…'):(ar?'جاري تحميل القسم…':'Loading…');
+ return '<div class="sf-loading" aria-busy="true"><span class="sf-loading-label">'+escHtml(label)+'</span><span class="sf-skel sf-skel-title"></span>'
+  +'<span class="sf-skel-row"><span class="sf-skel"></span><span class="sf-skel"></span><span class="sf-skel"></span></span>'
+  +'<span class="sf-skel sf-skel-line"></span><span class="sf-skel sf-skel-line"></span><span class="sf-skel sf-skel-line"></span><span class="sf-skel sf-skel-line short"></span></div>';
+}
 function sfUnifiedSetAccess(user,access){
  sfUnifiedAccess=access||null;const level=access?.commercial,name=access?.commercial_name||'';
  SF_TEAM_MEMBERS=level?{[sfNormalizeEmail(user?.email)]:level==='full'?{name,role:'Administrator'}:{name,role:'Commercial Administrator',blocked:['engineers','payroll']}}:{};
@@ -34,7 +42,7 @@ function sfUnifiedApplyAccess(){
  document.body.classList.toggle('sf-attendance-only',sfAttendanceOnly);
  for(const button of document.querySelectorAll('.side-nav-btn[data-module]'))button.style.display=sfUnifiedAllowed(button.dataset.module)?'':'none';
  const sync=document.querySelector('[data-unified-sync]');if(sync)sync.style.display=!sfAttendanceOnly&&sfUnifiedProfile?.role==='admin'&&sfHasAccess('payroll')?'':'none';
-  if(sfUnifiedProfile?.role==='engineer'){const btn=document.querySelector('button.side-nav-btn[data-module="timesheets"]');if(btn)btn.innerHTML='<span class="side-nav-icon">▦</span>'+(sfUiLanguage==='ar'?'المصروفات والتايم شيت':'Expenses & Timesheets');if(sfUnifiedRoute==='timesheets'){document.getElementById('app-page-title').textContent=sfUiLanguage==='ar'?'المصروفات والتايم شيت':'Expenses & Timesheets';document.getElementById('app-page-subtitle').textContent=sfUiLanguage==='ar'?'تابع حضورك ومصروفاتك وحمّل التايم شيت المعتمد':'Track attendance and expenses, and download your approved timesheet';}}
+  if(sfUnifiedProfile?.role==='engineer'){const btn=document.querySelector('button.side-nav-btn[data-module="timesheets"]');if(btn)btn.innerHTML=(btn.querySelector('.side-nav-icon')?.outerHTML||'')+(sfUiLanguage==='ar'?'المصروفات والتايم شيت':'Expenses & Timesheets');if(sfUnifiedRoute==='timesheets'){document.getElementById('app-page-title').textContent=sfUiLanguage==='ar'?'المصروفات والتايم شيت':'Expenses & Timesheets';document.getElementById('app-page-subtitle').textContent=sfUiLanguage==='ar'?'تابع حضورك ومصروفاتك وحمّل التايم شيت المعتمد':'Track attendance and expenses, and download your approved timesheet';}}
   sfUnifiedRefreshNavGroups();
 }
 // Hide a sidebar group heading when every item under it is hidden for this account.
@@ -67,7 +75,7 @@ showTab=function(name,button){
 function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
-  sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').textContent='جاري تحميل القسم… / Loading…';frame.hidden=true;
+  sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').innerHTML=sfUnifiedLoadingHtml();frame.hidden=true;
   frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261030-design';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
@@ -76,7 +84,7 @@ function sfUnifiedOpenModule(){
 function sfUnifiedModuleReady(frameWindow,userId){
  const frame=document.getElementById('sf-unified-frame');
  if(frameWindow!==frame.contentWindow||!sfAuthReady||sfCurrentUser?.id!==userId)return;
- sfUnifiedFrameReady=true;document.getElementById('sf-unified-notice').textContent='';
+ sfUnifiedFrameReady=true;document.getElementById('sf-unified-notice').innerHTML='';
  if(sfUnifiedRoutes[sfUnifiedRoute])sfUnifiedOpenModule();
 }
 function sfUnifiedNavigateFromModule(frameWindow,panel){

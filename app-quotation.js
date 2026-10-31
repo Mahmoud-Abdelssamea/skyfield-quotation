@@ -1462,6 +1462,11 @@ function previewSavedQuotation(id){
   const rec=savedQuotes.find(q=>q.id===id); if(!rec)return;
   activeQuoteId=id; applyQuotationSnapshot(rec.snapshot); showExport(rec.type==='invoice'?'invoice':'quotation');
 }
+// The card shows one next step: create the invoice once the quotation is linked to a project, otherwise link it.
+function quoteNextStep(r,isInv){
+  if(!isInv&&canCreateProformaFromQuote(r))return `<button class="btn-quote-invoice" onclick="openProformaFromQuotation('${r.id}')">Create Proforma</button>`;
+  return r.projectId?'':`<button class="btn-quote-copy" onclick="addQuotationAsProject('${r.id}')">📁 Add as Project</button>`;
+}
 function duplicateQuotation(id){
   const src=savedQuotes.find(q=>q.id===id); if(!src)return;
   const snap=deepClone(src.snapshot);
@@ -1539,7 +1544,7 @@ function updateActiveQuoteNote(){
   const note=document.getElementById('quote-active-note'); if(!note)return;
   if(!rec){ note.style.display='none'; note.textContent=''; return; }
   note.style.display='block';
-  note.textContent='Loaded record: '+rec.number+' — changes will update this record when you click Save Current. Use Duplicate if you need a separate copy.';
+  note.textContent='Loaded record: '+rec.number+' — changes will update this record when you click Save Quotation. Use Duplicate in the ⋯ menu for a separate copy.';
 }
 function renderSavedQuotations(){
   updateQuoteBadge(); updateActiveQuoteNote(); updateProformaAvailabilityControls();
@@ -1565,12 +1570,12 @@ function renderSavedQuotations(){
         ${r.projectId?`<div class="quote-line"><span>Linked project</span><strong style="color:var(--orange-dark)">📁 ${escHtml((projects.find(p=>p.id===r.projectId)||{}).name||'Linked')}</strong></div>`:''}
       </div>
       <div class="quote-actions">
-        <button class="btn-quote-load" onclick="loadQuotation('${r.id}')">Load/Edit</button>
+        <button class="btn-quote-load" onclick="loadQuotation('${r.id}')">Open</button>
         <button class="btn-quote-preview" onclick="previewSavedQuotation('${r.id}')">Preview</button>
-        ${!isInv&&canCreateProformaFromQuote(r)?`<button class="btn-quote-invoice" onclick="openProformaFromQuotation('${r.id}')">Create Proforma</button>`:''}
-        <button class="btn-quote-copy" onclick="duplicateQuotation('${r.id}')">Duplicate</button>
-        <button class="btn-quote-copy" onclick="addQuotationAsProject('${r.id}')">${r.projectId?'📁 Update Project':'📁 Add as Project'}</button>
-        ${sfMoreMenu([`<button type="button" class="sf-more-item danger" onclick="deleteSavedQuotation('${r.id}')">Delete quotation…</button>`])}
+        ${quoteNextStep(r,isInv)}
+        ${sfMoreMenu([`<button type="button" class="sf-more-item" onclick="duplicateQuotation('${r.id}')">Duplicate</button>`,
+          r.projectId?`<button type="button" class="sf-more-item" onclick="addQuotationAsProject('${r.id}')">📁 Update Project</button>`:'',
+          `<button type="button" class="sf-more-item danger" onclick="deleteSavedQuotation('${r.id}')">Delete quotation…</button>`])}
       </div>
     </div>`;
   }).join('');

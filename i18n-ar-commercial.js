@@ -2,6 +2,10 @@
 // proforma invoices, equipment, payroll). Fixed phrases are looked up as written; sentences that carry
 // numbers, dates or names are matched by SF_UI_AR_PATTERNS. Customer documents are never translated here.
 const SF_UI_AR_COMMERCIAL = Object.freeze({
+  // Short notes above the quotation and invoice lists
+  "How it works":"كيف يعمل",
+  "Save each station as its own quotation, then add it as a project to create invoices.":"احفظ كل محطة كعرض سعر مستقل، ثم أضفه كمشروع لإنشاء الفواتير.",
+  "Proforma invoices request payment and are not tax invoices. Create them from a quotation linked to a project.":"الفواتير المبدئية لطلب الدفع وليست فواتير ضريبية. أنشئها من عرض سعر مرتبط بمشروع.",
   // Sidebar, header, shared
   "SF":"SF","↕ Data Backup & Restore":"↕ النسخ الاحتياطي والاستعادة","More actions":"إجراءات أخرى","View all":"عرض الكل","View":"عرض","All":"الكل","Total":"الإجمالي","Actions":"الإجراءات","Client":"العميل","Project":"المشروع","Contract":"العقد","Commission":"العمولة","Approved":"معتمد","Site":"موقع","Office":"مكتب","Leave":"إجازة","Absent":"غياب","Documents":"المستندات","Quote":"عرض","Quotation":"عرض سعر","Item":"البند","SN":"م",
   "active":"نشط","Active":"نشط","completed":"مكتمل","Completed":"مكتمل","on hold":"متوقف","On Hold":"متوقف","cancelled":"ملغي","Cancelled":"ملغي","paid":"مدفوع","Paid":"مدفوع","PAID":"مدفوع","pending":"معلّق","Pending":"معلّق","PENDING":"معلّق","partial":"مدفوع جزئيًا","Partial":"مدفوع جزئيًا","QUOTATION":"عرض سعر","quotation":"عرض سعر","Invoice":"فاتورة","invoice":"فاتورة",
@@ -77,7 +81,7 @@ const SF_UI_AR_PATTERNS=[
   [/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d\d)(?: · (Invoiced|Collected|Cost): (SAR [\d,.]+))?$/,(m,mo,y,k,v)=>`${SF_UI_AR_MONTHS[mo]} ${y}${k?` · ${SF_UI_AR_SERIES[k]}: ${v}`:''}`],
   [/^(\d+) engineer\(s\), approved days$/,'$1 مهندس، الأيام المعتمدة'],
   [/^(\d+) period\(s\) and (\d+) expense\(s\) awaiting approval$/,'$1 فترة و$2 مصروف بانتظار الاعتماد'],
-  [/^Loaded record: (\S+) — changes will update this record when you click Save Current\. Use Duplicate if you need a separate copy\.$/,'العرض المفتوح: $1 — الحفظ يحدّث هذا العرض نفسه. استخدم «نسخ» إذا أردت نسخة منفصلة.'],
+  [/^Loaded record: (\S+) — changes will update this record when you click Save Quotation\. Use Duplicate in the ⋯ menu for a separate copy\.$/,'العرض المفتوح: $1 — «حفظ العرض» يحدّث هذا العرض نفسه. استخدم «نسخ» من قائمة ⋯ إذا أردت نسخة منفصلة.'],
   [/^Invoice (SAR [\d,.]+)$/,'فاتورة $1'],[/^Invoice (SF-PI-[\w-]+)$/,'فاتورة $1'],
   [/^([\d.,]+)% Fixed Advance$/,'دفعة مقدمة ثابتة $1%'],[/^Fixed Amount \((Including VAT|Before VAT)\)$/,(m,b)=>`مبلغ ثابت (${b==='Including VAT'?'شامل الضريبة':'قبل الضريبة'})`],
   [/^([\d.,]+)% Advance Payment against Quotation No\. (.+)$/,'دفعة مقدمة $1% مقابل العرض رقم $2'],[/^Balance (SAR [\d,.]+)$/,'المتبقي $1'],

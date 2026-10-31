@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SKY FIELD – Management System v29</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261030-design">
+<link rel="stylesheet" href="styles.css?v=20261031-design2">
 <script src="supabase-js-2.117.2.js"></script>
 <script src="equipment-library.js?v=20261017-eqlib-rename"></script><script src="sync-safety.js?v=20261028-speed"></script><script src="dialogs.js?v=20261028-quick"></script>
 <script>
@@ -106,35 +106,35 @@
   </div>
   <nav class="side-nav">
     <div class="side-nav-label" data-group="overview">Overview</div>
-    <button class="side-nav-btn active" data-module="dashboard" onclick="showTab('dashboard',this)"><span class="side-nav-icon">⌂</span>Dashboard</button>
-    <button class="side-nav-btn" data-module="analytics" onclick="showTab('analytics',this)"><span class="side-nav-icon">◩</span>Analytics</button>
+    <button class="side-nav-btn active" data-module="dashboard" onclick="showTab('dashboard',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>Dashboard</button>
+    <button class="side-nav-btn" data-module="analytics" onclick="showTab('analytics',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 20h18"/><path d="M6 20v-8"/><path d="M11 20V5"/><path d="M16 20v-5"/><path d="M21 20V9"/></svg></span>Analytics</button>
     <div class="side-nav-label" data-group="commercial">Commercial</div>
-    <button class="side-nav-btn" data-module="activities" onclick="sfStartNewQuotation()"><span class="side-nav-icon">＋</span>New Quotation</button>
-    <button class="side-nav-btn" data-module="quotes" onclick="showTab('quotes',this)"><span class="side-nav-icon">▤</span>Quotations <span class="side-nav-count" id="side-quote-count">0</span></button>
-    <button class="side-nav-btn" data-module="projects" onclick="showTab('projects',this)"><span class="side-nav-icon">▣</span>Projects <span class="side-nav-count" id="side-project-count">0</span></button>
-    <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon">▧</span>Proforma Invoices <span class="side-nav-count" id="side-pi-count">0</span></button> <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon">▥</span>Equipment Library</button>
+    <button class="side-nav-btn" data-module="activities" onclick="sfStartNewQuotation()"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/></svg></span>New Quotation</button>
+    <button class="side-nav-btn" data-module="quotes" onclick="showTab('quotes',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7"/><path d="M9 17h5"/></svg></span>Quotations <span class="side-nav-count" id="side-quote-count">0</span></button>
+    <button class="side-nav-btn" data-module="projects" onclick="showTab('projects',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>Projects <span class="side-nav-count" id="side-project-count">0</span></button>
+    <button class="side-nav-btn" data-module="proformas" onclick="showTab('proformas',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg></span>Proforma Invoices <span class="side-nav-count" id="side-pi-count">0</span></button> <button class="side-nav-btn" data-module="costsettings" onclick="showTab('costsettings',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/><path d="M11 13v2h2v-2"/></svg></span>Equipment Library</button>
     <div class="side-nav-label" data-group="team">Team &amp; Attendance</div>
-    <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon">♙</span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
-    <button class="side-nav-btn" data-module="attendance" onclick="showTab('attendance',this)"><span class="side-nav-icon">◷</span>Attendance</button>
-    <button class="side-nav-btn" data-module="expenses" onclick="showTab('expenses',this)"><span class="side-nav-icon">◫</span>Field Expenses</button>
-    <button class="side-nav-btn" data-module="timesheets" onclick="showTab('timesheets',this)"><span class="side-nav-icon">▦</span>Timesheets &amp; Approvals</button>
+    <button class="side-nav-btn" data-module="engineers" onclick="showTab('engineers',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg></span>Engineers <span class="side-nav-count" id="side-engineer-count">0</span></button>
+    <button class="side-nav-btn" data-module="attendance" onclick="showTab('attendance',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Attendance</button>
+    <button class="side-nav-btn" data-module="expenses" onclick="showTab('expenses',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 5H6a2 2 0 0 0-2 2"/><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M15 13.5h2"/></svg></span>Field Expenses</button>
+    <button class="side-nav-btn" data-module="timesheets" onclick="showTab('timesheets',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 13l2 2 4-4"/></svg></span>Timesheets &amp; Approvals</button>
     <div class="side-nav-label" data-group="equipment">Equipment &amp; Custody</div>
-    <button class="side-nav-btn" data-module="devices" onclick="showTab('devices',this)" style="display:none"><span class="side-nav-icon">⚒</span>Equipment Dashboard</button>
-    <button class="side-nav-btn" data-module="devices-form" onclick="showTab('devices-form',this)" style="display:none"><span class="side-nav-icon">⇄</span>Record Movement</button>
-    <button class="side-nav-btn" data-module="devices-log" onclick="showTab('devices-log',this)" style="display:none"><span class="side-nav-icon">☰</span>Movement Log</button>
-    <button class="side-nav-btn" data-module="devices-inv" onclick="showTab('devices-inv',this)" style="display:none"><span class="side-nav-icon">▥</span>Inventory</button>
-    <button class="side-nav-btn" data-module="devices-calibration" onclick="showTab('devices-calibration',this)" style="display:none"><span class="side-nav-icon">◎</span>Calibration</button>
-    <button class="side-nav-btn" data-module="devices-manage" onclick="showTab('devices-manage',this)" style="display:none"><span class="side-nav-icon">⚙</span>Manage Devices</button>
-    <button class="side-nav-btn" data-module="devices-settings" onclick="showTab('devices-settings',this)" style="display:none"><span class="side-nav-icon">⚑</span>Recipients &amp; Sites</button>
-    <button class="side-nav-btn" data-module="documents" onclick="showTab('documents',this)" style="display:none"><span class="side-nav-icon">🪪</span>Iqama &amp; SEC-ID</button>
+    <button class="side-nav-btn" data-module="devices" onclick="showTab('devices',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-5"/><path d="M4 18h16"/></svg></span>Equipment Dashboard</button>
+    <button class="side-nav-btn" data-module="devices-form" onclick="showTab('devices-form',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 8h14l-3-3"/><path d="M20 16H6l3 3"/></svg></span>Record Movement</button>
+    <button class="side-nav-btn" data-module="devices-log" onclick="showTab('devices-log',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg></span>Movement Log</button>
+    <button class="side-nav-btn" data-module="devices-inv" onclick="showTab('devices-inv',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="13" width="8" height="7" rx="1"/><rect x="13" y="13" width="8" height="7" rx="1"/><rect x="8" y="4" width="8" height="7" rx="1"/></svg></span>Inventory</button>
+    <button class="side-nav-btn" data-module="devices-calibration" onclick="showTab('devices-calibration',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/></svg></span>Calibration</button>
+    <button class="side-nav-btn" data-module="devices-manage" onclick="showTab('devices-manage',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg></span>Manage Devices</button>
+    <button class="side-nav-btn" data-module="devices-settings" onclick="showTab('devices-settings',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>Recipients &amp; Sites</button>
+    <button class="side-nav-btn" data-module="documents" onclick="showTab('documents',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0"/><path d="M14 10h4"/><path d="M14 14h4"/></svg></span>Iqama &amp; SEC-ID</button>
     <div class="side-nav-label" data-group="finance">Finance</div>
-    <button class="side-nav-btn" data-module="accounting" onclick="showTab('accounting',this)"><span class="side-nav-icon">▤</span>Accounts</button>
-    <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon">◈</span>Payroll <span class="side-nav-count" id="side-payroll-count">0</span></button>
+    <button class="side-nav-btn" data-module="accounting" onclick="showTab('accounting',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10l9-6 9 6"/><path d="M5 10v8"/><path d="M10 10v8"/><path d="M14 10v8"/><path d="M19 10v8"/><path d="M3 20h18"/></svg></span>Accounts</button>
+    <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5"/><path d="M18 9.5v5"/></svg></span>Payroll <span class="side-nav-count" id="side-payroll-count">0</span></button>
     <div class="side-nav-label" data-group="settings">Settings</div>
     
-    <button class="side-nav-btn" data-module="attendancesettings" onclick="showTab('attendancesettings',this)"><span class="side-nav-icon">⚙</span>Attendance Settings</button>
-    <button class="side-nav-btn" data-module="users" onclick="showTab('users',this)" style="display:none"><span class="side-nav-icon">👤</span>Users &amp; Permissions</button>
-    <button class="side-nav-btn side-nav-action" data-unified-sync onclick="sfSyncDailyModule()" title="Adds new projects to the attendance list and posts approved attendance and expenses to project cost"><span class="side-nav-icon">↻</span>Sync attendance &amp; projects</button>
+    <button class="side-nav-btn" data-module="attendancesettings" onclick="showTab('attendancesettings',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h9"/><path d="M17 6h3"/><circle cx="15" cy="6" r="2"/><path d="M4 12h3"/><path d="M11 12h9"/><circle cx="9" cy="12" r="2"/><path d="M4 18h11"/><path d="M19 18h1"/><circle cx="17" cy="18" r="2"/></svg></span>Attendance Settings</button>
+    <button class="side-nav-btn" data-module="users" onclick="showTab('users',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><circle cx="12" cy="10" r="2.5"/><path d="M8.5 16a3.5 3.5 0 0 1 7 0"/></svg></span>Users &amp; Permissions</button>
+    <button class="side-nav-btn side-nav-action" data-unified-sync onclick="sfSyncDailyModule()" title="Adds new projects to the attendance list and posts approved attendance and expenses to project cost"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/></svg></span>Sync attendance &amp; projects</button>
   </nav>
   <div class="side-footer">
     <div class="side-account" id="side-account">
@@ -156,11 +156,6 @@
     </div>
     <div class="header-title">
       <h1>SKY FIELD MANAGEMENT SYSTEM</h1>
-      <p>Quotations · Projects · Invoices · Testing &amp; Commissioning</p>
-    </div>
-    <div class="header-meta">
-      <div><strong style="color:var(--gold)">Internal Business System</strong></div>
-      <div>Quotations · Projects · Invoices</div>
     </div>
   </div>
   <div class="header-stripe"></div>
@@ -531,7 +526,7 @@
 <div id="sf-documents-panel" hidden></div>
 <div id="sf-users-panel" hidden></div>
 <div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" scrolling="no"></iframe></div>
-<div id="sf-unified-panel" hidden><p id="sf-unified-notice" role="status"></p><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
+<div id="sf-unified-panel" hidden><div id="sf-unified-notice" role="status"></div><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
     <!-- ENGINEERS TAB -->
     <div id="tab-engineers" style="display:none">
       <div class="resource-toolbar">
@@ -665,13 +660,8 @@
       <div class="quote-toolbar">
         <h3>All quotations / كل عروض الأسعار</h3>
         <input class="quote-search" id="quote-search" placeholder="Search quotation / station / client…" oninput="renderSavedQuotations()">
-        <button class="btn-outline" style="font-size:12px;padding:6px 12px" onclick="newSeparateQuotation()">+ New Separate Quotation</button>
-        <button class="btn-primary" style="font-size:12px;padding:6px 14px" onclick="saveCurrentQuotation(false)">💾 Save Current</button>
-        <button class="btn-outline" style="font-size:12px;padding:6px 12px" onclick="addCurrentQuotationAsProject()">📁 Add as Project</button>
       </div>
-      <div class="quote-hint">
-        Use this area when one project has more than one station or section. Save each station as a separate quotation, then click <strong>Add as Project</strong> to convert and link it to a tracked <strong>Project</strong>. Only after that step will the <strong>Create Proforma</strong> option appear. The project keeps the quotation, Proforma Invoices, payments, commission, attachments, and documents linked in one place.
-      </div>
+      <details class="quote-hint sf-hint"><summary><span>Save each station as its own quotation, then add it as a project to create invoices.</span><span class="sf-hint-more">How it works</span></summary><div class="sf-hint-body">Use this area when one project has more than one station or section. Save each station as a separate quotation, then click <strong>Add as Project</strong> to convert and link it to a tracked <strong>Project</strong>. Only after that step will the <strong>Create Proforma</strong> option appear. The project keeps the quotation, Proforma Invoices, payments, commission, attachments, and documents linked in one place.</div></details>
       <div class="quote-active-note" id="quote-active-note"></div>
       <div class="quote-grid" id="quote-grid"></div>
     </div>
@@ -691,9 +681,7 @@
       <span class="lf-count" id="if-count"></span>
     </div>
     <div class="proj-fin-summary pi-summary" id="pi-summary"></div>
-    <div class="pi-hint">
-        A Proforma Invoice is a payment-request document and is <strong>not a Tax Invoice</strong>. It can only be created after the quotation has been converted and linked to a <strong>Project</strong>. Choose Full, Percentage, or Fixed Amount, then preview and print it as an A4 PDF. Every saved Proforma Invoice is linked to its Project and automatically creates or updates a pending payment entry. Mark that entry as paid inside the Project when payment is received.
-      </div>
+    <details class="pi-hint sf-hint"><summary><span>Proforma invoices request payment and are not tax invoices. Create them from a quotation linked to a project.</span><span class="sf-hint-more">How it works</span></summary><div class="sf-hint-body">A Proforma Invoice is a payment-request document and is <strong>not a Tax Invoice</strong>. It can only be created after the quotation has been converted and linked to a <strong>Project</strong>. Choose Full, Percentage, or Fixed Amount, then preview and print it as an A4 PDF. Every saved Proforma Invoice is linked to its Project and automatically creates or updates a pending payment entry. Mark that entry as paid inside the Project when payment is received.</div></details>
       <div class="pi-grid" id="pi-grid"></div>
     </div>
   </div>
@@ -851,6 +839,7 @@
       <div class="btn-actions">
         <button class="btn-outline" onclick="clearAll()">✕ Clear All</button>
         <button class="btn-outline" onclick="saveCurrentQuotation(false)">💾 Save Quotation</button>
+        <button class="btn-outline" onclick="addCurrentQuotationAsProject()">📁 Add as Project</button>
         <button class="btn-outline" id="pi-current-action-btn" style="display:none" onclick="createProformaFromCurrent()">📄 Create / Preview Proforma Invoice</button>
         <button class="btn-primary" onclick="showExport()">⬇ Preview / Print Quotation</button>
       </div>
@@ -1048,8 +1037,8 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261028-quick"></script><script src="i18n-ar-commercial.js?v=20261023-theme2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261031-changes"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261030-design"></script><script src="app-projects.js?v=20261028-quick"></script><script src="app-invoices.js?v=20261030-company"></script><script src="app-payroll-team.js?v=20261028-quick"></script><script src="app-setup.js?v=20261030-billing"></script>
+<script src="i18n-ar.js?v=20261028-quick"></script><script src="i18n-ar-commercial.js?v=20261031-design2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261031-changes"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-design2"></script><script src="app-projects.js?v=20261028-quick"></script><script src="app-invoices.js?v=20261030-company"></script><script src="app-payroll-team.js?v=20261028-quick"></script><script src="app-setup.js?v=20261030-billing"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261030-billing"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261030-design"></script><script src="unified-shell.js?v=20261030-design"></script><script src="equipment-shell.js?v=20261030-design"></script><script src="documents-page.js?v=20261030-design"></script><script src="users-page.js?v=20261027-roles"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261030-billing"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261030-design"></script><script src="unified-shell.js?v=20261031-design2"></script><script src="equipment-shell.js?v=20261030-design"></script><script src="documents-page.js?v=20261030-design"></script><script src="users-page.js?v=20261027-roles"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>

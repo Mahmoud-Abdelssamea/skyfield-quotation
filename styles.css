@@ -32,8 +32,8 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 24px;
   }
-  .logo-wrap img { height: 46px; }
-  .header-title { text-align: center; }
+  .logo-wrap img { height: 36px; }
+  .header-title { flex: 1; text-align: left; margin-left: 14px; }
   .header-title h1 { color: var(--orange); font-size: 18px; font-weight: 700; letter-spacing: 1px; }
   .header-title p { color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 2px; }
   .header-meta { text-align: right; color: rgba(255,255,255,0.6); font-size: 12px; line-height: 1.6; }
@@ -804,12 +804,13 @@
   }
   .side-nav-btn:hover { background:rgba(255,255,255,.07);color:#fff; }
   .side-nav-btn.active { background:linear-gradient(90deg,rgba(232,97,10,.95),rgba(232,97,10,.72));color:#fff;font-weight:700;box-shadow:0 5px 13px rgba(0,0,0,.16); }
-  .side-nav-icon { width:21px;text-align:center;font-size:15px; }
+  .side-nav-icon { width:21px;text-align:center;font-size:15px;display:inline-flex;align-items:center;justify-content:center; }
+  .side-nav-icon svg { width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round; }
   .side-nav-count { margin-left:auto;background:rgba(255,255,255,.14);border-radius:12px;padding:2px 7px;font-size:11px;font-weight:700; }
   .side-footer { padding:12px;border-top:1px solid rgba(255,255,255,.09); }
   .side-data-btn { width:100%;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:rgba(255,255,255,.72);padding:9px;border-radius:8px;font-size:11px;cursor:pointer; }
 
-  .header-inner { max-width:none;padding:10px 24px; }
+  .header-inner { max-width:none;padding:7px 24px; }
   .header-title h1 { font-size:16px; }
   .header-title p { font-size:11px; }
   .main { max-width:1540px;padding:18px 26px 70px; }
@@ -1189,3 +1190,22 @@
 :where(button:not(:disabled),[role="button"]:not([aria-disabled="true"])){transition:scale 160ms cubic-bezier(.23,1,.32,1)}
 :where(button:not(:disabled),[role="button"]:not([aria-disabled="true"])):active{scale:.97}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+/* Short notes above the quotation and invoice lists; the full explanation opens on request. */
+.sf-hint summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;cursor:pointer;list-style:none}
+.sf-hint summary::-webkit-details-marker{display:none}
+.sf-hint .sf-hint-more{color:var(--orange-dark);font-weight:700;white-space:nowrap}
+.sf-hint .sf-hint-more::after{content:' ▾'}
+.sf-hint[open] .sf-hint-more::after{content:' ▴'}
+.sf-hint .sf-hint-body{margin-top:8px}
+/* Section loading: a grey outline of the page until it opens. */
+.sf-loading{display:flex;flex-direction:column;gap:12px;padding:18px}
+.sf-loading-label{font-size:13px;font-weight:600;color:var(--gray-500)}
+.sf-loading .sf-skel{display:block;height:14px;border-radius:7px;background:var(--gray-100,#f1f3f6);animation:sf-skel-pulse 1.2s ease-in-out infinite}
+.sf-loading .sf-skel-title{height:22px;width:40%}
+.sf-loading .sf-skel-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sf-loading .sf-skel-row .sf-skel{height:64px;border-radius:10px}
+.sf-loading .sf-skel-line.short{width:60%}
+@keyframes sf-skel-pulse{50%{opacity:.55}}
+/* Quotation cards: Open and Preview on the first row, the next step with ⋯ beside it on the second. */
+#quote-grid .quote-actions .btn-quote-load,#quote-grid .quote-actions .btn-quote-preview{flex:1 1 40%}
+#quote-grid .quote-actions .btn-quote-invoice,#quote-grid .quote-actions .btn-quote-copy{flex:1 1 60%}
