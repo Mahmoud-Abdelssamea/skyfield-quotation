@@ -261,8 +261,12 @@ async function sfCloudPushAllLocal(){
   }
 }
 
+// Settings rows only (about 65 KB): quotations, projects and invoices are refreshed right after the app opens
+// (sfRefreshCommercialRecords), so sign-in no longer downloads them twice (supabase/2026-10-31-workspace-settings.sql).
+// The older function, which also sends the three lists, is used only while the database lacks the new one.
 async function sfFetchUserCloudRows(userId){
-  const {data,error}=await sfDb.rpc('sf_workspace_rows_for_current_user');
+  let {data,error}=await sfDb.rpc('sf_workspace_settings_for_current_user');
+  if(error&&(error.code==='PGRST202'||/sf_workspace_settings_for_current_user/.test(String(error.message||''))))({data,error}=await sfDb.rpc('sf_workspace_rows_for_current_user'));
   if(error)throw error;
   return data||[];
 }
