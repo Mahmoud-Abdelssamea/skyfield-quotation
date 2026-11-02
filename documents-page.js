@@ -129,8 +129,8 @@ function sfDocsRender(){
       <option value="expired"${sfDocsFilter==='expired'?' selected':''}>${sfDocsEsc(sfDocsT('Expired only','منتهية فقط'))}</option></select></div></div>
     ${sfDocsLoading?`<div class="docs-status">${sfDocsEsc(sfDocsT('Loading…','جاري التحميل…'))}</div>`:''}
     <div class="docs-table-wrap"><table class="docs-table"><thead><tr><th>${sfDocsEsc(sfDocsT('Employee','الموظف'))}</th><th>${sfDocsEsc(sfDocsT('Code','الكود'))}</th><th>${sfDocsEsc(sfDocsT('Iqama','الإقامة'))}</th><th>SEC-ID</th>${sfDocsCanEdit?`<th>${sfDocsEsc(sfDocsT('Actions','إجراءات'))}</th>`:''}</tr></thead>
-    <tbody>${rows.map(r=>`<tr data-search="${sfDocsEsc([r.name,r.name_en,r.empid,r.iqama,r.sec_id_no].filter(Boolean).join(' ').toLowerCase())}">
-      <td class="docs-name-cell"${L(sfDocsT('Employee','الموظف'))}><div class="docs-person"><span class="docs-avatar">${sfDocsEsc(String(r.name_en||r.name||'?').replace(/[^\p{L}]/gu,'').charAt(0).toUpperCase()||'?')}</span><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b>${r.name_en?`<span class="en" dir="ltr">${sfDocsEsc(r.name_en)}</span>`:''}</span></div></td>
+    <tbody>${rows.map(r=>`<tr data-search="${sfDocsEsc([r.name,r.name_en,r.empid,r.iqama,r.sec_id_no,r.email].filter(Boolean).join(' ').toLowerCase())}">
+      <td class="docs-name-cell"${L(sfDocsT('Employee','الموظف'))}><div class="docs-person"><span class="docs-avatar">${sfDocsEsc(String(r.name_en||r.name||'?').replace(/[^\p{L}]/gu,'').charAt(0).toUpperCase()||'?')}</span><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b>${r.name_en?`<span class="en" dir="ltr">${sfDocsEsc(r.name_en)}</span>`:''}${r.email?`<span class="en docs-email" dir="ltr">${sfDocsEsc(r.email)}</span>`:''}</span></div></td>
       <td${L(sfDocsT('Code','الكود'))}>${r.empid?`<span class="docs-code" dir="ltr">${sfDocsEsc(r.empid)}</span>`:'—'}</td>
       <td${L(sfDocsT('Iqama','الإقامة'))}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.iqama||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.iqama_expiry,''):''}</div></td>
       <td${L('SEC-ID')}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.sec_id_no||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.sec_id_expiry,r.sec_id_returned_on):''}</div></td>
@@ -156,11 +156,13 @@ function sfDocsApplySearch(){
 async function sfDocsLoad(){
   sfDocsLoading=true;sfDocsRender();
   try{
-    const [{data,error},edit]=await Promise.all([
+    const [{data,error},edit,mail]=await Promise.all([
       sfDb.from('eq_recipients').select('id,name,name_en,empid,iqama,phone,iqama_expiry,sec_id_no,sec_id_expiry,sec_id_returned_on').order('name'),
-      sfDb.rpc('eq_can_edit_documents')]);
+      sfDb.rpc('eq_can_edit_documents'),sfDb.rpc('eq_recipient_emails')]);
     if(error)throw error;
-    sfDocsRows=data||[];sfDocsCanEdit=!edit.error&&edit.data===true;
+    // People linked to an engineer account carry its reminder email (the Engineers page shows the same field).
+    const emails=new Map((mail.error?[]:mail.data||[]).map(m=>[String(m.id),m.email||'']));
+    sfDocsRows=(data||[]).map(r=>emails.has(String(r.id))?{...r,engineer:true,email:emails.get(String(r.id))}:r);sfDocsCanEdit=!edit.error&&edit.data===true;
   }catch(error){console.warn('Iqama / SEC-ID list could not be loaded',error);alert(sfDocsT('The Iqama / SEC-ID list could not be loaded. Try again.','تعذر تحميل قائمة الإقامات والبطاقات. حاول مرة أخرى.'))}
   sfDocsLoading=false;sfDocsRender();
 }
@@ -168,7 +170,8 @@ async function sfDocsLoad(){
 const SF_DOCS_ERRORS={NEW_DATE_NOT_LATER:['The new date must be after the current expiry date.','التاريخ الجديد يجب أن يكون بعد تاريخ الانتهاء الحالي.'],
   DATE_IN_FUTURE:['The hand-in date cannot be in the future.','لا يمكن أن يكون تاريخ التسليم في المستقبل.'],NO_SEC_ID:['No SEC-ID card is recorded.','لا توجد بطاقة SEC-ID مسجلة.'],
   ACCESS_DENIED:['You do not have permission to update this.','ليس لديك صلاحية لهذا التحديث.'],RECIPIENT_NOT_FOUND:['This person was not found. Refresh the page.','الشخص غير موجود. حدّث الصفحة.'],
-  IQAMA_INVALID:['The Iqama number must be 10 digits.','رقم الإقامة يجب أن يكون 10 أرقام.'],IQAMA_TAKEN:['This Iqama number is already recorded for another person.','رقم الإقامة ده مسجّل لشخص تاني.']};
+  IQAMA_INVALID:['The Iqama number must be 10 digits.','رقم الإقامة يجب أن يكون 10 أرقام.'],IQAMA_TAKEN:['This Iqama number is already recorded for another person.','رقم الإقامة ده مسجّل لشخص تاني.'],
+  EMAIL_INVALID:['Write a valid email address.','اكتب بريدًا إلكترونيًا صحيحًا.'],NOT_AN_ENGINEER:['No engineer account is linked to this person.','لا يوجد حساب مهندس مربوط بهذا الشخص.']};
 function sfDocsError(error){const code=Object.keys(SF_DOCS_ERRORS).find(k=>String(error?.message||'').includes(k));return code?sfDocsT(...SF_DOCS_ERRORS[code]):(error?.message||String(error))}
 const sfDocsValidDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(new Date(d+'T00:00:00').getTime());
 async function sfDocsSave(rpcName,args,row){
@@ -179,7 +182,8 @@ async function sfDocsSave(rpcName,args,row){
   return true;
 }
 const sfDocsTodayIso=()=>{const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`};
-// The update form: Iqama number and expiry, SEC-ID number and expiry, and "returned to the electricity company" with its date.
+// The update form: Iqama number and expiry, SEC-ID number and expiry, the reminder email (people linked to an engineer
+// account), and "returned to the electricity company" with its date.
 // Resolves with the values, or null when cancelled.
 let sfDocsAskUpdate=row=>new Promise(done=>{
   const sheet=document.createElement('div');sheet.className='docs-sheet';
@@ -189,6 +193,8 @@ let sfDocsAskUpdate=row=>new Promise(done=>{
     <label>${sfDocsEsc(sfDocsT('Iqama expiry date','تاريخ انتهاء الإقامة'))}<input type="date" name="iqama" value="${sfDocsEsc(row.iqama_expiry||'')}"></label>
     <label>${sfDocsEsc(sfDocsT('SEC-ID card number','رقم بطاقة SEC-ID'))}<input name="secNo" dir="ltr" maxlength="50" value="${sfDocsEsc(row.sec_id_no||'')}"></label>
     <label>${sfDocsEsc(sfDocsT('SEC-ID card expiry date','تاريخ انتهاء بطاقة SEC-ID'))}<input type="date" name="secExpiry" value="${sfDocsEsc(row.sec_id_expiry||'')}"></label>
+    ${row.engineer?`<label>${sfDocsEsc(sfDocsT('Reminder email (SEC-ID card reminders)','بريد التذكير (تذكير بطاقة SEC-ID)'))}<input type="email" name="email" dir="ltr" maxlength="254" autocomplete="off" value="${sfDocsEsc(row.email||'')}"></label>`
+      :`<p class="docs-hint">${sfDocsEsc(sfDocsT('No engineer account is linked to this person, so there is no reminder email.','لا يوجد حساب مهندس مربوط بهذا الشخص، فلا يوجد بريد للتذكير.'))}</p>`}
     <label class="docs-check"><input type="checkbox" name="returned"${returned?' checked':''}> ${sfDocsEsc(sfDocsT('The card was returned to the electricity company (SEC)','البطاقة اتسلّمت لشركة الكهرباء'))}</label>
     <label class="docs-returned-date"${returned?'':' hidden'}>${sfDocsEsc(sfDocsT('Date returned','تاريخ التسليم'))}<input type="date" name="returnedOn" value="${sfDocsEsc(row.sec_id_returned_on||sfDocsTodayIso())}" max="${sfDocsTodayIso()}"></label>
     <p class="docs-hint">${sfDocsEsc(sfDocsT('When an engineer leaves, the SEC-ID card goes back to the electricity company; from then on its expiry is no longer followed. A new card (new expiry date) starts it again.','لما المهندس يسيب الشغل البطاقة بترجع لشركة الكهرباء، ومن ساعتها السيستم بيبطّل يتابع تاريخ انتهائها. لو اتطلعت له بطاقة جديدة اكتب تاريخ انتهائها الجديد.'))}</p>
@@ -196,7 +202,7 @@ let sfDocsAskUpdate=row=>new Promise(done=>{
   const form=sheet.querySelector('form'),close=v=>{sheet.remove();done(v)};
   form.elements.returned.onchange=()=>{form.querySelector('.docs-returned-date').hidden=!form.elements.returned.checked};
   form.onsubmit=e=>{e.preventDefault();const f=form.elements;
-    close({iqamaNo:f.iqamaNo.value.trim(),iqama:f.iqama.value,secNo:f.secNo.value.trim(),secExpiry:f.secExpiry.value,returned:f.returned.checked,returnedOn:f.returnedOn.value})};
+    close({iqamaNo:f.iqamaNo.value.trim(),iqama:f.iqama.value,secNo:f.secNo.value.trim(),secExpiry:f.secExpiry.value,returned:f.returned.checked,returnedOn:f.returnedOn.value,email:f.email?f.email.value.trim().toLowerCase():undefined})};
   sheet.querySelector('[data-docs-cancel]').onclick=()=>close(null);
   sheet.onclick=e=>{if(e.target===sheet)close(null)};
   document.body.appendChild(sheet);form.elements.iqamaNo.focus();
@@ -205,6 +211,7 @@ async function sfDocsUpdate(row){
   const v=await sfDocsAskUpdate(row);if(!v)return;
   const iqamaNo=v.iqamaNo===undefined?(row.iqama||''):v.iqamaNo;
   if(iqamaNo&&iqamaNo!==(row.iqama||'')&&!/^\d{10}$/.test(iqamaNo)){alert(sfDocsT('The Iqama number must be 10 digits.','رقم الإقامة يجب أن يكون 10 أرقام.'));return}
+  if(v.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email)){alert(sfDocsT('Write a valid email address.','اكتب بريدًا إلكترونيًا صحيحًا.'));return}
   if([v.iqama,v.secExpiry,v.returned?v.returnedOn:''].some(d=>d&&!sfDocsValidDate(d))){alert(sfDocsT('Write the date as YYYY-MM-DD.','اكتب التاريخ بصيغة YYYY-MM-DD.'));return}
   const datesChanged=(iqamaNo||null)!==(row.iqama||null)||(v.iqama||null)!==(row.iqama_expiry||null)||(v.secNo||null)!==(row.sec_id_no||null)||(v.secExpiry||null)!==(row.sec_id_expiry||null);
   const wasReturned=!!row.sec_id_returned_on;
@@ -212,9 +219,11 @@ async function sfDocsUpdate(row){
   if(wasReturned&&!v.returned&&(v.secExpiry||null)===(row.sec_id_expiry||null)){alert(sfDocsT('To follow the card again, write the expiry date of the new card.','عشان السيستم يتابع البطاقة تاني، اكتب تاريخ انتهاء البطاقة الجديدة.'));return}
   if(v.returned&&!v.returnedOn){alert(sfDocsT('Write the date the card was returned.','اكتب تاريخ تسليم البطاقة.'));return}
   const returnChanged=v.returned&&(!wasReturned||v.returnedOn!==row.sec_id_returned_on||(v.secExpiry||null)!==(row.sec_id_expiry||null));
-  if(!datesChanged&&!returnChanged)return;
+  const emailChanged=v.email!==undefined&&v.email!==(row.email||'');
+  if(!datesChanged&&!returnChanged&&!emailChanged)return;
   if(datesChanged&&!await sfDocsSave('eq_update_documents',{p_id:row.id,p_iqama:iqamaNo||null,p_iqama_expiry:v.iqama||null,p_sec_id_no:v.secNo||null,p_sec_id_expiry:v.secExpiry||null},row))return;
   if(returnChanged)await sfDocsSave('eq_engineer_document',{p_id:row.id,p_document:'sec_id',p_action:'returned',p_date:v.returnedOn},row);
+  if(emailChanged)await sfDocsSave('eq_set_reminder_email',{p_id:row.id,p_email:v.email||null},row);
 }
 async function sfDocsAction(act,id){
   const row=sfDocsRows.find(r=>String(r.id)===String(id));if(!row||!sfDocsCanEdit)return;
