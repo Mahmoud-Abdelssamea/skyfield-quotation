@@ -35,7 +35,7 @@ function errorText(e){
 const stateGroups={attention:['changes_requested','reopened'],done:['cancelled','closed']};
 const inState=(r,state)=>state==='all'||(state==='awaiting'?payable(r):stateGroups[state]?stateGroups[state].includes(r.status):r.status===state);
 function scoped(){const term=A('acctSearch').value.trim().toLocaleLowerCase(),project=A('acctProject').value;
- return items.filter(r=>(!project||project==='all'||(r.project_id||'general')===project)&&(!term||[r.engineer_name,r.engineer_id,r.project_name,r.description,r.payment_reference,r.expense_id].join(' ').toLocaleLowerCase().includes(term)))}
+ return items.filter(r=>(!project||project==='all'||(r.project_id||'general')===project)&&(!term||[r.engineer_name,r.engineer_id,r.project_name,r.description,r.invoice_no,r.payment_reference,r.expense_id].join(' ').toLocaleLowerCase().includes(term)))}
 function filtered(){const state=A('acctState').value;return scoped().filter(r=>inState(r,state))}
 const daysSince=d=>{const t=Date.parse(String(d||'').slice(0,10)+'T00:00:00Z');return Number.isFinite(t)?Math.max(0,Math.floor((Date.parse(today()+'T00:00:00Z')-t)/86400000)):null};
 // Summary cards for the loaded period (project and search applied, status not), each opening its tab.
@@ -63,11 +63,13 @@ function bulkBar(){
  A('acctBulkInfo').textContent=T(`${rows.length} فاتورة محددة · ${money(total)} ريال · ${rows[0].engineer_name}`,`${rows.length} selected · SAR ${money(total)} · ${rows[0].engineer_name}`);
  A('acctBulkPay').disabled=stale||busy||rows.length>100;
 }
+// The engineer's invoice number (expenses entered before 2 Nov 2026 have it in the description instead).
+const invoiceNo=r=>r.invoice_no?T('فاتورة رقم ','Invoice no. ')+r.invoice_no:'';
 function rowHtml(r){
  const id=esc(r.expense_id),off=stale||busy?'disabled':'',btn=(kind,label,cls='secondary')=>`<button type="button" class="${cls}" data-acct-action="${kind}" data-id="${id}" ${['edit','pay','feedback'].includes(kind)?off:''}>${esc(label)}</button>`;
  const primary=payable(r)?btn('pay',T('سداد','Pay'),'acct-primary'):btn('details',T('التفاصيل','Details'));
  const more=[payable(r)?btn('details',T('تفاصيل الفاتورة','Invoice details')):'',btn('print',T('طباعة سند','Print voucher')),btn('history',T('السجل','History')),r.payment_proof_path?btn('proof',T('إثبات السداد','Payment proof')):'',payable(r)?btn('feedback',T('تعليق / طلب تعديل / إلغاء','Comment / correction / cancel')):'',r.batch_id?btn('batch',T('سند الدفعة المجمّع','Batch voucher')):''].join('');
- const desc=`${tr(labels[r.category]||r.category)} · ${r.description||''}`;
+ const desc=[tr(labels[r.category]||r.category),invoiceNo(r),r.description||''].filter(Boolean).join(' · ');
  return `<tr data-row="${id}">${selectCell(r)}<td data-label="${esc(T('المهندس','Engineer'))}"><b>${esc(r.engineer_name)}</b><small>${esc(r.engineer_id)} · ${esc(r.day)}</small></td><td class="acct-desc" data-label="${esc(T('المشروع','Project'))}"><span>${esc(r.project_name||T('مصروف عام','General expense'))}</span><small title="${esc(desc)}">${esc(desc)}</small>${r.accounting_comment?`<small class="acct-comment" title="${esc(r.accounting_comment)}">${esc(T('تعليق الحسابات','Accounts comment'))}: ${esc(r.accounting_comment)}</small>`:''}</td><td class="acct-amount" data-label="${esc(T('المبلغ','Amount'))}">${money(r.amount)}</td><td class="acct-status" data-label="${esc(T('الحالة','Status'))}"><span class="status-badge ${badgeTone(r.status)}">${esc(status(r.status))}</span>${r.payment_date?`<small>${esc(r.payment_date)} · ${esc(r.payment_reference)}</small>`:''}</td><td class="acct-actions-cell"><div class="acct-row-actions">${primary}<details class="acct-menu"><summary aria-label="${esc(T('إجراءات أخرى','More actions'))}">⋯</summary><div class="acct-menu-list">${more}</div></details></div></td></tr>`;
 }
 function projectOptions(){const select=A('acctProject'),old=select.value,projects=new Map(items.map(r=>[r.project_id||'general',r.project_name||T('مصروف عام','General expense')]));
@@ -121,7 +123,7 @@ function printable(rows){
  <h2>${cell(T('بيانات المصروف','Expense details'))}</h2><table><tbody>
  ${full(T('المهندس','Engineer'),r.engineer_name)}
  <tr><th>${cell(T('الرقم الوظيفي','Employee code'))}</th><td dir="ltr">${cell(r.engineer_id)}</td><th>${cell(T('التاريخ','Date'))}</th><td dir="ltr">${cell(r.day)}</td></tr>
- ${full(T('المشروع','Project'),r.project_name||T('مصروف عام','General expense'))}${full(T('نوع المصروف','Expense type'),tr(labels[r.category]||r.category))}${full(T('البيان','Description'),r.description)}
+ ${full(T('المشروع','Project'),r.project_name||T('مصروف عام','General expense'))}${full(T('نوع المصروف','Expense type'),tr(labels[r.category]||r.category))}${full(T('رقم الفاتورة','Invoice number'),r.invoice_no)}${full(T('البيان','Description'),r.description)}
  </tbody></table><h2>${cell(T('الاعتماد والسداد','Approval & payment'))}</h2><table class="payment"><tbody>
  <tr><th>${cell(T('اعتماد الإدارة','Admin approval'))}</th><td>${date(r.reviewed_at)}</td><th>${cell(T('تاريخ السداد','Payment date'))}</th><td dir="ltr">${cell(r.payment_date||'—')}</td></tr>
  ${full(T('مرجع التحويل','Payment reference'),r.payment_reference)}${full(T('ملاحظات','Notes'),r.note)}
@@ -136,7 +138,7 @@ function batchVoucher(rows,ref){
  <h1>${cell(T('سند صرف مجمّع','Batch payment voucher'))}</h1>
  <div class="meta"><div><b>${cell(T('المهندس','Engineer'))}</b>${cell(rows[0]?.engineer_name)} · <span dir="ltr">${cell(rows[0]?.engineer_id)}</span></div><div><b>${cell(T('تاريخ السداد','Payment date'))}</b><span dir="ltr">${cell(ref.payment_date)}</span></div><div><b>${cell(T('مرجع التحويل','Payment reference'))}</b>${cell(ref.payment_reference)}</div><div><b>${cell(T('عدد الفواتير','Invoices'))}</b>${cell(count)}</div></div>${missing}
  <table><thead><tr><th>#</th><th>${cell(T('التاريخ','Date'))}</th><th>${cell(T('المشروع','Project'))}</th><th>${cell(T('البيان','Description'))}</th><th class="n">${cell(T('المبلغ SAR','Amount SAR'))}</th></tr></thead><tbody>
- ${rows.map((r,i)=>`<tr><td>${i+1}</td><td dir="ltr">${cell(r.day)}</td><td>${cell(r.project_name||T('مصروف عام','General expense'))}</td><td>${cell(tr(labels[r.category]||r.category))} · ${cell(r.description)}</td><td class="n">${cell(money(r.amount))}</td></tr>`).join('')}
+ ${rows.map((r,i)=>`<tr><td>${i+1}</td><td dir="ltr">${cell(r.day)}</td><td>${cell(r.project_name||T('مصروف عام','General expense'))}</td><td>${cell([tr(labels[r.category]||r.category),invoiceNo(r),r.description].filter(Boolean).join(' · '))}</td><td class="n">${cell(money(r.amount))}</td></tr>`).join('')}
  </tbody><tfoot><tr><td colspan="4">${cell(T('إجمالي الدفعة','Batch total'))}</td><td class="n">${cell(money(total))}</td></tr></tfoot></table>
  ${ref.note?`<p><b>${cell(T('ملاحظات','Notes'))}:</b> ${cell(ref.note)}</p>`:''}<div class="signatures"><div>${cell(T('توقيع الحسابات','Accounts signature'))}</div><div>${cell(T('مدير القسم','Department Manager'))}</div><div>${cell(T('المدير العام','General Manager'))}</div><div>${cell(T('توقيع المستلم','Received by'))}</div></div></main></body></html>`;
 }
@@ -144,8 +146,8 @@ function printBatch(r){const rows=items.filter(x=>x.batch_id&&x.batch_id===r.bat
 function printRows(rows){const w=window.open('about:blank','_blank');if(!w)throw Error(T('اسمح بنافذة الطباعة.','Allow the print popup.'));w.opener=null;w.document.open();w.document.write(printable(rows));w.document.close();w.focus()}
 function csvText(rows,receipts=null){
  const safe=v=>'"'+String(v??'').replace(/^\s*[=+@\-]/,"'$&").replace(/"/g,'""')+'"';
- const headers=['Expense ID','Engineer','Employee code','Date','Project','Category','Description','Amount SAR','Accounting status','Payment date','Payment reference','Note'];if(receipts)headers.push('Invoice file');
- const data=[headers,...rows.map(r=>{const values=[r.expense_id,r.engineer_name,r.engineer_id,r.day,r.project_name,tr(labels[r.category]||r.category),r.description,r.amount,status(r.status),r.payment_date,r.payment_reference,r.note];if(receipts)values.push(receipts.get(r.expense_id)||'');return values})];
+ const headers=['Expense ID','Engineer','Employee code','Date','Project','Category','Invoice number','Description','Amount SAR','Accounting status','Payment date','Payment reference','Note'];if(receipts)headers.push('Invoice file');
+ const data=[headers,...rows.map(r=>{const values=[r.expense_id,r.engineer_name,r.engineer_id,r.day,r.project_name,tr(labels[r.category]||r.category),r.invoice_no,r.description,r.amount,status(r.status),r.payment_date,r.payment_reference,r.note];if(receipts)values.push(receipts.get(r.expense_id)||'');return values})];
  return '\ufeff'+data.map(row=>row.map(safe).join(',')).join('\r\n');
 }
 function exportCsv(){
@@ -172,7 +174,7 @@ async function downloadReceipts(){
 function printList(){
  if(stale)return;const rows=filtered(),heads=T(['التاريخ','المهندس / الكود','المشروع','الوصف','المبلغ SAR','الحالة'],['Date','Engineer / code','Project','Description','Amount SAR','Status']);
  const w=window.open('about:blank','_blank');if(!w)throw Error(T('اسمح بنافذة الطباعة.','Allow the print popup.'));w.opener=null;
- const cells=r=>[r.day,r.engineer_name+' / '+r.engineer_id,r.project_name||T('مصروف عام','General expense'),r.description,money(r.amount),status(r.status)].map(v=>`<td>${esc(v)}</td>`).join('');
+ const cells=r=>[r.day,r.engineer_name+' / '+r.engineer_id,r.project_name||T('مصروف عام','General expense'),[invoiceNo(r),r.description].filter(Boolean).join(' · '),money(r.amount),status(r.status)].map(v=>`<td>${esc(v)}</td>`).join('');
  w.document.write(`<!doctype html><html lang="${language}" dir="${language==='en'?'ltr':'rtl'}"><meta charset="utf-8"><title>Sky Field — Expense list</title><style>@page{size:A4 landscape;margin:12mm}body{font:12px Arial;color:#173b65}table{border-collapse:collapse;width:100%}td,th{border:1px solid #bbc8d6;padding:9px;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}@media print{button{display:none}}</style><h1>SKY FIELD · ${esc(T('كشف المصروفات المعتمدة','Approved expense list'))}</h1><p>${esc(today())}</p><button onclick="window.print()">${esc(T('طباعة','Print'))}</button><table><thead><tr>${heads.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cells(r)}</tr>`).join('')}<tr><th colspan="4">${esc(T('الإجمالي','Total'))}</th><th>${money(rows.reduce((s,r)=>s+Number(r.amount),0))}</th><td>${rows.length}</td></tr></tbody></table></html>`);w.document.close();w.focus();
 }
 const dialogTabs=['acctDetailPayment','acctDetailFeedback','acctDetailReopen','acctDetailHistory'];
@@ -208,7 +210,7 @@ async function preparePanel(r){
  ++panelRequest;closeEditor();closeFeedback();A('acctHistory').hidden=true;A('acctReopenPanel').hidden=true;batchRows=null;A('acctBatchPanel').hidden=true;detailDirty=false;detail={...r};
  showDialog();A('acctDetailHistory').hidden=A('acctDetailReceipt').hidden=false;
  A('acctInvoiceTitle').textContent=T('تفاصيل الفاتورة','Invoice details')+' · '+r.engineer_name;
- A('acctInvoiceSummary').innerHTML=`<b>${esc(r.project_name||T('مصروف عام','General expense'))}</b><br>${esc(r.day)} · SAR ${esc(money(r.amount))} · ${esc(status(r.status))}<br>${esc(r.description||'')}<br>${esc(r.accounting_comment||'')}`;
+ A('acctInvoiceSummary').innerHTML=`<b>${esc(r.project_name||T('مصروف عام','General expense'))}</b><br>${esc(r.day)} · SAR ${esc(money(r.amount))} · ${esc(status(r.status))}<br>${esc([invoiceNo(r),r.description||''].filter(Boolean).join(' · '))}<br>${esc(r.accounting_comment||'')}`;
  activeTab(null);A('acctDetailPayment').hidden=A('acctDetailFeedback').hidden=!payable(r);A('acctDetailReopen').hidden=!['changes_requested','cancelled'].includes(r.status);A('acctDialogMessage').textContent='';return true;
 }
 async function openInvoice(r){if(stale||busy)return;if(payable(r))await openEditor(r);else if(await preparePanel(r)&&['changes_requested','cancelled'].includes(r.status)){activeTab('acctDetailReopen');A('acctReopenForm').reset();A('acctReopenPanel').hidden=false}}
@@ -228,7 +230,7 @@ async function openBatch(){
  A('acctInvoiceTitle').textContent=T('تسجيل سداد جماعي','Record bulk payment')+' · '+rows[0].engineer_name;
  A('acctInvoiceSummary').innerHTML=`<b>${esc(T(`${rows.length} فاتورة · ${money(total)} ريال`,`${rows.length} invoices · SAR ${money(total)}`))}</b>`;
  A('acctBatchTitle').textContent=T('الفواتير المشمولة','Included invoices');
- A('acctBatchList').innerHTML=`<table><tbody>${rows.map(r=>`<tr><td dir="ltr">${esc(r.day)}</td><td>${esc(r.project_name||T('مصروف عام','General expense'))} · ${esc(r.description||'')}</td><td class="acct-amount">${money(r.amount)}</td></tr>`).join('')}</tbody></table>`;
+ A('acctBatchList').innerHTML=`<table><tbody>${rows.map(r=>`<tr><td dir="ltr">${esc(r.day)}</td><td>${esc([r.project_name||T('مصروف عام','General expense'),invoiceNo(r),r.description||''].filter(Boolean).join(' · '))}</td><td class="acct-amount">${money(r.amount)}</td></tr>`).join('')}</tbody></table>`;
  const f=A('acctBatchForm');f.reset();f.elements.payment_date.value=today();f.elements.payment_date.max=today();A('acctBatchPanel').hidden=false;
 }
 async function saveBatch(e){
