@@ -43,10 +43,13 @@ function canEditDocuments(){return !EQ_PREVIEW&&['admin','storekeeper','document
 async function eqEditDocuments(idx){
   if(!canEditDocuments()){requireEditPermission();return;}
   const e=ENGINEERS[idx];if(!e?.dbId)return;
-  const ask=(label,value)=>{const answer=prompt(translateRuntimeText(label)+' — '+e.name,value||'');return answer===null?null:String(answer).trim();};
-  const iqama=ask('تاريخ انتهاء الإقامة (YYYY-MM-DD)',e.iqamaExpiry);if(iqama===null)return;
-  const secNo=ask('رقم بطاقة SEC-ID',e.secIdNo);if(secNo===null)return;
-  const secExpiry=ask('تاريخ انتهاء بطاقة SEC-ID (YYYY-MM-DD)',e.secIdExpiry);if(secExpiry===null)return;
+  // One form for the three values (dates with the date picker).
+  const v=await localizedForm(eqLang('تعديل المستندات','Edit documents')+' — '+e.name,[
+    {name:'iqama',label:eqLang('تاريخ انتهاء الإقامة','Iqama expiry date'),type:'date',value:e.iqamaExpiry},
+    {name:'secNo',label:eqLang('رقم بطاقة SEC-ID','SEC-ID card number'),type:'text',value:e.secIdNo},
+    {name:'secExpiry',label:eqLang('تاريخ انتهاء بطاقة SEC-ID','SEC-ID card expiry date'),type:'date',value:e.secIdExpiry}],
+    {note:eqLang('اترك الحقل فارغًا لمسحه.','Leave a field empty to clear it.')});
+  if(!v)return;const {iqama,secNo,secExpiry}=v;
   for(const d of [iqama,secExpiry])if(d&&(!/^\d{4}-\d{2}-\d{2}$/.test(d)||Number.isNaN(new Date(d+'T00:00:00').getTime()))){toast(translateRuntimeText('⚠️ اكتب التاريخ بصيغة YYYY-MM-DD'));return;}
   const res=await callRpc('eq_update_documents',{p_id:e.dbId,p_iqama_expiry:iqama||null,p_sec_id_no:secNo||null,p_sec_id_expiry:secExpiry||null});
   if(res.error){toast('⚠️ '+(res.transient?translateRuntimeText('تعذر الاتصال بـ Supabase؛ لم يُحفظ المستلم'):rpcErrorMessage(res.error)));return;}
@@ -1864,8 +1867,28 @@ function labelTableCells(table){
 }
 
 function toggleLanguage(){setLanguage(CURRENT_LANG==='ar'?'en':'ar');}
-function localizedConfirm(message){return confirm(translateRuntimeText(message));}
-function localizedPrompt(message,defaultValue){return prompt(translateRuntimeText(message),defaultValue);}
+// Questions and small forms open the main page's in-page dialogs when this page runs inside it (they cover the frame
+// too); on its own, the browser's boxes. Each returns a Promise. Titles and labels come in the page language.
+function eqDialogs(){try{return window.parent!==window&&typeof window.parent.sfConfirm==='function'?window.parent:null}catch(e){return null}}
+const eqLang=(ar,en)=>CURRENT_LANG==='en'?en:ar;
+// {ok, cancel, danger} name the buttons; a destructive action gets a red button with the focus on Cancel.
+function localizedConfirm(message,options={}){const title=translateRuntimeText(message),host=eqDialogs();return host?host.sfConfirm({...options,title}):Promise.resolve(confirm(title));}
+// fields: [{name, label, type:'text'|'date', value, required, max}] → {name: value} (trimmed), or null when cancelled.
+function localizedForm(title,fields,options={}){
+  const host=eqDialogs();if(host)return host.sfAskForm({...options,title,fields});
+  const out={};
+  for(const f of fields){
+    const answer=prompt(f.label+' — '+title,f.value||'');if(answer===null)return Promise.resolve(null);out[f.name]=String(answer).trim();
+    if(f.type==='date'&&out[f.name]&&!/^\d{4}-\d{2}-\d{2}$/.test(out[f.name])){toast(eqLang('⚠️ اكتب التاريخ بصيغة YYYY-MM-DD','⚠️ Write the date as YYYY-MM-DD'));return Promise.resolve(null);}
+  }
+  return Promise.resolve(out);
+}
+// items: [{label, sub}] → the chosen item's index, or null.
+function localizedChoice(title,items,hint=''){
+  const host=eqDialogs();if(host)return host.sfAskChoice({title,items,hint});
+  const answer=parseInt(prompt(title+'\n'+items.map((x,i)=>`${i+1}. ${x.label}${x.sub?' ('+x.sub+')':''}`).join('\n'))||'',10)-1;
+  return Promise.resolve(answer>=0&&answer<items.length?answer:null);
+}
 
 const languageObserver=new MutationObserver(mutations=>{
   if(CURRENT_LANG!=='en'||I18N_RUNNING)return;
@@ -2071,8 +2094,8 @@ async function retryPendingMovements(silent=true){
   refreshAfterSave();
   return allSent;
 }
-function dropPendingMovement(clientId){
-  if(!localizedConfirm('حذف هذه الحركة غير المحفوظة من هذا المتصفح؟'))return;
+async function dropPendingMovement(clientId){
+  if(!(await localizedConfirm('حذف هذه الحركة غير المحفوظة من هذا المتصفح؟',{danger:true,ok:eqLang('حذف','Delete')})))return;
   setPendingMovements(getPendingMovements().filter(x=>x.clientId!==clientId));renderLog();
 }
 function formatStoredDate(value){
@@ -2972,7 +2995,7 @@ async function saveRecord() {
   // Expired Iqama / SEC-ID of the recipient (or the escort): warn, the user decides.
   const person = kind === 'engineer' ? eng : document.getElementById('f-escort').value;
   const expiredDocs = person ? expiredDocumentsOf(person) : [];
-  if(expiredDocs.length && !localizedConfirm(`تنبيه: ${expiredDocs.join(' و')} لـ ${person} منتهية. هل تريد المتابعة وتسليم الأجهزة؟`)) return;
+  if(expiredDocs.length && !(await localizedConfirm(`تنبيه: ${expiredDocs.join(' و')} لـ ${person} منتهية. هل تريد المتابعة وتسليم الأجهزة؟`,{ok:eqLang('تسليم الأجهزة','Hand over devices')}))) return;
   const movementStatus=document.getElementById('f-status').value;
   if(movementStatus==='استلام'&&!document.getElementById('f-rdate').value){toast('⚠️ تاريخ الاستلام مطلوب');return;}
   if(movementStatus==='تسليم'&&!document.getElementById('f-ddate').value){toast('⚠️ تاريخ التسليم مطلوب');return;}
@@ -2996,7 +3019,7 @@ async function saveRecord() {
     resetForm();refreshAfterSave();
     // Back from outside maintenance: offer to enter the new calibration date and certificate.
     const fromLab = eng === WAREHOUSE_HOLDER ? devs.filter(d => d.status === 'في الصيانة' && d.calibrationRequired) : [];
-    if(fromLab.length && localizedConfirm(`رجع ${fromLab.map(d=>d.id).join('، ')} من الصيانة. هل تريد تحديث تاريخ المعايرة ورفع الشهادة الآن؟`))
+    if(fromLab.length && await localizedConfirm(`رجع ${fromLab.map(d=>d.id).join('، ')} من الصيانة. هل تريد تحديث تاريخ المعايرة ورفع الشهادة الآن؟`,{ok:eqLang('تحديث المعايرة','Update calibration'),cancel:eqLang('لاحقًا','Later')}))
       openDeviceModal(INVENTORY.findIndex(d => d.id === fromLab[0].id));
     return;
   }
@@ -3119,7 +3142,7 @@ function renderLog() {
 async function quickDelete(idx) {
   if(!requireEditPermission())return;
   const rec=RECORDS[idx];if(!rec)return;
-  if(!localizedConfirm('هل أنت متأكد من حذف السجل '+rec.id+'؟ ستعود أجهزته إلى حالتها قبل هذه الحركة.')) return;
+  if(!(await localizedConfirm('هل أنت متأكد من حذف السجل '+rec.id+'؟ ستعود أجهزته إلى حالتها قبل هذه الحركة.',{danger:true,ok:eqLang('حذف السجل','Delete record')}))) return;
   const res=await callRpc('eq_delete_movement',{p_record_no:rec.id,p_expected_updated_at:rec.updatedAt||null});
   if(res.error){toast('⚠️ '+(res.transient?'تعذر الاتصال بـ Supabase؛ لم يُحذف السجل':rpcErrorMessage(res.error)));if(!res.transient)await syncFromCloud();return;}
   applyServerDevices(res.data.devices);RECORDS=RECORDS.filter(r=>r.id!==rec.id);
@@ -3197,7 +3220,7 @@ async function deleteRecord() {
   if(!requireEditPermission())return;
   if(editIdx===null) return;
   const rec=RECORDS[editIdx];if(!rec)return;
-  if(!localizedConfirm('هل أنت متأكد من حذف السجل '+rec.id+'؟ ستعود أجهزته إلى حالتها قبل هذه الحركة.')) return;
+  if(!(await localizedConfirm('هل أنت متأكد من حذف السجل '+rec.id+'؟ ستعود أجهزته إلى حالتها قبل هذه الحركة.',{danger:true,ok:eqLang('حذف السجل','Delete record')}))) return;
   const res=await callRpc('eq_delete_movement',{p_record_no:rec.id,p_expected_updated_at:rec.updatedAt||null});
   if(res.error){toast('⚠️ '+(res.transient?'تعذر الاتصال بـ Supabase؛ لم يُحذف السجل':rpcErrorMessage(res.error)));if(!res.transient)await syncFromCloud();return;}
   applyServerDevices(res.data.devices);RECORDS=RECORDS.filter(r=>r.id!==rec.id);
@@ -3609,9 +3632,10 @@ async function renewDocument(idx, doc) {
   const e = ENGINEERS[idx]; if(!e?.dbId) return;
   const current = doc === 'iqama' ? e.iqamaExpiry : e.secIdExpiry;
   const base = current ? new Date(current+'T00:00:00') : new Date(); base.setFullYear(base.getFullYear()+1);
-  const answer = localizedPrompt(`${doc === 'iqama' ? 'تاريخ انتهاء الإقامة الجديد' : 'تاريخ انتهاء بطاقة SEC-ID الجديدة'} — ${e.name} (YYYY-MM-DD):`, localISODate(base));
+  const label = doc === 'iqama' ? eqLang('تاريخ انتهاء الإقامة الجديد','New Iqama expiry date') : eqLang('تاريخ انتهاء بطاقة SEC-ID الجديدة','New SEC-ID expiry date');
+  const answer = await localizedForm(translateRuntimeText(doc === 'iqama' ? 'تجديد الإقامة' : 'تجديد SEC-ID') + ' — ' + e.name, [{name:'date', label, type:'date', value:localISODate(base), required:true}]);
   if(answer === null) return;
-  const date = String(answer).trim();
+  const date = String(answer.date).trim();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(date+'T00:00:00').getTime())){toast('⚠️ اكتب التاريخ بصيغة YYYY-MM-DD');return;}
   await saveDocumentAction(idx, doc, 'renew', date);
 }
@@ -3619,9 +3643,10 @@ async function renewDocument(idx, doc) {
 async function handInSecId(idx) {
   if(!canEditDocuments()){requireEditPermission();return;}
   const e = ENGINEERS[idx]; if(!e?.dbId) return;
-  const answer = localizedPrompt(`تاريخ تسليم بطاقة SEC-ID لشركة الكهرباء — ${e.name} (YYYY-MM-DD):`, localISODate());
+  const answer = await localizedForm(eqLang('تسليم بطاقة SEC-ID','SEC-ID card handed in') + ' — ' + e.name,
+    [{name:'date', label:eqLang('تاريخ تسليم بطاقة SEC-ID لشركة الكهرباء','Date the SEC-ID card was handed in to the electricity company'), type:'date', value:localISODate(), max:localISODate(), required:true}]);
   if(answer === null) return;
-  const date = String(answer).trim();
+  const date = String(answer.date).trim();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast('⚠️ اكتب التاريخ بصيغة YYYY-MM-DD');return;}
   await saveDocumentAction(idx, 'sec_id', 'returned', date);
 }
@@ -3686,7 +3711,7 @@ async function deleteEng(idx) {
   if(!requireEditPermission())return;
   const e = ENGINEERS[idx];
   if(e.name==='مدير المخزن (صالح)'){toast('لا يمكن حذف مدير المخزن الافتراضي');return;}
-  if(!localizedConfirm('حذف المستلم: ' + e.name + '؟')) return;
+  if(!(await localizedConfirm('حذف المستلم: ' + e.name + '؟',{danger:true,ok:eqLang('حذف','Delete')}))) return;
   if(e.dbId){
     const res=await callRpc('eq_delete_engineer',{p_id:e.dbId});
     if(res.error){toast('⚠️ '+(res.transient?'تعذر الاتصال بـ Supabase؛ لم يُحذف المستلم':rpcErrorMessage(res.error)));return;}
@@ -3753,7 +3778,7 @@ async function deleteLocation(idx) {
   if(!requireEditPermission())return;
   const l = LOCATIONS[idx];
   if(DEFAULT_LOCATIONS.includes(l)){toast('لا يمكن حذف المواقع الافتراضية');return;}
-  if(!localizedConfirm('حذف الموقع: ' + l + '؟')) return;
+  if(!(await localizedConfirm('حذف الموقع: ' + l + '؟',{danger:true,ok:eqLang('حذف','Delete')}))) return;
   LOCATIONS.splice(idx,1);
   saveLocations();
   refreshLocationSelects();
@@ -3885,7 +3910,7 @@ function renderAfterClear(){
 }
 async function logout() {toast(translateRuntimeText('سجّل الخروج من الموقع الرئيسي'));return;
   const pending=getPendingDeviceIds().length+getPendingMovements().length;
-  if(pending&&!localizedConfirm(`يوجد ${pending} عنصر (أجهزة أو حركات) لم يُحفظ في Supabase بعد وسيُحذف من هذا المتصفح عند الخروج. هل تريد الخروج؟`))return;
+  if(pending&&!(await localizedConfirm(`يوجد ${pending} عنصر (أجهزة أو حركات) لم يُحفظ في Supabase بعد وسيُحذف من هذا المتصفح عند الخروج. هل تريد الخروج؟`,{danger:true,ok:eqLang('خروج','Sign out')})))return;
   const client=getSupabaseClient();
   if(client)await client.auth.signOut();
   clearLocalData();renderAfterClear();
@@ -3937,8 +3962,9 @@ function onTypeSelect() {
   }
 }
 
-function addNewType() {
-  const name = localizedPrompt('أدخل اسم النوع الجديد:');
+async function addNewType() {
+  const answer = await localizedForm(eqLang('نوع جهاز جديد','New device type'), [{name:'name', label:eqLang('اسم النوع','Type name'), type:'text', required:true}], {ok:eqLang('إضافة','Add')});
+  const name = answer?.name;
   if(!name || !name.trim()) return;
   const trimmed = name.trim();
   if(deviceTypeOptions().includes(trimmed)){toast('النوع موجود مسبقاً');return;}
@@ -3948,21 +3974,17 @@ function addNewType() {
   toast('✅ تم إضافة النوع: ' + trimmed);
 }
 
-function openTypeManager() {
+// The types in a list to pick from: default ones and those used by devices are marked and cannot be deleted.
+async function openTypeManager() {
   const types = deviceTypeOptions();
   const usedBy = t => INVENTORY.filter(d=>(d.type||'').trim()===t).length;
-  const list = types.map((t,i) =>
-    `${i+1}. ${t} ${DEFAULT_TYPES.includes(t)?'(افتراضي)':usedBy(t)?`(${usedBy(t)} جهاز)`:''}`
-  ).join('\n');
-  const action = localizedPrompt(CURRENT_LANG==='en'
-    ? 'Current types:\n' + list + '\n\nEnter the type number to delete, or press Cancel:'
-    : 'الأنواع الحالية:\n' + list + '\n\nأدخل رقم النوع لحذفه، أو اضغط إلغاء:');
-  if(!action || !action.trim()) return;
-  const idx = parseInt(action.trim()) - 1;
-  if(isNaN(idx) || idx < 0 || idx >= types.length){toast('رقم غير صحيح');return;}
+  const items = types.map(t => ({label:t, sub:DEFAULT_TYPES.includes(t) ? eqLang('افتراضي','Default') : usedBy(t) ? eqLang(`${usedBy(t)} جهاز`,`${usedBy(t)} devices`) : ''}));
+  const idx = await localizedChoice(eqLang('حذف نوع جهاز','Delete a device type'), items, eqLang('اختر النوع المراد حذفه. الأنواع الافتراضية والمستخدمة في أجهزة لا تُحذف.','Choose the type to delete. Default types and types used by devices cannot be deleted.'));
+  if(idx === null || idx === undefined) return;
   const removed = types[idx];
   if(DEFAULT_TYPES.includes(removed)){toast('لا يمكن حذف الأنواع الافتراضية');return;}
   if(usedBy(removed)){toast('لا يمكن حذف نوع مستخدم في أجهزة — غيّر نوع هذه الأجهزة أولًا');return;}
+  if(!(await localizedConfirm(eqLang(`حذف النوع «${removed}»؟`,`Delete the type "${removed}"?`),{danger:true,ok:eqLang('حذف','Delete')})))return;
   DEVICE_TYPES = DEVICE_TYPES.filter(t=>t!==removed);
   saveDeviceTypes();
   renderTypeSelect(DEFAULT_TYPES[0]);
@@ -4230,7 +4252,7 @@ async function deleteDevice(idx) {
   if(!requireEditPermission())return;
   const d = INVENTORY[idx];
   if(['غير متاح','مؤجر','في الصيانة'].includes(d.status)){toast('لا يمكن حذف جهاز عند مستخدم');return;}
-  if(!localizedConfirm('هل أنت متأكد من حذف الجهاز ' + d.id + '?')) return;
+  if(!(await localizedConfirm('هل أنت متأكد من حذف الجهاز ' + d.id + '?',{danger:true,ok:eqLang('حذف الجهاز','Delete device')}))) return;
   const res=await callRpc('eq_delete_device',{p_code:d.id});
   if(res.error){toast('⚠️ '+(res.transient?'تعذر الاتصال بـ Supabase؛ لم يُحذف الجهاز':rpcErrorMessage(res.error)));return;}
   INVENTORY=INVENTORY.filter(x=>x.id!==d.id);

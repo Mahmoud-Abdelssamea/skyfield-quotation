@@ -3,6 +3,7 @@
 // sfAskChoice:  pick one item from a list (a project, a quotation) instead of typing its number.
 // Both return a Promise: the entered values, or null when cancelled.
 // sfConfirm:    a yes/no question replacing the browser's confirm(); resolves true or false.
+// sfAskForm:    a small form (text and date fields) replacing a row of prompts; the values, or null when cancelled.
 // sfNotice:     a message at the bottom of the screen in the page language, replacing the browser's alert();
 //               it stays until closed and returns a Promise that resolves when it is closed.
 (function(){
@@ -73,6 +74,31 @@ window.sfConfirm=function({title,message='',ok,cancel,danger=false}={}){
  }).then(answer=>answer===true);
 };
 window.sfLang=L; // sfLang('English','عربي'): the text in the page language, for questions written in both
+// sfAskForm: a small form in the page language, replacing a row of text prompts; dates use the date picker.
+// {title, note, fields:[{name, label, type:'text'|'date', value, required, max}], ok} → {name: value} (trimmed), or null.
+window.sfAskForm=function({title,note,fields=[],ok}={}){
+ return openDialog(`<form method="dialog" class="sf-dialog-form" novalidate>
+  <h3>${esc(title||'')}</h3>${note?`<p class="sf-dialog-note">${esc(note)}</p>`:''}
+  ${fields.map(f=>`<label>${esc(f.label)}<input name="${esc(f.name)}" type="${f.type==='date'?'date':'text'}" value="${esc(f.value??'')}"${f.max?` max="${esc(f.max)}"`:''}${f.required?' required':''} autocomplete="off"></label>`).join('')}
+  <p class="sf-dialog-error" role="alert" hidden></p>
+  <div class="sf-dialog-actions"><button type="button" class="btn-outline" data-dlg-cancel>${esc(L('Cancel','إلغاء'))}</button><button type="submit" class="btn-primary">${esc(ok||L('Save','حفظ'))}</button></div>
+ </form>`,(dlg,finish)=>{
+  const form=dlg.querySelector('form'),err=dlg.querySelector('.sf-dialog-error');
+  const fail=(msg,name)=>{err.textContent=msg;err.hidden=false;form.elements[name]?.focus()};
+  form.onsubmit=e=>{
+   e.preventDefault();const out={};
+   for(const f of fields){
+    const input=form.elements[f.name],v=String(input.value||'').trim();
+    if(f.type==='date'&&(input.validity?.badInput||v&&(!/^\d{4}-\d{2}-\d{2}$/.test(v)||Number.isNaN(Date.parse(v+'T00:00:00')))))return fail(L(`Choose a valid date: ${f.label}`,`اختر تاريخًا صحيحًا: ${f.label}`),f.name);
+    if(f.required&&!v)return fail(L(`Fill in: ${f.label}`,`أكمل: ${f.label}`),f.name);
+    if(f.max&&v&&v>f.max)return fail(L(`${f.label} cannot be after ${f.max}.`,`${f.label} لا يمكن أن يكون بعد ${f.max}.`),f.name);
+    out[f.name]=v;
+   }
+   finish(out);
+  };
+  setTimeout(()=>form.elements[fields[0]?.name]?.focus?.(),30);
+ });
+};
 
 // Messages are written once (mostly in English); SF_NOTICE_AR / SF_NOTICE_EN in i18n-ar.js give the other language.
 function noticeLookup(text){

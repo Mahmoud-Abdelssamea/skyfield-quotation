@@ -114,7 +114,7 @@ function sfDocsRender(){
     ${kpi('var(--sf-warn)',sfDocsT('Iqamas due','إقامات قريبة الانتهاء'),count('iqama',false),sfDocsT('Within 45 days','خلال 45 يومًا'),'due')}
     ${kpi('var(--sf-alert)',sfDocsT('Expired SEC-ID cards','بطاقات SEC-ID منتهية'),count('sec_id',true),sfDocsT('Renew now','تحتاج تجديدًا الآن'),'expired')}
     ${kpi('var(--sf-warn)',sfDocsT('SEC-ID cards due','بطاقات SEC-ID قريبة الانتهاء'),count('sec_id',false),sfDocsT('Within 45 days','خلال 45 يومًا'),'due')}</div>`;
-  // Employee table first.
+  // The employee table, under the two lists of what is due.
   const worst=r=>{const keys=[sfDocsState(r.iqama_expiry,'').key,sfDocsState(r.sec_id_expiry,r.sec_id_returned_on).key];return keys.includes('expired')?'expired':keys.some(k=>['critical','urgent','soon'].includes(k))?'due':''};
   const rows=sfDocsRows.filter(r=>sfDocsFilter==='all'||(sfDocsFilter==='expired'?worst(r)==='expired':!!worst(r)));
   const L=t=>` data-label="${sfDocsEsc(t)}"`;
@@ -135,13 +135,13 @@ function sfDocsRender(){
       <td${L(sfDocsT('Iqama','الإقامة'))}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.iqama||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.iqama_expiry,''):''}</div></td>
       <td${L('SEC-ID')}><div class="docs-doc"><span class="no" dir="ltr">${sfDocsEsc(r.sec_id_no||'—')}</span>${sfDocsPerson(r)?sfDocsBadge(r.sec_id_expiry,r.sec_id_returned_on):''}</div></td>
       ${sfDocsCanEdit?`<td${L(sfDocsT('Actions','إجراءات'))}>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="5" class="docs-empty">${sfDocsEsc(sfDocsT('No employees match.','لا يوجد موظفون مطابقون.'))}</td></tr>`}</tbody></table></div></div>`;
-  // Then the two lists of what is due, each with print and Excel.
+  // The two lists of what is due, each with print and Excel; they come first, right under the summary.
   const list=doc=>{const due=sfDocsDue(doc);
     return due.length?`<ul class="docs-list">${due.map(({r,s})=>`<li class="sev-${s.key}"><span><b><bdi>${sfDocsEsc(r.name)}</bdi></b><span class="sub" dir="ltr">${sfDocsEsc(doc==='iqama'?(r.iqama||''):(r.sec_id_no||''))} · ${sfDocsDate(expiry(r,doc))}</span></span>${sfDocsBadge(expiry(r,doc),'')}</li>`).join('')}</ul>`
       :`<div class="docs-empty">✅ ${sfDocsEsc(sfDocsT('Nothing due within 45 days.','لا شيء ينتهي خلال 45 يومًا.'))}</div>`};
   const card=(doc,icon,title)=>`<div class="docs-card"><div class="docs-card-hdr"><h3>${icon} ${sfDocsEsc(title)} <span class="docs-count">${sfDocsDue(doc).length}</span> <small>${sfDocsEsc(sfDocsT('expired or within 45 days','منتهية أو خلال 45 يومًا'))}</small></h3>
     <span class="docs-actions"><button type="button" class="docs-btn" data-docs-print="${doc}">🖨 ${sfDocsEsc(sfDocsT('Print','طباعة'))}</button><button type="button" class="docs-btn" data-docs-excel="${doc}">📥 Excel</button></span></div>${list(doc)}</div>`;
-  panel.innerHTML=kpis+people+`<div class="docs-grid">${card('iqama','🪪',sfDocsT('Iqamas','الإقامات'))}${card('sec_id','🦺',sfDocsT('SEC-ID cards','بطاقات SEC-ID'))}</div>`;
+  panel.innerHTML=kpis+`<div class="docs-grid">${card('iqama','🪪',sfDocsT('Iqamas','الإقامات'))}${card('sec_id','🦺',sfDocsT('SEC-ID cards','بطاقات SEC-ID'))}</div>`+people;
   sfDocsApplySearch();
 }
 // Search hides table rows without redrawing, so typing keeps the focus.
@@ -219,31 +219,6 @@ async function sfDocsUpdate(row){
 async function sfDocsAction(act,id){
   const row=sfDocsRows.find(r=>String(r.id)===String(id));if(!row||!sfDocsCanEdit)return;
   if(act==='update')return sfDocsUpdate(row);
-  const who=' — '+row.name;
-  if(act==='renew-iqama'||act==='renew-sec'){
-    const doc=act==='renew-iqama'?'iqama':'sec_id',current=doc==='iqama'?row.iqama_expiry:row.sec_id_expiry;
-    const base=current?new Date(current+'T00:00:00'):new Date();base.setFullYear(base.getFullYear()+1);
-    const suggest=`${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
-    const answer=prompt((doc==='iqama'?sfDocsT('New Iqama expiry date','تاريخ انتهاء الإقامة الجديد'):sfDocsT('New SEC-ID expiry date','تاريخ انتهاء بطاقة SEC-ID الجديدة'))+who+' (YYYY-MM-DD):',suggest);
-    if(answer===null)return;const date=String(answer).trim();
-    if(!sfDocsValidDate(date)){alert(sfDocsT('Write the date as YYYY-MM-DD.','اكتب التاريخ بصيغة YYYY-MM-DD.'));return}
-    return sfDocsSave('eq_engineer_document',{p_id:row.id,p_document:doc,p_action:'renew',p_date:date},row);
-  }
-  if(act==='handin'){
-    const t=new Date(),today=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-    const answer=prompt(sfDocsT('Date the SEC-ID card was handed in to the electricity company','تاريخ تسليم بطاقة SEC-ID لشركة الكهرباء')+who+' (YYYY-MM-DD):',today);
-    if(answer===null)return;const date=String(answer).trim();
-    if(!sfDocsValidDate(date)){alert(sfDocsT('Write the date as YYYY-MM-DD.','اكتب التاريخ بصيغة YYYY-MM-DD.'));return}
-    return sfDocsSave('eq_engineer_document',{p_id:row.id,p_document:'sec_id',p_action:'returned',p_date:date},row);
-  }
-  if(act==='edit'){
-    const ask=(label,value)=>{const a=prompt(label+who,value||'');return a===null?null:String(a).trim()};
-    const iqama=ask(sfDocsT('Iqama expiry date (YYYY-MM-DD)','تاريخ انتهاء الإقامة (YYYY-MM-DD)'),row.iqama_expiry);if(iqama===null)return;
-    const secNo=ask(sfDocsT('SEC-ID card number','رقم بطاقة SEC-ID'),row.sec_id_no);if(secNo===null)return;
-    const secExpiry=ask(sfDocsT('SEC-ID card expiry date (YYYY-MM-DD)','تاريخ انتهاء بطاقة SEC-ID (YYYY-MM-DD)'),row.sec_id_expiry);if(secExpiry===null)return;
-    if([iqama,secExpiry].some(d=>d&&!sfDocsValidDate(d))){alert(sfDocsT('Write the date as YYYY-MM-DD.','اكتب التاريخ بصيغة YYYY-MM-DD.'));return}
-    return sfDocsSave('eq_update_documents',{p_id:row.id,p_iqama_expiry:iqama||null,p_sec_id_no:secNo||null,p_sec_id_expiry:secExpiry||null},row);
-  }
 }
 function sfDocsPrint(doc){
   const rows=sfDocsListRows(doc),head=sfDocsListHeaders(doc),title=sfDocsListTitle(doc),ar=sfDocsAr();
