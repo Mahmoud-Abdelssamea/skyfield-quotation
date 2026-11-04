@@ -80,7 +80,7 @@ function sfUnifiedOpenModule(){
  const frame=document.getElementById('sf-unified-frame');
  if(!frame.getAttribute('src')){
   sfUnifiedFrameReady=false;document.getElementById('sf-unified-notice').innerHTML=sfUnifiedLoadingHtml();frame.hidden=true;
-  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261102-invoice';
+  frame.onload=()=>{if(sfAuthReady)frame.hidden=false;};frame.src='attendance-module.html?v=20261104-labels';
  }else if(sfUnifiedFrameReady){
   frame.contentWindow.sfSetEmbeddedView(sfUnifiedRoutes[sfUnifiedRoute][2],sfUiLanguage,sfCurrentUser.id);frame.hidden=false;
  }

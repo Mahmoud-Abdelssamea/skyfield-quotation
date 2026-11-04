@@ -719,7 +719,7 @@ function renderProformas(){
     return true;
   });
   sfListCount('if-count',rows.length,proformaInvoices.length,'invoice(s)');
-  const sum=k=>rows.reduce((s,p)=>s+(pay.get(p)[k]||0),0),filteredNote=rows.length===proformaInvoices.length?'All invoices':'Filtered · المعروض';
+  const sum=k=>rows.reduce((s,p)=>s+(pay.get(p)[k]||0),0),filteredNote=rows.length===proformaInvoices.length?'All invoices':'Filtered';
   const summary=document.getElementById('pi-summary');
   if(summary)summary.innerHTML=proformaInvoices.length?`
     <div class="pfs-card"><div class="pfs-lbl">Invoices / الفواتير</div><div class="pfs-val">${rows.length}</div><div class="pfs-sub">${filteredNote}</div></div>
