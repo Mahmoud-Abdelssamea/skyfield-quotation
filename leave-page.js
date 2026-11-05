@@ -34,6 +34,24 @@ function sfLeaveSpan(from,to){
 // Back at work: the first day after the leave that is not a Friday or an official holiday.
 function sfLeaveReturn(last){if(!last)return '';let d=sfLeaveAdd(last,1);while(sfLeaveOff(d))d=sfLeaveAdd(d,1);return d}
 const sfLeaveDays=n=>sfLeaveT(`${n} day${n===1?'':'s'}`,`${n} يوم`);
+// The annual balance from the database (sf_leave_private.balance): a service year's days are usable once the year is
+// complete; the current year's days so far are shown with the date they open.
+const sfLeaveNum=n=>{const v=Number(n)||0;return Number.isInteger(v)?String(v):v.toFixed(1)};
+function sfLeaveBalanceText(b){
+  if(!b)return '—';
+  if(!b.known)return b.reason==='no_start'?sfLeaveT('Not set: no service start date','غير محدد: لا يوجد تاريخ بداية خدمة'):sfLeaveT('Not set: available balance not entered','غير محدد: لم يُدخل الرصيد المتاح');
+  return sfLeaveT(`${sfLeaveNum(b.usable)} days usable`,`${sfLeaveNum(b.usable)} يوم متاح`);
+}
+const sfLeaveYearText=b=>b?.known?sfLeaveT(`${sfLeaveNum(b.accruing)} days so far, usable from ${sfLeaveDate(b.available_from)}`,`${sfLeaveNum(b.accruing)} يوم حتى الآن، يُتاح من ${sfLeaveDate(b.available_from)}`):'—';
+// Annual leave beyond the usable balance is unpaid (deducted from the salary): said before and after approval.
+function sfLeaveUnpaid(r){
+  const b=r.balance||{},w=t=>`<p class="lv-warn">${sfLeaveEsc(t)}</p>`;
+  if(r.unpaid_days)return w(sfLeaveT(`${r.unpaid_days} day(s) of this leave are unpaid and deducted from the salary: the annual balance did not cover them.`,`${r.unpaid_days} يوم من هذه الإجازة بدون راتب وتُخصم من الراتب: الرصيد السنوي لم يكفِها.`));
+  if(r.unpaid_expected)return w(b.completed_years===0?sfLeaveT(`The first service year is not complete: if approved, ${r.unpaid_expected} day(s) are unpaid and deducted from the salary.`,`لم يكمل سنة الخدمة الأولى: عند الموافقة تكون ${r.unpaid_expected} يوم بدون راتب وتُخصم من الراتب.`)
+    :sfLeaveT(`Only ${sfLeaveNum(Math.max(0,b.usable))} day(s) are usable: if approved, ${r.unpaid_expected} day(s) are unpaid and deducted from the salary.`,`المتاح ${sfLeaveNum(Math.max(0,b.usable))} يوم فقط: عند الموافقة تكون ${r.unpaid_expected} يوم بدون راتب وتُخصم من الراتب.`));
+  if(r.leave_type==='annual'&&b.known===false&&['supervisor','hr','executive'].includes(r.status))return w(sfLeaveT('The annual balance is not set (service start date or available balance missing), so the days stay annual leave. HR can enter them on the Balances tab.','الرصيد السنوي غير محدد (تاريخ بداية الخدمة أو الرصيد المتاح غير مُدخل)، لذلك تبقى الأيام إجازة سنوية. تقدر الموارد البشرية إدخالهما من تبويب الأرصدة.'));
+  return '';
+}
 
 function sfLeaveState(r){
   const t=sfLeaveToday();
@@ -61,7 +79,7 @@ const SF_LEAVE_ERRORS={ACCESS_DENIED:['You do not have permission for this step.
  LEAVE_DAYS_TAKEN:['These days already have attendance recorded; remove it first:','هذه الأيام مسجّل فيها حضور بالفعل؛ احذفه أولًا:'],LEAVE_CANNOT_CANCEL:['This request can no longer be cancelled.','لم يعد ممكنًا إلغاء هذا الطلب.'],
  LEAVE_NOT_APPROVED:['Actual dates are recorded after the leave is approved.','تُسجَّل التواريخ الفعلية بعد اعتماد الإجازة.'],EXTRA_TYPE_REQUIRED:['Some days fall outside the approved leave: choose how to count them.','بعض الأيام خارج الإجازة المعتمدة: اختر كيف تُحسب.'],
  PROJECT_UNAVAILABLE:['Choose a project from the list.','اختر مشروعًا من القائمة.'],TEXT_TOO_LONG:['A text is too long; shorten it.','أحد النصوص طويل جدًا؛ اختصره.'],
- PROFILE_INVALID:['Check the start date and the yearly leave days (0–60).','راجع تاريخ بداية الخدمة وأيام الإجازة السنوية (0–60).'],NOT_AN_ENGINEER:['This account is not an engineer.','هذا الحساب ليس مهندسًا.'],HOLIDAY_INVALID:['Choose the date.','اختر التاريخ.']};
+ PROFILE_INVALID:['Check the start date (not in the future), the yearly leave days (0–60) and the available balance (0–365, one decimal).','راجع تاريخ بداية الخدمة (ليس في المستقبل)، وأيام الإجازة السنوية (0–60)، والرصيد المتاح (0–365، رقم عشري واحد).'],NOT_AN_ENGINEER:['This account is not an engineer.','هذا الحساب ليس مهندسًا.'],HOLIDAY_INVALID:['Choose the date.','اختر التاريخ.']};
 function sfLeaveError(error){
   const msg=String(error?.message||error||'');const code=Object.keys(SF_LEAVE_ERRORS).find(k=>msg.includes(k));
   if(!code)return msg;const text=sfLeaveT(...SF_LEAVE_ERRORS[code]);
@@ -125,6 +143,7 @@ function sfLeaveStyles(){
 .lv-count{grid-column:1/-1;margin:0;padding:8px 12px;border-radius:9px;background:#F4F6FA;font-size:13px;color:var(--sf-navy)}
 .lv-count small{display:block;color:var(--sf-muted);font-size:12px}
 .lv-hint{margin:0;font-size:12px;color:var(--sf-muted);line-height:1.6}
+.lv-warn{margin:0;padding:10px 12px;border-radius:10px;background:#FFF1E0;border:1px solid #F5D9B5;color:var(--sf-warn-text);font-size:13px;line-height:1.6}
 .lv-custody{margin:0;padding-inline-start:18px;font-size:13px}
 .lv-log{list-style:none;margin:0;padding:0;font-size:12px;color:var(--sf-muted)}.lv-log li{padding:4px 0}.lv-log b{color:var(--sf-text)}
 .lv-error{margin:0;color:var(--sf-alert-text);font-size:13px}
@@ -156,7 +175,7 @@ function sfLeaveRender(){
     kpi('var(--sf-navy)',sfLeaveT('On leave today','في إجازة اليوم'),sfLeavePeople.filter(p=>p.on_leave).length,sfLeaveT('Engineers','مهندسون'),'people'),
     kpi('var(--sf-alert)',sfLeaveT('Return not recorded','لم يُسجَّل رجوعهم'),sfLeaveRows.filter(r=>r.status==='approved'&&!r.actual_state&&r.approved_end<t).length,sfLeaveT('Leave ended','انتهت إجازتهم'),'waiting'),
     kpi('var(--sf-ok)',sfLeaveT('In progress','قيد الاعتماد'),sfLeaveRows.filter(r=>['supervisor','hr','executive'].includes(r.status)).length,sfLeaveT('All stages','كل المراحل'),'all')].join('')
-   :own?[kpi('var(--sf-ok)',sfLeaveT('Annual leave left','المتبقي من الإجازة السنوية'),own.annual_days-own.annual_used,sfLeaveT(`of ${own.annual_days} days this year`,`من ${own.annual_days} يومًا هذا العام`),'mine'),
+   :own?[kpi('var(--sf-ok)',sfLeaveT('Usable annual leave','الإجازة السنوية المتاحة'),own.balance?.known?sfLeaveNum(own.balance.usable):'—',own.balance?.known?sfLeaveYearText(own.balance):sfLeaveT('HR has not entered your balance yet','لم تُدخل الموارد البشرية رصيدك بعد'),'mine'),
     kpi('var(--sf-warn)',sfLeaveT('In progress','قيد الاعتماد'),sfLeaveRows.filter(r=>r.user_id===sfLeaveMe.user_id&&['supervisor','hr','executive'].includes(r.status)).length,sfLeaveT('My requests','طلباتي'),'mine'),
     kpi('var(--sf-navy)',sfLeaveT('Last leave','آخر إجازة'),sfLeaveDate(own.last_leave),sfLeaveT('Last day of leave','آخر يوم إجازة'),'mine')].join(''):'';
   const bar=`<div class="lv-bar"><div class="lv-tabs" role="tablist">${tabs.map(([k,label,n])=>`<button type="button" class="lv-tab" role="tab" aria-selected="${k===sfLeaveTab}" data-lv-tab="${k}">${sfLeaveEsc(label)}${n?`<b>${n}</b>`:''}</button>`).join('')}</div>
@@ -170,7 +189,7 @@ function sfLeaveRender(){
     const item=r=>{const a=r.approved_start||r.start_date,b=r.approved_end||r.end_date;
       return `<li><button type="button" class="lv-item" data-lv-open="${r.id}" data-search="${sfLeaveEsc([r.name,r.engineer_id,r.project_name,sfLeaveType(r.leave_type)].filter(Boolean).join(' ').toLowerCase())}">
       <b>${sfLeaveTab==='mine'?sfLeaveEsc(sfLeaveType(r.leave_type)+' — '+sfLeaveDays(r.approved_days||r.days)):`<bdi>${sfLeaveEsc(r.name)}</bdi> · ${sfLeaveEsc(sfLeaveType(r.leave_type))}`}</b>${sfLeaveChip(r)}
-      <span class="sub"><span class="lv-num" dir="ltr">${sfLeaveDate(a)} → ${sfLeaveDate(b)}</span> · ${sfLeaveEsc(sfLeaveDays(r.approved_days||r.days))}${r.project_name?` · <bdi>${sfLeaveEsc(r.project_name)}</bdi>`:''}</span></button></li>`};
+      <span class="sub"><span class="lv-num" dir="ltr">${sfLeaveDate(a)} → ${sfLeaveDate(b)}</span> · ${sfLeaveEsc(sfLeaveDays(r.approved_days||r.days))}${r.unpaid_days||r.unpaid_expected?` · ${sfLeaveEsc(sfLeaveT(`${r.unpaid_days||r.unpaid_expected} unpaid`,`${r.unpaid_days||r.unpaid_expected} بدون راتب`))}`:''}${r.project_name?` · <bdi>${sfLeaveEsc(r.project_name)}</bdi>`:''}</span></button></li>`};
     body=`<div class="lv-card"><div class="lv-card-hdr"><h3>${sfLeaveEsc(title)}</h3>${sfLeaveTab==='mine'?'':`<input type="search" id="sf-leave-search" value="${sfLeaveEsc(sfLeaveSearch)}" placeholder="${sfLeaveEsc(sfLeaveT('Search by name, code or project','بحث بالاسم أو الكود أو المشروع'))}" aria-label="${sfLeaveEsc(sfLeaveT('Search','بحث'))}">`}</div>
       ${sfLeaveLoading&&!sfLeaveRows.length?`<div class="lv-empty">${sfLeaveEsc(sfLeaveT('Loading…','جاري التحميل…'))}</div>`:rows.length?`<ul class="lv-list">${rows.map(item).join('')}</ul>`:`<div class="lv-empty">${sfLeaveEsc(sfLeaveTab==='waiting'?sfLeaveT('Nothing is waiting for you.','لا يوجد ما ينتظر قرارك.'):sfLeaveT('No leave requests yet.','لا توجد طلبات إجازة بعد.'))}</div>`}</div>`;
   }
@@ -183,13 +202,13 @@ function sfLeavePeopleHtml(){
   const L=t=>` data-label="${sfLeaveEsc(t)}"`;
   return `<div class="lv-card"><div class="lv-card-hdr"><h3>${sfLeaveEsc(sfLeaveT('Leave balances and HR details','أرصدة الإجازات وبيانات الموارد البشرية'))}</h3></div><div class="lv-table-wrap"><table class="lv-table"><thead><tr>
    <th>${sfLeaveEsc(sfLeaveT('Engineer','المهندس'))}</th><th>${sfLeaveEsc(sfLeaveT('Service start','بداية الخدمة'))}</th><th>${sfLeaveEsc(sfLeaveT('Department / section / position','الإدارة / القسم / الوظيفة'))}</th>
-   <th>${sfLeaveEsc(sfLeaveT('Yearly days','الأيام السنوية'))}</th><th>${sfLeaveEsc(sfLeaveT('Used this year','المستخدم هذا العام'))}</th><th>${sfLeaveEsc(sfLeaveT('Left','المتبقي'))}</th><th>${sfLeaveEsc(sfLeaveT('Last leave','آخر إجازة'))}</th><th></th></tr></thead>
+   <th>${sfLeaveEsc(sfLeaveT('Yearly days','الأيام السنوية'))}</th><th>${sfLeaveEsc(sfLeaveT('Usable now','المتاح الآن'))}</th><th>${sfLeaveEsc(sfLeaveT('Current service year','سنة الخدمة الحالية'))}</th><th>${sfLeaveEsc(sfLeaveT('Last leave','آخر إجازة'))}</th><th></th></tr></thead>
    <tbody>${sfLeavePeople.map(p=>`<tr><td class="lv-who"${L(sfLeaveT('Engineer','المهندس'))}><span><bdi>${sfLeaveEsc(p.name)}</bdi>${p.on_leave?` <span class="lv-chip lv-on">${sfLeaveEsc(sfLeaveT('On leave','في إجازة'))}</span>`:''}<small class="lv-num" dir="ltr">${sfLeaveEsc(p.engineer_id)}</small></span></td>
     <td class="lv-num"${L(sfLeaveT('Service start','بداية الخدمة'))}>${sfLeaveDate(p.service_start)}</td><td${L(sfLeaveT('Department / section / position','الإدارة / القسم / الوظيفة'))}>${sfLeaveEsc([p.department,p.section,p.position].filter(Boolean).join(' / ')||'—')}</td>
-    <td class="lv-num"${L(sfLeaveT('Yearly days','الأيام السنوية'))}>${p.annual_days}</td><td class="lv-num"${L(sfLeaveT('Used this year','المستخدم هذا العام'))}>${p.annual_used}</td><td class="lv-num"${L(sfLeaveT('Left','المتبقي'))}><b>${p.annual_days-p.annual_used}</b></td>
+    <td class="lv-num"${L(sfLeaveT('Yearly days','الأيام السنوية'))}>${p.annual_days}</td><td${L(sfLeaveT('Usable now','المتاح الآن'))}>${p.balance?.known?`<b class="lv-num">${sfLeaveNum(p.balance.usable)}</b>`:`<span class="lv-chip lv-wait">${sfLeaveEsc(sfLeaveBalanceText(p.balance))}</span>`}</td><td${L(sfLeaveT('Current service year','سنة الخدمة الحالية'))}>${sfLeaveEsc(sfLeaveYearText(p.balance))}</td>
     <td class="lv-num"${L(sfLeaveT('Last leave','آخر إجازة'))}>${sfLeaveDate(p.last_leave)}</td><td><button type="button" class="lv-btn" data-lv-profile="${p.user_id}">${sfLeaveEsc(sfLeaveT('Edit','تعديل'))}</button></td></tr>`).join('')
     ||`<tr><td colspan="8" class="lv-empty">${sfLeaveEsc(sfLeaveT('No engineers.','لا يوجد مهندسون.'))}</td></tr>`}</tbody></table></div>
-   <p class="lv-hint" style="padding:10px 16px">${sfLeaveEsc(sfLeaveT('Used days are the annual leave days in attendance this year, Fridays and holidays inside a leave included.','الأيام المستخدمة هي أيام الإجازة السنوية المسجلة في الحضور هذا العام، ومنها الجمعة والإجازات الرسمية التي تقع داخل الإجازة.'))}</p></div>`;
+   <p class="lv-hint" style="padding:10px 16px">${sfLeaveEsc(sfLeaveT('Each service year\'s days are usable once the year is complete. Usable now = the balance HR entered + the completed years since − annual leave in attendance. Annual leave beyond it is unpaid.','أيام كل سنة خدمة تُتاح بعد اكتمال السنة. المتاح الآن = الرصيد الذي أدخلته الموارد البشرية + السنوات المكتملة بعده − الإجازات السنوية في الحضور. وما زاد عليه يكون بدون راتب.'))}</p></div>`;
 }
 function sfLeaveHolidaysHtml(){
   const list=sfLeaveMe.holidays||[],t=sfLeaveToday();
@@ -237,6 +256,7 @@ function sfLeaveNew(){
     <label>${sfLeaveEsc(sfLeaveT('Leave start date','تاريخ بداية الإجازة'))}<input type="date" name="start_date" required min="${sfLeaveAdd(t,-60)}" max="${sfLeaveAdd(t,183)}"></label>
     <label>${sfLeaveEsc(sfLeaveT('Leave end date','تاريخ نهاية الإجازة'))}<input type="date" name="end_date" required min="${sfLeaveAdd(t,-60)}"></label>
     <p class="lv-count" data-lv-count>${sfLeaveEsc(sfLeaveT('Choose the dates to see the number of days.','اختر التواريخ لعرض عدد الأيام.'))}</p>
+    <p class="lv-hint wide" data-lv-balance hidden></p>
     <label class="wide">${sfLeaveEsc(sfLeaveT('Contact address during the leave','العنوان أثناء الإجازة'))}<input name="address" maxlength="300" autocomplete="off"></label>
     <label>${sfLeaveEsc(sfLeaveT('Phone number','رقم الهاتف'))}<input name="phone" maxlength="30" dir="ltr" inputmode="tel" autocomplete="tel"></label>
     <label class="wide">${sfLeaveEsc(sfLeaveT('Reason','السبب'))}<textarea name="reason" maxlength="1000" required></textarea></label>
@@ -244,11 +264,18 @@ function sfLeaveNew(){
     <label class="wide lv-check"><input type="checkbox" name="undertaking"><span>${sfLeaveEsc(sfLeaveT('I, the undersigned, undertake to resume my work after returning from the leave granted to me by the company; if I am late, I bear all the regular procedures followed in the company, including dismissal and deprivation of service.','أتعهد أنا الموقع أدناه بأن أباشر مهام عملي بعد عودتي من الإجازة الممنوحة لي من الشركة، وعند تأخري أتحمل كافة الإجراءات النظامية المتبعة في الشركة من فصل وحرمان من الخدمة.'))}</span></label>
     <p class="lv-error wide" role="alert" hidden></p></div></div>
    <footer><button type="button" class="lv-btn" data-lv-close>${sfLeaveEsc(sfLeaveT('Cancel','إلغاء'))}</button><button type="submit" class="lv-btn primary">${sfLeaveEsc(sfLeaveT('Send the request','إرسال الطلب'))}</button></footer></form>`,(sheet,close)=>{
-    const f=sheet.querySelector('form'),count=sheet.querySelector('[data-lv-count]'),err=sheet.querySelector('.lv-error');
+    const f=sheet.querySelector('form'),count=sheet.querySelector('[data-lv-count]'),err=sheet.querySelector('.lv-error'),bal=sheet.querySelector('[data-lv-balance]');
+    const own=sfLeavePeople.find(p=>p.user_id===me.user_id)?.balance;
     const update=()=>{
       sheet.querySelector('[data-lv-report]').hidden=f.leave_type.value!=='sick';
       if(f.start_date.value)f.end_date.min=f.start_date.value;
       const s=sfLeaveSpan(f.start_date.value,f.end_date.value);
+      // Annual leave: what the balance covers (the next year's days count if the leave starts after they open).
+      bal.hidden=f.leave_type.value!=='annual'||!own;bal.className='lv-hint wide';
+      if(!bal.hidden){if(!own.known)bal.textContent=sfLeaveT('HR has not entered your leave balance yet; HR checks it before approving.','لم تُدخل الموارد البشرية رصيد إجازتك بعد؛ ستراجعه قبل الموافقة.');
+        else{const usable=Number(own.usable)+(f.start_date.value&&f.start_date.value>=own.available_from?own.annual_days:0),unpaid=Math.max(0,s.days-Math.max(0,Math.floor(usable)));
+          bal.textContent=unpaid?sfLeaveT(`Your usable balance is ${sfLeaveNum(Math.max(0,usable))} day(s): if approved, ${unpaid} day(s) are unpaid and deducted from your salary.`,`رصيدك المتاح ${sfLeaveNum(Math.max(0,usable))} يوم: عند الموافقة تكون ${unpaid} يوم بدون راتب وتُخصم من راتبك.`)
+            :sfLeaveT(`Your usable balance: ${sfLeaveNum(usable)} day(s).`,`رصيدك المتاح: ${sfLeaveNum(usable)} يوم.`);if(unpaid)bal.className='lv-warn wide'}}
       if(!f.start_date.value||!f.end_date.value){count.textContent=sfLeaveT('Choose the dates to see the number of days.','اختر التواريخ لعرض عدد الأيام.');return}
       count.innerHTML=`<b>${sfLeaveEsc(sfLeaveT('Number of leave days:','عدد أيام الإجازة:'))} ${s.days}</b>${s.days?` · ${sfLeaveEsc(sfLeaveT('back at work','العودة للعمل'))} <span class="lv-num">${sfLeaveDate(sfLeaveReturn(s.last))}</span>`:''}
         ${s.dropped.length?`<small>${sfLeaveEsc(sfLeaveT('Not counted (Friday or official holiday at the start or end):','لا تُحسب (جمعة أو إجازة رسمية في أول الإجازة أو آخرها):'))} ${s.dropped.sort().map(sfLeaveDate).join('، ')}</small>`:''}
@@ -283,7 +310,6 @@ function sfLeaveOpen(id){
   const kv=(label,value,ltr)=>`<div><dt>${sfLeaveEsc(label)}</dt><dd${ltr?' dir="ltr" class="lv-num"':''}>${value===''||value==null?'—':value}</dd></div>`;
   const e=sfLeaveEsc,T=sfLeaveT,pr=r.profile||{};
   const span=sfLeaveSpan(r.approved_start||r.start_date,r.approved_end||r.end_date);
-  const left=r.annual_left-(r.leave_type==='annual'&&!['approved','rejected','cancelled'].includes(r.status)?(r.approved_days||r.days):0);
   const note=(name,label)=>`<label class="wide">${e(label)}<textarea name="${name}" maxlength="1000"></textarea></label>`;
   const stageButtons=stage=>`<div class="wide" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
     <button type="button" class="lv-btn no" data-lv-decide="${stage}" data-approve="0">${e(T('Reject','رفض'))}</button>
@@ -304,7 +330,7 @@ function sfLeaveOpen(id){
      ${note('note',T('Reasons / notes','الأسباب / ملاحظات'))}${stageButtons('supervisor')}</form></section>`
    :r.approved_start?`<section class="lv-sec"><h4>${e(T('Direct supervisor','الرئيس المباشر'))}</h4><dl class="lv-kv">${kv(T('Approved from','اعتبارًا من'),sfLeaveDate(r.approved_start),true)}${kv(T('Until','وحتى'),sfLeaveDate(r.approved_end),true)}${kv(T('For','لمدة'),e(sfLeaveDays(r.approved_days)))}
      ${kv(T('Replacement','البديل'),r.replacement_needed?e(r.replacement_name||T('Required','يحتاج')):e(T('Not required','لا يحتاج')))}${kv(T('Custody handed over to','العهدة تُسلَّم لـ'),e(r.custody_to))}${kv(T('Notes','ملاحظات'),e(r.supervisor_note))}</dl></section>`:'';
-  const hrFacts=`<dl class="lv-kv">${kv(T('Service start date','تاريخ بداية الخدمة'),sfLeaveDate(pr.service_start),true)}${kv(T('Leave credit','رصيد الإجازات'),e(T(`${left} of ${pr.annual_days} days`,`${left} من ${pr.annual_days} يومًا`)))}
+  const hrFacts=`<dl class="lv-kv">${kv(T('Service start date','تاريخ بداية الخدمة'),sfLeaveDate(pr.service_start),true)}${kv(T('Leave credit','رصيد الإجازات'),e(sfLeaveBalanceText(r.balance)))}
      ${kv(T('Last leave','تاريخ آخر إجازة'),sfLeaveDate(r.last_leave),true)}${kv(T('Days given','عدد الأيام الممنوحة'),e(sfLeaveDays(r.approved_days||span.days)))}
      ${kv(T('Leave start date','تاريخ بداية الإجازة'),sfLeaveDate(span.first),true)}${kv(T('Date of return to work','تاريخ العودة إلى العمل'),sfLeaveDate(sfLeaveReturn(span.last)),true)}${r.hr_note?kv(T('HR remarks','ملاحظات الموارد البشرية'),e(r.hr_note)):''}</dl>`;
   const hr=r.can.hr?`<section class="lv-sec"><h4>${e(T('Completed by HR','يعبأ من قبل إدارة الموارد البشرية'))}</h4>${hrFacts}<form class="lv-form" data-lv-stage="hr" style="margin-top:10px">${note('note',T('HR remarks','ملاحظات الموارد البشرية'))}${stageButtons('hr')}</form></section>`
@@ -325,7 +351,7 @@ function sfLeaveOpen(id){
   const rejected=r.status==='rejected'?`<section class="lv-sec"><h4>${e(T('Rejected','مرفوض'))}</h4><p class="lv-hint">${e(r.reject_note)}</p></section>`:'';
   const log=`<section class="lv-sec"><h4>${e(T('History','السجل'))}</h4><ul class="lv-log">${(r.log||[]).map(l=>`<li><b>${e(sfLeaveT(...(SF_LEAVE_ACTIONS[l.action]||[l.action,l.action])))}</b> · <bdi>${e(l.by)}</bdi> · <span class="lv-num" dir="ltr">${e(new Date(l.at).toLocaleString(sfLeaveAr()?'ar-SA-u-nu-latn-ca-gregory':'en-GB',{dateStyle:'short',timeStyle:'short'}))}</span>${l.note?` — ${e(l.note)}`:''}</li>`).join('')}</ul></section>`;
   sfLeaveSheet(`<div class="lv-dialog" role="dialog" aria-modal="true" aria-labelledby="lv-title"><header><h3 id="lv-title">${e(T('Leave application','طلب إجازة'))} — <bdi>${e(r.name)}</bdi> ${sfLeaveChip(r)}</h3><button type="button" class="lv-close" data-lv-close aria-label="${e(T('Close','إغلاق'))}">×</button></header>
-    <div class="lv-body">${employee}${rejected}${supervisor}${hr}${exec}${all}${actual}${log}</div>
+    <div class="lv-body">${employee}${r.leave_type==='annual'||r.unpaid_days?sfLeaveUnpaid(r):''}${rejected}${supervisor}${hr}${exec}${all}${actual}${log}</div>
     <footer><span class="lv-left"><button type="button" class="lv-btn" data-lv-print="${r.id}">🖨 ${e(T('Print the form','طباعة النموذج'))}</button></span>
      ${r.can.cancel?`<button type="button" class="lv-btn no" data-lv-cancel="${r.id}">${e(T('Cancel the request','إلغاء الطلب'))}</button>`:''}<button type="button" class="lv-btn" data-lv-close>${e(T('Close','إغلاق'))}</button></footer></div>`,(sheet)=>{
     const sup=sheet.querySelector('[data-lv-stage="supervisor"]');
@@ -371,9 +397,11 @@ async function sfLeaveProfile(userId){
   const v=await sfAskForm({title:sfLeaveT('HR details — ','بيانات الموارد البشرية — ')+p.name,fields:[
     {name:'service_start',label:sfLeaveT('Service start date','تاريخ بداية الخدمة'),type:'date',value:p.service_start||''},
     {name:'department',label:sfLeaveT('Department','الإدارة'),value:p.department||''},{name:'section',label:sfLeaveT('Section','القسم'),value:p.section||''},
-    {name:'position',label:sfLeaveT('Position','الوظيفة'),value:p.position||''},{name:'annual_days',label:sfLeaveT('Yearly leave days','أيام الإجازة السنوية'),value:String(p.annual_days),required:true}],ok:sfLeaveT('Save','حفظ')});
+    {name:'position',label:sfLeaveT('Position','الوظيفة'),value:p.position||''},{name:'annual_days',label:sfLeaveT('Yearly leave days','أيام الإجازة السنوية'),value:String(p.annual_days),required:true},
+    {name:'opening_balance',label:sfLeaveT('Annual leave available today (days)','الإجازة السنوية المتاحة اليوم (أيام)'),value:p.opening_balance==null?'':sfLeaveNum(p.opening_balance)}],
+    note:sfLeaveT('Leave taken before this system is not recorded: enter the days the engineer can use today. Engineers who joined from 5 Nov 2026 start from zero; leave it empty for them.','الإجازات التي أُخذت قبل هذا النظام غير مسجلة: أدخل الأيام التي يستطيع المهندس استخدامها اليوم. المهندس الذي بدأ من 5 نوفمبر 2026 يبدأ من صفر؛ اتركها فارغة له.'),ok:sfLeaveT('Save','حفظ')});
   if(!v)return;
-  if(!/^\d{1,2}$/.test(v.annual_days)||Number(v.annual_days)>60)return sfNotice(sfLeaveError('PROFILE_INVALID'));
+  if(!/^\d{1,2}$/.test(v.annual_days)||Number(v.annual_days)>60||(v.opening_balance&&(!/^\d{1,3}(\.\d)?$/.test(v.opening_balance)||Number(v.opening_balance)>365)))return sfNotice(sfLeaveError('PROFILE_INVALID'));
   try{await sfLeaveRpc('sf_leave_set_profile',{p_user:userId,p:v})}catch(error){sfNotice(sfLeaveError(error))}
   await sfLeaveLoad();
 }
@@ -414,9 +442,9 @@ h2{display:flex;justify-content:space-between;font-size:13px;margin:14px 0 6px}t
 <td>العهدة يتم تسليمها لـ / Custody handed over to: <b>${e(r.custody_to)}</b><br>ملاحظات: ${e(rej?r.reject_note:r.supervisor_note)}</td></tr>
 <tr><td>الرئيس المباشر / Supervisor: <b>${by('supervisor_approved','approved_all')}</b></td><td>&nbsp;</td></tr></table>
 <h2><span>يعبأ من قبل إدارة الموارد البشرية</span><span dir="ltr">TO BE COMPLETED BY HUMAN RESOURCES DEPARTMENT</span></h2>
-<table><tr>${cell('تاريخ بداية الخدمة','Start date',sfLeaveDate(pr.service_start))}${cell('رصيد الإجازات','Leave credit',r.annual_left!=null?`${r.annual_left} / ${pr.annual_days}`:'')}${cell('تاريخ آخر إجازة','Last leave',sfLeaveDate(r.last_leave))}
+<table><tr>${cell('تاريخ بداية الخدمة','Start date',sfLeaveDate(pr.service_start))}${cell('رصيد الإجازات','Leave credit',r.balance?.known?`${sfLeaveNum(r.balance.usable)} / ${pr.annual_days}`:'غير محدد')}${cell('تاريخ آخر إجازة','Last leave',sfLeaveDate(r.last_leave))}
 ${cell('عدد الأيام الممنوحة','Days given',r.approved_days??'')}${cell('تاريخ بداية الإجازة','Leave start date',sfLeaveDate(span.first))}${cell('تاريخ العودة إلى العمل','Date of start work',sfLeaveDate(r.actual_return||sfLeaveReturn(span.last)))}</tr>
-<tr><td colspan="6"><span class="l">ملاحظات إدارة الموارد البشرية / Human Resources Remarks</span><b>${e(r.hr_note)}</b>${r.actual_start?`<span class="muted">الإجازة الفعلية: من ${sfLeaveDate(r.actual_start)} والعودة ${sfLeaveDate(r.actual_return)} — ${r.actual_days} يوم</span>`:''}</td></tr>
+<tr><td colspan="6"><span class="l">ملاحظات إدارة الموارد البشرية / Human Resources Remarks</span><b>${e(r.hr_note)}</b>${r.unpaid_days||r.unpaid_expected?`<span class="muted">أيام بدون راتب (تُخصم من الراتب): ${r.unpaid_days||r.unpaid_expected}</span><br>`:''}${r.actual_start?`<span class="muted">الإجازة الفعلية: من ${sfLeaveDate(r.actual_start)} والعودة ${sfLeaveDate(r.actual_return)} — ${r.actual_days} يوم</span>`:''}</td></tr>
 <tr><td colspan="6">الموارد البشرية / HR: <b>${by('hr_approved','approved_all')}</b></td></tr></table>
 <h2><span>إعتماد السيد المدير التنفيذي</span><span dir="ltr">Executive Manager Approval</span></h2>
 <table><tr><td>${box(r.status==='approved')} معتمد / Approved: <b>${by('approved','approved_all')}</b>${r.executive_note?`<span class="muted">${e(r.executive_note)}</span>`:''}</td></tr></table>
