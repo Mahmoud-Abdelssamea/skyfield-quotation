@@ -118,6 +118,7 @@
     <button class="side-nav-btn" data-module="attendance" onclick="showTab('attendance',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Attendance</button>
     <button class="side-nav-btn" data-module="expenses" onclick="showTab('expenses',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17 5H6a2 2 0 0 0-2 2"/><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M15 13.5h2"/></svg></span>Field Expenses</button>
     <button class="side-nav-btn" data-module="timesheets" onclick="showTab('timesheets',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 13l2 2 4-4"/></svg></span>Timesheets &amp; Approvals</button>
+    <button class="side-nav-btn" data-module="leave" onclick="showTab('leave',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M9 15l2 2 4-4"/></svg></span>Leave requests<span class="side-nav-count" hidden></span></button>
     <div class="side-nav-label" data-group="equipment">Equipment &amp; Custody</div>
     <button class="side-nav-btn" data-module="devices" onclick="showTab('devices',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-5"/><path d="M4 18h16"/></svg></span>Equipment Dashboard</button>
     <button class="side-nav-btn" data-module="devices-form" onclick="showTab('devices-form',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 8h14l-3-3"/><path d="M20 16H6l3 3"/></svg></span>Record Movement</button>
@@ -524,7 +525,7 @@
     </div>
 
 <div id="sf-documents-panel" hidden></div>
-<div id="sf-users-panel" hidden></div>
+<div id="sf-users-panel" hidden></div><div id="sf-leave-panel" hidden></div>
 <div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" scrolling="no"></iframe></div>
 <div id="sf-unified-panel" hidden><div id="sf-unified-notice" role="status"></div><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
     <!-- ENGINEERS TAB -->
@@ -1037,8 +1038,9 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261104-labels"></script><script src="i18n-ar-commercial.js?v=20261031-design2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261031-confirm"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-confirm"></script><script src="app-projects.js?v=20261031-confirm"></script><script src="app-invoices.js?v=20261104-labels"></script><script src="app-payroll-team.js?v=20261031-confirm"></script><script src="app-setup.js?v=20261030-billing"></script>
+<script src="i18n-ar.js?v=20261105-leave"></script><script src="i18n-ar-commercial.js?v=20261031-design2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261031-confirm"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-confirm"></script><script src="app-projects.js?v=20261031-confirm"></script><script src="app-invoices.js?v=20261104-labels"></script><script src="app-payroll-team.js?v=20261031-confirm"></script><script src="app-setup.js?v=20261030-billing"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261031-confirm"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261030-design"></script><script src="unified-shell.js?v=20261104-labels"></script><script src="equipment-shell.js?v=20261102-forms"></script><script src="documents-page.js?v=20261102-email"></script><script src="users-page.js?v=20261031-confirm"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261031-confirm"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261105-leave"></script><script src="unified-shell.js?v=20261104-labels"></script><script src="equipment-shell.js?v=20261102-forms"></script><script src="documents-page.js?v=20261102-email"></script><script src="users-page.js?v=20261031-confirm"></script>
+<script src="leave-page.js?v=20261105-leave"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>

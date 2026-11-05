@@ -44,6 +44,8 @@ function commercialItems(){
 }
 function attendanceItems(d){
  const out=[];if(!d)return out;
+ if(d.leave?.waiting)out.push({sev:'mid',title:L(`${d.leave.waiting} leave request${d.leave.waiting>1?'s':''} waiting for your decision`,`${d.leave.waiting} طلب إجازة بانتظار قرارك`),detail:L('Approve or reject on the leave page.','وافق أو ارفض من صفحة الإجازات.'),btn:L('Open leave requests','فتح طلبات الإجازة'),go:'leave'});
+ if(d.leave?.overdue)out.push({sev:'high',title:L(`${d.leave.overdue} engineer${d.leave.overdue>1?'s':''} back from leave without a recorded return`,`${d.leave.overdue} مهندس انتهت إجازته ولم يُسجَّل رجوعه`),detail:L('Record the actual dates so attendance and payroll are right.','سجّل التواريخ الفعلية ليكون الحضور والرواتب صحيحين.'),btn:L('Open leave requests','فتح طلبات الإجازة'),go:'leave'});
  if(d.periods)out.push({sev:'mid',title:L(`${d.periods} attendance period${d.periods>1?'s':''} awaiting approval`,`${d.periods} فترة حضور بانتظار الاعتماد`),detail:L(`${d.days} day${d.days>1?'s':''} from ${d.engineers} engineer${d.engineers>1?'s':''}${d.months>1?` across ${d.months} months`:''}. Payroll only counts approved days.`,`${d.days} يوم من ${d.engineers} مهندس${d.months>1?` في ${d.months} شهور`:''}. الرواتب لا تحسب إلا الأيام المعتمدة.`),go:'timesheets-pending',btn:L('Review','مراجعة')});
  if(d.pendingExp)out.push({sev:'mid',title:L(`${d.pendingExp} expense${d.pendingExp>1?'s':''} awaiting approval`,`${d.pendingExp} مصروف بانتظار الاعتماد`),detail:L(`${sar2(d.pendingAmt)} in total.`,`بإجمالي ${sar2(d.pendingAmt)}.`),go:'timesheets',btn:L('Review','مراجعة')});
  if(d.unsettled)out.push({sev:'info',title:L(`${d.unsettled} approved expense${d.unsettled>1?'s':''} not settled`,`${d.unsettled} مصروف معتمد لم يُصفَّ`),detail:L(`${sar2(d.unsettledAmt)} owed to engineers. Export them for accounting from Timesheets & Approvals.`,`${sar2(d.unsettledAmt)} مستحقة للمهندسين. صدّرها للحسابات من التايم شيت والاعتمادات.`),go:'timesheets',btn:L('Open','فتح')});
@@ -79,7 +81,11 @@ async function loadAttendance(){
   iqamas=people.map(c=>({name:c.name,days:daysUntil(c.iqama_expiry)})).filter(c=>c.days!==null&&c.days<=45);
  }catch(_){}
  const months=[...new Set(records.map(r=>String(r.day).slice(0,7)))].sort();
- return{periods:new Set(records.map(r=>r.user_id+'|'+(r.period_id||r.day))).size,days:records.length,engineers:new Set(records.map(r=>r.user_id)).size,months:months.length,oldestMonth:months[0]||'',
+ let leave=null;
+ try{ // needs 29-leave-requests.sql; quietly skipped before it is run
+  const {data,error}=await sfDb.rpc('sf_leave_waiting');if(!error)leave=data;
+ }catch(_){}
+ return{leave,periods:new Set(records.map(r=>r.user_id+'|'+(r.period_id||r.day))).size,days:records.length,engineers:new Set(records.map(r=>r.user_id)).size,months:months.length,oldestMonth:months[0]||'',
   pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation,secCards,iqamas};
 }
 function draw(){
