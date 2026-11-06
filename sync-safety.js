@@ -64,7 +64,14 @@ function sfPushQueued(key){
  const clean=()=>{if(sfPushChains.get(key)===next)sfPushChains.delete(key)};sfPushChains.set(key,next);next.then(clean,clean);
  return next;
 }
-async function sfPushNow(key){
+// Shared lists are saved only over the server copy this device last saw (sf_workspace_save_key_if); if someone saved in
+// between, the page merges with the newer copy and tries again (twice at most). Before that function exists, the plain save.
+async function sfSaveSharedChecked(key,value){
+ const expected=SF_SHARED_LISTS[key]?sfBaseRead(key):null;
+ if(expected!==null){const {error}=await sfDb.rpc('sf_workspace_save_key_if',{p_key:key,p_value:value,p_expected:expected});if(!error||!/PGRST202|Could not find the function/.test(String(error.code)+' '+String(error.message)))return {error}}
+ return sfDb.rpc('sf_workspace_save_key',{p_key:key,p_value:value});
+}
+async function sfPushNow(key,attempt=0){
  if(typeof sfDb==='undefined'||!sfDb||!sfCurrentUser){setCloudStatus('error','Sign in required');return false}
  try{if(SF_SHARED_LISTS[key]&&!(await sfMergeSharedBeforePush(key)))return true;}catch(error){setCloudStatus('error','Could not check latest cloud data; changes remain pending.');sfScheduleSyncRetry();return false;}
  const raw=localStorage.getItem(key);
@@ -72,7 +79,8 @@ async function sfPushNow(key){
  let value;try{value=JSON.parse(raw)}catch{value=raw}
  setCloudStatus('saving','Saving…');
  try{
-  const {error}=await sfDb.rpc('sf_workspace_save_key',{p_key:key,p_value:value});
+  const {error}=await sfSaveSharedChecked(key,value);
+  if(error&&/SHARED_LIST_CHANGED/.test(String(error.message))&&attempt<2)return sfPushNow(key,attempt+1);
   if(error)throw error;
   if(SF_SHARED_LISTS[key])sfBaseWrite(key,value);
   if(localStorage.getItem(key)===raw)sfPendingClear(key); // a newer edit stays on the list for its own upload

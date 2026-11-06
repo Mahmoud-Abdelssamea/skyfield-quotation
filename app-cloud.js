@@ -34,7 +34,7 @@ function sfPurgeRestrictedLocalCache(){
   const wasPaused=sfSyncPaused;
   sfSyncPaused=true;
   try{
-    ['sfEngineers','sfPayrollSheets','sfDeletedDefaultEngineerIds'].forEach(key=>localStorage.removeItem(key));
+    ['sfEngineers','sfPayrollSheets','sfDeletedDefaultEngineerIds'].forEach(key=>{localStorage.removeItem(key);localStorage.removeItem('skyfield:base:'+key)});
 
     const scrub=(key,transform)=>{
       const raw=localStorage.getItem(key);if(raw===null)return;
@@ -95,12 +95,17 @@ function sfLocalSnapshot(){
   return JSON.stringify(Object.keys(data).filter(k=>!SF_REFRESHED_IN_PLACE_KEYS.has(k)).sort().map(k=>[k,data[k]]));
 }
 
+const SF_PRIVATE_LOCAL_PREFIXES=['skyfield:base:','commercialCacheAccess:','legacyImportTried:'];
 function sfClearLocalUserData(preservePerRecord=false){
   const keys=[];
   for(let i=0;i<localStorage.length;i++){
     const key=localStorage.key(i);
     if(sfIsManagedDataKey(key)&&!(preservePerRecord&&SF_PER_RECORD_SYNCED_KEYS.has(key)))keys.push(key);
+    // Full clear (sign-out, another account): the copies kept outside the "sf" keys go too — the last server copy
+    // of shared lists (engineers, payroll), commercial cache markers and legacy-import markers.
+    else if(!preservePerRecord&&SF_PRIVATE_LOCAL_PREFIXES.some(p=>String(key).startsWith(p)))keys.push(key);
   }
+  if(!preservePerRecord)try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(String(k).startsWith('sfHydrationSnapshot:'))sessionStorage.removeItem(k)}}catch(_){}
   const wasPaused=sfSyncPaused;
   sfSyncPaused=true;
   try{ keys.forEach(k=>localStorage.removeItem(k)); }

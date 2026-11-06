@@ -131,9 +131,9 @@ function sfUsersFormHtml(){
       <label>${sfUsersEsc(sfUsersT('Name','الاسم'))}<input name="name" required maxlength="150" value="${sfUsersEsc(d.name)}"></label>
       ${code?`<label>${sfUsersEsc(sfUsersT('Employee code','كود الموظف'))}<input name="code" required inputmode="numeric" pattern="[0-9]{6,40}" dir="ltr" value="${sfUsersEsc(d.code)}"></label>`
         :`<label>${sfUsersEsc(sfUsersT('E-mail','البريد الإلكتروني'))}<input name="email" type="email" required maxlength="254" dir="ltr" value="${sfUsersEsc(d.email)}"></label>`}
-      <label>${sfUsersEsc(sfUsersT('Password','كلمة المرور'))}<input name="password" type="password" required autocomplete="new-password" dir="ltr" ${code?'inputmode="numeric" pattern="[0-9]{6,}"':'minlength="8" maxlength="128"'}></label>
+      <label>${sfUsersEsc(sfUsersT('Password','كلمة المرور'))}<input name="password" type="password" required autocomplete="new-password" dir="ltr" ${code?'inputmode="numeric" pattern="[0-9]{8,}"':'minlength="8" maxlength="128"'}></label>
     </div>
-    <p class="users-hint">${sfUsersEsc(code?sfUsersT('Password: at least 6 digits. Set the wage and job details afterwards on the Engineers page.','كلمة المرور: 6 أرقام على الأقل. حدّد الأجر وبيانات الوظيفة بعد ذلك من صفحة المهندسين.'):sfUsersT('Password: 8 to 128 characters.','كلمة المرور: من 8 إلى 128 حرفًا.'))}</p>
+    <p class="users-hint">${sfUsersEsc(code?sfUsersT('Password: at least 8 digits. Set the wage and job details afterwards on the Engineers page.','كلمة المرور: 8 أرقام على الأقل. حدّد الأجر وبيانات الوظيفة بعد ذلك من صفحة المهندسين.'):sfUsersT('Password: 8 to 128 characters.','كلمة المرور: من 8 إلى 128 حرفًا.'))}</p>
     ${office&&d.roles.length?`<label class="users-check"><input type="checkbox" name="commercial"${d.commercial?' checked':''}> ${sfUsersEsc(sfUsersT('Also open the commercial pages (limited: quotations, projects, invoices — no salaries or engineers)','يدخل كمان الأقسام التجارية (محدود: عروض الأسعار والمشاريع والفواتير — بدون الرواتب والمهندسين)'))}</label>`:''}
     <div class="users-row-actions"><button type="submit" class="users-btn primary">${sfUsersEsc(sfUsersT('Create account','إنشاء الحساب'))}</button><button type="button" class="users-btn" data-users-cancel>${sfUsersEsc(sfUsersT('Cancel','إلغاء'))}</button></div>
   </form>`;
@@ -260,9 +260,9 @@ async function sfUsersAction(act,id){
     if(act==='password'){
       const engineer=!!u.engineer_account;
       const password=await sfUsersAskPassword(sfUsersT('New password','كلمة مرور جديدة')+' — '+sfUsersName(u),
-        engineer?sfUsersT('At least 6 digits.','6 أرقام على الأقل.'):sfUsersT('8 to 128 characters.','من 8 إلى 128 حرفًا.'),engineer?'inputmode="numeric" pattern="[0-9]{6,}"':'minlength="8" maxlength="128"');
+        engineer?sfUsersT('At least 8 digits.','8 أرقام على الأقل.'):sfUsersT('8 to 128 characters.','من 8 إلى 128 حرفًا.'),engineer?'inputmode="numeric" pattern="[0-9]{8,}"':'minlength="8" maxlength="128"');
       if(password===null)return;
-      if(engineer?!/^[0-9]{6,}$/.test(password):(password.length<8||password.length>128)){sfUsersNote={ok:false,text:engineer?sfUsersT('The password must be at least 6 digits.','كلمة المرور يجب أن تكون 6 أرقام على الأقل.'):sfUsersT('The password must be 8 to 128 characters.','كلمة المرور يجب أن تكون من 8 إلى 128 حرفًا.')};return sfUsersRender()}
+      if(engineer?!/^[0-9]{8,}$/.test(password):(password.length<8||password.length>128)){sfUsersNote={ok:false,text:engineer?sfUsersT('The password must be at least 8 digits.','كلمة المرور يجب أن تكون 8 أرقام على الأقل.'):sfUsersT('The password must be 8 to 128 characters.','كلمة المرور يجب أن تكون من 8 إلى 128 حرفًا.')};return sfUsersRender()}
       await sfUsersInvoke(engineer?{action:'password',user_id:id,password}:{action:'staff-password',user_id:id,password});
       sfUsersNote={ok:true,text:sfUsersT('Password changed.','تم تغيير كلمة المرور.')};return void await sfUsersLoad();
     }
@@ -293,7 +293,7 @@ async function sfUsersCreate(form){
   if(d.login==='code'){
     const code=d.code.trim();
     if(!/^[0-9]{6,40}$/.test(code))return fail(sfUsersT('The employee code must be 6 to 40 digits.','كود الموظف يجب أن يكون من 6 إلى 40 رقمًا.'));
-    if(!/^[0-9]{6,}$/.test(password))return fail(sfUsersT('The password must be at least 6 digits.','كلمة المرور يجب أن تكون 6 أرقام على الأقل.'));
+    if(!/^[0-9]{8,}$/.test(password))return fail(sfUsersT('The password must be at least 8 digits.','كلمة المرور يجب أن تكون 8 أرقام على الأقل.'));
     body.engineer_id=code;
   }else{
     const email=d.email.trim().toLowerCase();

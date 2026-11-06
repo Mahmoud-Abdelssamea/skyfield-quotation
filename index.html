@@ -181,10 +181,11 @@
   <!-- BACKUP / RESTORE (for OneDrive sync) -->
   <div class="backup-tools-panel" id="backup-tools">
     <div style="font-size:12px;color:var(--gray-700);flex:1;min-width:200px">
-      💾 <strong>Data backup:</strong> Export all data (projects, saved quotations, and invoices) as a JSON backup file. Use Import to restore it when needed; daily synchronization with Supabase remains automatic.
+      💾 <strong>Data backup:</strong> Full backup: every table (quotations, projects, invoices, attendance, expenses, payroll, equipment, leave) and every uploaded file in one ZIP. Keep it off this computer, for example on OneDrive.
     </div>
-    <button class="btn-sm" type="button" onclick="exportBackup()">⬇ Export Backup (JSON)</button>
-    <button class="btn-sm" type="button" onclick="document.getElementById('backup-file-input').click()">⬆ Import Backup</button>
+    <button class="btn-sm" type="button" id="full-backup-btn" onclick="sfFullBackup(this)" hidden>⬇ Full backup (ZIP)</button><span id="full-backup-status" role="status" style="font-size:12px;color:var(--gray-700)"></span>
+    <button class="btn-sm" type="button" onclick="exportBackup()">⬇ Settings only (JSON)</button>
+    <button class="btn-sm" type="button" onclick="document.getElementById('backup-file-input').click()">⬆ Import settings (JSON)</button>
     <button class="btn-sm" type="button" onclick="migrateLegacyDocumentsToStorage()">☁ Move Legacy Documents to Storage</button>
     <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
   </div>
@@ -1038,9 +1039,9 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261105-leave"></script><script src="i18n-ar-commercial.js?v=20261031-design2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261031-confirm"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-confirm"></script><script src="app-projects.js?v=20261031-confirm"></script><script src="app-invoices.js?v=20261104-labels"></script><script src="app-payroll-team.js?v=20261031-confirm"></script><script src="app-setup.js?v=20261030-billing"></script>
+<script src="i18n-ar.js?v=20261106-backup"></script><script src="i18n-ar-commercial.js?v=20261031-design2"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261106-backup"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-confirm"></script><script src="app-projects.js?v=20261031-confirm"></script><script src="app-invoices.js?v=20261104-labels"></script><script src="app-payroll-team.js?v=20261031-confirm"></script><script src="app-setup.js?v=20261030-billing"></script>
 
 <script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261031-confirm"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261105-leave"></script><script src="unified-shell.js?v=20261104-labels"></script><script src="equipment-shell.js?v=20261102-forms"></script><script src="documents-page.js?v=20261102-email"></script><script src="users-page.js?v=20261031-confirm"></script>
-<script src="leave-page.js?v=20261105-balance"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="leave-page.js?v=20261105-balance"></script><script src="full-backup.js?v=20261106-backup"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 </body>
 </html>
