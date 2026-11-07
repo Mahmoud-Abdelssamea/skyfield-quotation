@@ -11,6 +11,13 @@ const sfLeaveAr=()=>sfUiLanguage==='ar';
 const sfLeaveT=(en,ar)=>sfLeaveAr()?ar:en;
 const sfLeaveEsc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const sfLeaveDate=d=>{if(!d)return '—';const [y,m,x]=String(d).slice(0,10).split('-');return `${x}/${m}/${y}`};
+// A logged moment as 06/11/2026, 18:40 in local time (the Arabic locale adds direction marks that scramble it).
+const sfLeaveWhen=at=>{const d=new Date(at),p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}, ${p(d.getHours())}:${p(d.getMinutes())}`};
+// The stage a rejected request was rejected at, from the approvals logged before the rejection.
+function sfLeaveRejectedAt(r){
+  if(r.status!=='rejected')return '';const log=r.log||[],i=log.findIndex(l=>l.action==='rejected'),before=(i<0?log:log.slice(0,i)).map(l=>l.action);
+  return before.includes('hr_approved')?'executive':before.includes('supervisor_approved')?'hr':'supervisor';
+}
 const sfLeaveIso=t=>`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 const sfLeaveAdd=(d,n)=>{const t=new Date(String(d).slice(0,10)+'T00:00:00');t.setDate(t.getDate()+n);return sfLeaveIso(t)};
 const sfLeaveToday=()=>sfLeaveMe?.today||sfLeaveIso(new Date());
@@ -348,8 +355,8 @@ function sfLeaveOpen(id){
   const actual=r.status==='approved'?`<section class="lv-sec"><h4>${e(T('Actual leave','الإجازة الفعلية'))}</h4>${r.actual_start?`<dl class="lv-kv">${kv(T('First day away','أول يوم غياب للإجازة'),sfLeaveDate(r.actual_start),true)}${kv(T('Back at work on','العودة إلى العمل يوم'),sfLeaveDate(r.actual_return),true)}${kv(T('Actual days','الأيام الفعلية'),e(sfLeaveDays(r.actual_days)))}
      ${kv(T('State','الحالة'),e(r.actual_state==='confirmed'?T('Confirmed by HR','مؤكدة من الموارد البشرية'):T('Waiting for HR','بانتظار الموارد البشرية')))}${r.extra_type?kv(T('Extra days counted as','الأيام الزائدة تُحسب'),e({annual:T('Annual leave','إجازة سنوية'),unpaid:T('Unpaid leave','إجازة بدون راتب'),absent:T('Absence','غياب')}[r.extra_type])):''}</dl>`
      :`<p class="lv-hint">${e(T('If the engineer travelled or came back on different days, record the actual dates here; attendance and payroll follow them.','لو سافر المهندس أو رجع في أيام مختلفة، سجّل التواريخ الفعلية هنا؛ الحضور والرواتب يتبعانها.'))}</p>`}${actualForm}</section>`:'';
-  const rejected=r.status==='rejected'?`<section class="lv-sec"><h4>${e(T('Rejected','مرفوض'))}</h4><p class="lv-hint">${e(r.reject_note)}</p></section>`:'';
-  const log=`<section class="lv-sec"><h4>${e(T('History','السجل'))}</h4><ul class="lv-log">${(r.log||[]).map(l=>`<li><b>${e(sfLeaveT(...(SF_LEAVE_ACTIONS[l.action]||[l.action,l.action])))}</b> · <bdi>${e(l.by)}</bdi> · <span class="lv-num" dir="ltr">${e(new Date(l.at).toLocaleString(sfLeaveAr()?'ar-SA-u-nu-latn-ca-gregory':'en-GB',{dateStyle:'short',timeStyle:'short'}))}</span>${l.note?` — ${e(l.note)}`:''}</li>`).join('')}</ul></section>`;
+  const rejected=r.status==='rejected'?`<section class="lv-sec"><h4>${e({supervisor:T('Rejected by the direct supervisor','رفض الرئيس المباشر'),hr:T('Rejected at the HR stage','رفض في مرحلة الموارد البشرية'),executive:T('Rejected at the executive manager stage','رفض في مرحلة المدير التنفيذي')}[sfLeaveRejectedAt(r)])}</h4><p class="lv-hint">${e(r.reject_note)}</p></section>`:'';
+  const log=`<section class="lv-sec"><h4>${e(T('History','السجل'))}</h4><ul class="lv-log">${(r.log||[]).map(l=>`<li><b>${e(sfLeaveT(...(SF_LEAVE_ACTIONS[l.action]||[l.action,l.action])))}</b> · <bdi>${e(l.by)}</bdi> · <span class="lv-num" dir="ltr">${e(sfLeaveWhen(l.at))}</span>${l.note?` — ${e(l.note)}`:''}</li>`).join('')}</ul></section>`;
   sfLeaveSheet(`<div class="lv-dialog" role="dialog" aria-modal="true" aria-labelledby="lv-title"><header><h3 id="lv-title">${e(T('Leave application','طلب إجازة'))} — <bdi>${e(r.name)}</bdi> ${sfLeaveChip(r)}</h3><button type="button" class="lv-close" data-lv-close aria-label="${e(T('Close','إغلاق'))}">×</button></header>
     <div class="lv-body">${employee}${r.leave_type==='annual'||r.unpaid_days?sfLeaveUnpaid(r):''}${rejected}${supervisor}${hr}${exec}${all}${actual}${log}</div>
     <footer><span class="lv-left"><button type="button" class="lv-btn" data-lv-print="${r.id}">🖨 ${e(T('Print the form','طباعة النموذج'))}</button></span>
@@ -417,16 +424,20 @@ function sfLeavePrint(id){
   const r=sfLeaveRows.find(x=>x.id===id);if(!r)return;
   const w=window.open('','_blank');if(!w){sfNotice(sfLeaveT('Allow pop-ups to print.','اسمح بالنوافذ المنبثقة للطباعة.'));return}
   const e=sfLeaveEsc,pr=r.profile||{},span=sfLeaveSpan(r.approved_start||r.start_date,r.approved_end||r.end_date);
-  const by=(...actions)=>{const l=[...(r.log||[])].reverse().find(x=>actions.includes(x.action));return l?`${e(l.by)} · ${new Date(l.at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'})}`:''};
-  const box=on=>on?'☑':'☐',t=r.leave_type,rej=r.status==='rejected';
+  const by=(...actions)=>{const l=[...(r.log||[])].reverse().find(x=>actions.includes(x.action));return l?`${e(l.by)} · ${sfLeaveWhen(l.at)}`:''};
+  const box=on=>on?'☑':'☐',t=r.leave_type,rej=r.status==='rejected',at=sfLeaveRejectedAt(r),given=!['rejected','cancelled'].includes(r.status);
+  const stamp=rej?'<div class="stamp">مرفوض / REJECTED</div>':r.status==='cancelled'?'<div class="stamp">ملغي / CANCELLED</div>':'';
+  const refusal=`<b class="no">☑ غير موافق / Not approved: ${e(r.reject_note)}</b>`;
+  const credit=r.balance?.known?`متاح ${sfLeaveNum(r.balance.usable)} يوم<span class="l">من ${pr.annual_days??r.balance.annual_days} يوم لكل سنة خدمة</span>`:'غير محدد';
   const cell=(ar,en,v,cls='')=>`<td class="${cls}"><span class="l">${ar}</span><b>${v||'&nbsp;'}</b><span class="l en">${en}</span></td>`;
   w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${e('طلب إجازة — '+r.name)}</title>
 <style>@page{size:A4;margin:12mm}body{font-family:'Tajawal','Inter',Arial,sans-serif;color:#1A1A2E;font-size:12px;margin:0}
 .top{display:flex;justify-content:space-between;align-items:center}.top img{height:64px}.title{text-align:center;flex:1}.title h1{margin:0;font-size:20px;text-decoration:underline}.title div{font-weight:700;letter-spacing:.5px}
 h2{display:flex;justify-content:space-between;font-size:13px;margin:14px 0 6px}table{width:100%;border-collapse:collapse}td{border:1px solid #333;padding:6px 8px;vertical-align:top}
 .l{display:block;font-size:10px;color:#444}.en{direction:ltr;text-align:left}b{display:block;font-size:12px;min-height:14px}.pledge{margin:8px 0;line-height:1.7;font-weight:600}
+.stamp{border:2px solid #B42318;color:#B42318;font-weight:800;font-size:15px;padding:4px 14px;margin:6px auto 0;width:max-content}.no{color:#B42318}
 .sig{display:flex;justify-content:space-between;margin:6px 0;font-weight:600}.muted{color:#555;font-size:10px}</style></head><body>
-<div class="top"><div class="title"><h1>طــلب إجـــازة</h1><div>LEAVE APPLICATION</div></div><img src="${location.origin+location.pathname.replace(/[^/]*$/,'')}skyfield-logo.webp" alt=""></div>
+<div class="top"><div class="title"><h1>طــلب إجـــازة</h1><div>LEAVE APPLICATION</div>${stamp}</div><img src="${location.origin+location.pathname.replace(/[^/]*$/,'')}skyfield-logo.webp" alt=""></div>
 <h2><span>يعبأ بواسطة الموظف</span><span dir="ltr">TO BE COMPLETED BY EMPLOYEE</span></h2>
 <table><tr>${cell('الرقم الوظيفي','Employee no.',e(r.engineer_id))}${cell('الاسم','Name',e(r.name))}${cell('التاريخ','Date',sfLeaveDate(String(r.created_at).slice(0,10)))}</tr>
 <tr>${cell('الإدارة','Department',e(pr.department))}${cell('القسم','Section',e(pr.section))}${cell('الوظيفة','Position',e(pr.position))}</tr>
@@ -436,18 +447,18 @@ h2{display:flex;justify-content:space-between;font-size:13px;margin:14px 0 6px}t
 <p class="pledge">${r.undertaking===false?'':'☑ '}أتعهد أنا الموقع أدناه بأن أباشر مهام عملي بعد عودتي من الإجازة الممنوحة لي من الشركة وعند تأخري أتحمل كافة الإجراءات النظامية المتبعة في الشركة من فصل وحرمان من الخدمة.</p>
 <div class="sig"><span>توقيع طالب الإجازة: ${e(r.name)}</span><span class="muted">${by('submitted')}</span><span dir="ltr">Applicant's signature</span></div>
 <h2><span>يعبأ من قبل الرئيس المباشر</span><span dir="ltr">TO BE COMPLETED BY SUPERVISOR</span></h2>
-<table><tr><td>${box(!!r.approved_start)} موافق Approved &nbsp; ${box(rej&&r.log?.some(l=>l.action==='rejected'))} غير موافق Not approved</td>
+<table><tr><td>${box(!!r.approved_start)} موافق Approved &nbsp; ${box(at==='supervisor')} غير موافق Not approved</td>
 <td>اعتبارًا من: <b>${sfLeaveDate(r.approved_start)}</b> وحتى: <b>${sfLeaveDate(r.approved_end)}</b> ولمدة ( ${r.approved_days??''} ) يوم</td></tr>
 <tr><td>البديل / Replacement: ${box(r.replacement_needed===true)} يحتاج Required &nbsp; ${box(r.replacement_needed===false)} لا يحتاج Not required<br>اسم البديل / Replacement name: <b>${e(r.replacement_name)}</b></td>
-<td>العهدة يتم تسليمها لـ / Custody handed over to: <b>${e(r.custody_to)}</b><br>ملاحظات: ${e(rej?r.reject_note:r.supervisor_note)}</td></tr>
-<tr><td>الرئيس المباشر / Supervisor: <b>${by('supervisor_approved','approved_all')}</b></td><td>&nbsp;</td></tr></table>
+<td>العهدة يتم تسليمها لـ / Custody handed over to: <b>${e(r.custody_to)}</b><br>ملاحظات: ${e(at==='supervisor'?r.reject_note:r.supervisor_note)}</td></tr>
+<tr><td>الرئيس المباشر / Supervisor: <b>${at==='supervisor'?by('rejected'):by('supervisor_approved','approved_all')}</b></td><td>&nbsp;</td></tr></table>
 <h2><span>يعبأ من قبل إدارة الموارد البشرية</span><span dir="ltr">TO BE COMPLETED BY HUMAN RESOURCES DEPARTMENT</span></h2>
-<table><tr>${cell('تاريخ بداية الخدمة','Start date',sfLeaveDate(pr.service_start))}${cell('رصيد الإجازات','Leave credit',r.balance?.known?`${sfLeaveNum(r.balance.usable)} / ${pr.annual_days}`:'غير محدد')}${cell('تاريخ آخر إجازة','Last leave',sfLeaveDate(r.last_leave))}
-${cell('عدد الأيام الممنوحة','Days given',r.approved_days??'')}${cell('تاريخ بداية الإجازة','Leave start date',sfLeaveDate(span.first))}${cell('تاريخ العودة إلى العمل','Date of start work',sfLeaveDate(r.actual_return||sfLeaveReturn(span.last)))}</tr>
-<tr><td colspan="6"><span class="l">ملاحظات إدارة الموارد البشرية / Human Resources Remarks</span><b>${e(r.hr_note)}</b>${r.unpaid_days||r.unpaid_expected?`<span class="muted">أيام بدون راتب (تُخصم من الراتب): ${r.unpaid_days||r.unpaid_expected}</span><br>`:''}${r.actual_start?`<span class="muted">الإجازة الفعلية: من ${sfLeaveDate(r.actual_start)} والعودة ${sfLeaveDate(r.actual_return)} — ${r.actual_days} يوم</span>`:''}</td></tr>
-<tr><td colspan="6">الموارد البشرية / HR: <b>${by('hr_approved','approved_all')}</b></td></tr></table>
+<table><tr>${cell('تاريخ بداية الخدمة','Start date',sfLeaveDate(pr.service_start))}${cell('رصيد الإجازات','Leave credit',credit)}${cell('تاريخ آخر إجازة','Last leave',sfLeaveDate(r.last_leave))}
+${cell('عدد الأيام الممنوحة','Days given',given?r.approved_days??'':'')}${cell('تاريخ بداية الإجازة','Leave start date',given&&r.approved_start?sfLeaveDate(span.first):'')}${cell('تاريخ العودة إلى العمل','Date of start work',given&&r.approved_start?sfLeaveDate(r.actual_return||sfLeaveReturn(span.last)):'')}</tr>
+<tr><td colspan="6"><span class="l">ملاحظات إدارة الموارد البشرية / Human Resources Remarks</span><b>${e(r.hr_note)}</b>${at==='hr'?refusal:''}${given&&(r.unpaid_days||r.unpaid_expected)?`<span class="muted">أيام بدون راتب (تُخصم من الراتب): ${r.unpaid_days||r.unpaid_expected}</span><br>`:''}${r.actual_start?`<span class="muted">الإجازة الفعلية: من ${sfLeaveDate(r.actual_start)} والعودة ${sfLeaveDate(r.actual_return)} — ${r.actual_days} يوم</span>`:''}</td></tr>
+<tr><td colspan="6">الموارد البشرية / HR: <b>${at==='hr'?by('rejected'):by('hr_approved','approved_all')}</b></td></tr></table>
 <h2><span>إعتماد السيد المدير التنفيذي</span><span dir="ltr">Executive Manager Approval</span></h2>
-<table><tr><td>${box(r.status==='approved')} معتمد / Approved: <b>${by('approved','approved_all')}</b>${r.executive_note?`<span class="muted">${e(r.executive_note)}</span>`:''}</td></tr></table>
+<table><tr><td>${box(r.status==='approved')} معتمد / Approved: <b>${by('approved','approved_all')}</b>${at==='executive'?refusal+`<span class="muted">${by('rejected')}</span>`:''}${r.executive_note?`<span class="muted">${e(r.executive_note)}</span>`:''}</td></tr></table>
 <p class="muted">${e(sfLeaveT('Approved online in the Sky Field system; each name above is the account that approved the step.','اعتُمد إلكترونيًا في نظام سماء الميدان؛ كل اسم أعلاه هو الحساب الذي وافق على الخطوة.'))}</p>
 <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>`);
   w.document.close();
