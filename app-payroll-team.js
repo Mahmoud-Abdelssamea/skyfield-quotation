@@ -198,7 +198,10 @@ function addCostManpowerRow(){sfCurrentCostPlan.manpower.push({id:sfUid('mp'),en
 
 function addCostOtherRow(description='',amount=0){sfCurrentCostPlan.other.push({id:sfUid('oth'),description,amount:sfNum(amount)});renderCostPlan();}
 function removeCostPlanRow(group,id){sfCurrentCostPlan[group]=(sfCurrentCostPlan[group]||[]).filter(x=>x.id!==id);renderCostPlan();}
-function setCostPlanValue(group,id,field,value){const row=(sfCurrentCostPlan[group]||[]).find(x=>x.id===id);if(!row)return;row[field]=['qty','duration','rate','amount'].includes(field)?sfNum(value):value;if(group==='manpower'&&field==='engineerId'){const e=sfEngineers.find(x=>x.id===value);row.label=e?e.name:'';row.rate=e?(row.basis==='monthly'?e.monthly:row.basis==='hourly'?e.overtime:e.daily):row.rate;}if(group==='manpower'&&field==='basis'){const e=sfEngineers.find(x=>x.id===row.engineerId);if(e)row.rate=value==='monthly'?e.monthly:value==='hourly'?e.overtime:e.daily;}
+// An engineer's cost per basis. Monthly is the full package the payroll pays (basic + housing & transport + car
+// allowance), not the basic salary alone; the daily rate in the engineer profile is already that package / 30.
+function costPlanEngineerRate(e,basis){return basis==='monthly'?sfNum(e.monthly)+sfNum(e.housingTransport)+sfNum(e.carAllowance??e.siteCar):basis==='hourly'?sfNum(e.overtime):sfNum(e.daily)}
+function setCostPlanValue(group,id,field,value){const row=(sfCurrentCostPlan[group]||[]).find(x=>x.id===id);if(!row)return;row[field]=['qty','duration','rate','amount'].includes(field)?sfNum(value):value;if(group==='manpower'&&field==='engineerId'){const e=sfEngineers.find(x=>x.id===value);row.label=e?e.name:'';row.rate=e?costPlanEngineerRate(e,row.basis):row.rate;}if(group==='manpower'&&field==='basis'){const e=sfEngineers.find(x=>x.id===row.engineerId);if(e)row.rate=costPlanEngineerRate(e,value);}
   // Typing (numbers, role, description) updates the row cost and totals only: rebuilding the table would drop the cursor after each key.
   if(field==='engineerId'||field==='basis'){renderCostPlan();return}
   const cost=group==='manpower'&&document.querySelector(`[data-cost-row="${id}"]`);if(cost)cost.textContent=fmtSAR(sfNum(row.qty)*sfNum(row.duration)*sfNum(row.rate));
