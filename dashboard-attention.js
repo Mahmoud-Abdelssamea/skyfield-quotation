@@ -53,6 +53,8 @@ function attendanceItems(d){
   out.push({sev:d.secCards.some(c=>c.days<=10)?'high':'mid',title:L(`${n} SEC ID card${n>1?'s':''} expiring within 15 days`,`${n} بطاقة SEC تنتهي خلال 15 يومًا`),detail:L('Remind them to send the card to the Qassim office:','ذكّرهم بإرسال البطاقة إلى مكتب القصيم:')+peopleHtml(d.secCards),go:'documents',btn:L('Open Iqama & SEC-ID','فتح الإقامات والبطاقات')});}
  if(d.iqamas&&d.iqamas.length){const n=d.iqamas.length;
   out.push({sev:d.iqamas.some(c=>c.days<=7)?'high':'mid',title:L(`${n} Iqama${n>1?'s':''} expiring within 45 days`,`${n} إقامة تنتهي خلال 45 يومًا`),detail:L('Start the renewal for:','ابدأ إجراءات التجديد لـ:')+peopleHtml(d.iqamas),go:'documents',btn:L('Open Iqama & SEC-ID','فتح الإقامات والبطاقات')});}
+ if(d.library&&d.library.length){const n=d.library.length;
+  out.push({sev:d.library.some(c=>c.days<=7)?"high":"mid",title:L(`${n} document${n>1?"s":""} expiring within 30 days`,`${n} مستند ينتهي خلال 30 يومًا`),detail:L("Renew and upload the new copy:","جدّدها وارفع النسخة الجديدة:")+peopleHtml(d.library),go:"library",btn:L("Open documents library","فتح مكتبة المستندات")});}
  if(d.noLocation&&d.noLocation.length)out.push({sev:'high',title:L(`${d.noLocation.length} project${d.noLocation.length>1?'s':''} without a location`,`${d.noLocation.length} مشروع بلا موقع`),detail:L('Engineers cannot record site days on: ','لا يستطيع المهندسون تسجيل أيام موقع على: ')+names(d.noLocation),go:'attendancesettings',btn:L('Set location','تحديد الموقع')});
  return out;
 }
@@ -80,13 +82,20 @@ async function loadAttendance(){
   const people=await all(sfDb.from('eq_recipients').select('name,iqama_expiry').not('iqama_expiry','is',null).lte('iqama_expiry',limit).order('iqama_expiry'));
   iqamas=people.map(c=>({name:c.name,days:daysUntil(c.iqama_expiry)})).filter(c=>c.days!==null&&c.days<=45);
  }catch(_){}
+ let library=null;
+ try{ // documents library (2026-11-09-documents-library.sql): other papers expiring within 30 days; Iqama and SEC-ID are above
+  const limit=new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+  const rows=await all(sfDb.from("eq_library_files").select("doc_type,label,expiry_date,vehicle_id,eq_recipients(name),eq_vehicles(plate)").not("expiry_date","is",null).lte("expiry_date",limit).not("doc_type","in","(iqama,sec_id)").order("expiry_date"));
+  const kind=(car,t)=>{const list=typeof SF_LIB_CAR_TYPES!=="undefined"?(car?SF_LIB_CAR_TYPES:SF_LIB_PERSON_TYPES):[];const x=list.find(k=>k[0]===t);return x?L(x[1],x[2]):t};
+  library=rows.map(r=>({name:`${r.vehicle_id?r.eq_vehicles?.plate:r.eq_recipients?.name} – ${r.label||kind(!!r.vehicle_id,r.doc_type)}`,days:daysUntil(r.expiry_date)})).filter(c=>c.days!==null&&c.days<=30);
+ }catch(_){}
  const months=[...new Set(records.map(r=>String(r.day).slice(0,7)))].sort();
  let leave=null;
  try{ // needs 29-leave-requests.sql; quietly skipped before it is run
   const {data,error}=await sfDb.rpc('sf_leave_waiting');if(!error)leave=data;
  }catch(_){}
  return{leave,periods:new Set(records.map(r=>r.user_id+'|'+(r.period_id||r.day))).size,days:records.length,engineers:new Set(records.map(r=>r.user_id)).size,months:months.length,oldestMonth:months[0]||'',
-  pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation,secCards,iqamas};
+  pendingExp:pendingExp.length,pendingAmt:sum(pendingExp),unsettled:unsettled.length,unsettledAmt:sum(unsettled),noLocation,secCards,iqamas,library};
 }
 function draw(){
  const root=document.getElementById('dash-attention');if(!root)return;

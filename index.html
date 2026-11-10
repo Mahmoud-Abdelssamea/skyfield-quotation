@@ -128,6 +128,7 @@
     <button class="side-nav-btn" data-module="devices-manage" onclick="showTab('devices-manage',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg></span>Manage Devices</button>
     <button class="side-nav-btn" data-module="devices-settings" onclick="showTab('devices-settings',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>Recipients &amp; Sites</button>
     <button class="side-nav-btn" data-module="documents" onclick="showTab('documents',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0"/><path d="M14 10h4"/><path d="M14 14h4"/></svg></span>Iqama &amp; SEC-ID</button>
+    <button class="side-nav-btn" data-module="library" onclick="showTab('library',this)" style="display:none"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 13h8"/><path d="M8 16h5"/></svg></span>Documents Library</button>
     <div class="side-nav-label" data-group="finance">Finance</div>
     <button class="side-nav-btn" data-module="accounting" onclick="showTab('accounting',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10l9-6 9 6"/><path d="M5 10v8"/><path d="M10 10v8"/><path d="M14 10v8"/><path d="M19 10v8"/><path d="M3 20h18"/></svg></span>Accounts</button>
     <button class="side-nav-btn" data-module="payroll" onclick="showTab('payroll',this)"><span class="side-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5"/><path d="M18 9.5v5"/></svg></span>Payroll <span class="side-nav-count" id="side-payroll-count">0</span></button>
@@ -525,7 +526,7 @@
       </div>
     </div>
 
-<div id="sf-documents-panel" hidden></div>
+<div id="sf-documents-panel" hidden></div><div id="sf-library-panel" hidden></div>
 <div id="sf-users-panel" hidden></div><div id="sf-leave-panel" hidden></div>
 <div id="sf-equipment-panel" hidden><iframe id="sf-equipment-frame" title="Equipment &amp; Custody" scrolling="no"></iframe></div>
 <div id="sf-unified-panel" hidden><div id="sf-unified-notice" role="status"></div><iframe id="sf-unified-frame" title="Sky Field workspace" style="width:100%;height:900px;border:0;display:block" hidden></iframe></div>
@@ -1039,9 +1040,9 @@
   </div>
 </div>
 
-<script src="i18n-ar.js?v=20261106-backup"></script><script src="i18n-ar-commercial.js?v=20261108-qty"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261106-backup"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-confirm"></script><script src="app-projects.js?v=20261031-confirm"></script><script src="app-invoices.js?v=20261104-labels"></script><script src="app-payroll-team.js?v=20261108-qty"></script><script src="app-setup.js?v=20261030-billing"></script>
+<script src="i18n-ar.js?v=20261109-library"></script><script src="i18n-ar-commercial.js?v=20261108-qty"></script><script src="app-common.js?v=20261030-billing"></script><script src="app-cloud.js?v=20261106-backup"></script><script src="app-ui.js?v=20261030-design"></script><script src="app-quotation.js?v=20261031-confirm"></script><script src="app-projects.js?v=20261031-confirm"></script><script src="app-invoices.js?v=20261104-labels"></script><script src="app-payroll-team.js?v=20261108-qty"></script><script src="app-setup.js?v=20261030-billing"></script>
 
-<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261031-confirm"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261105-leave"></script><script src="unified-shell.js?v=20261104-labels"></script><script src="equipment-shell.js?v=20261102-forms"></script><script src="documents-page.js?v=20261102-email"></script><script src="users-page.js?v=20261031-confirm"></script>
-<script src="leave-page.js?v=20261107-print"></script><script src="full-backup.js?v=20261106-backup"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
+<script src="fflate-0.8.3.js"></script><script src="payroll-export.js?v=20261018-review-final"></script><script src="attendance-integration.js?v=20261031-confirm"></script><script src="analytics.js?v=20261028-quick"></script><script src="dashboard-attention.js?v=20261109-library"></script><script src="unified-shell.js?v=20261104-labels"></script><script src="equipment-shell.js?v=20261102-forms"></script><script src="documents-page.js?v=20261102-email"></script><script src="users-page.js?v=20261031-confirm"></script>
+<script src="leave-page.js?v=20261107-print"></script><script src="library-page.js?v=20261109-library"></script><script src="full-backup.js?v=20261106-backup"></script><script src="side-nav-groups.js?v=20261028-quick"></script><script src="payroll-ui.js?v=20261018-sort-all"></script><script>sfInitAuth();</script>
 <script src="password-eye.js?v=20261108-eye"></script></body>
 </html>
