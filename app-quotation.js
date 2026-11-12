@@ -954,7 +954,7 @@ function showExport(docType='quotation'){
   const isInvoice = docType === 'invoice';
   const docTitle = isInvoice
     ? quotationLabel('INVOICE QUOTATION','عرض سعر للفاتورة')
-    : quotationLabel('TESTING AND COMMISSIONING QUOTATION','عرض سعر لأعمال الاختبارات والتشغيل');
+    : quotationLabel('TESTING AND COMMISSIONING DEPARTMENT QUOTATION','عرض سعر قسم الاختبارات والتشغيل');
   const refLabel = isInvoice
     ? quotationLabel('Invoice Quotation Reference','مرجع عرض سعر الفاتورة')
     : quotationLabel('Quotation Reference','مرجع عرض السعر');
@@ -1205,7 +1205,7 @@ function showExport(docType='quotation'){
     <div class="doc-header">
       <img src="${LOGO_SRC}" alt="SKY FIELD">
       <div class="doc-header-right">
-        <h2>${docTitle}</h2>
+        <h2${docTitle.length>40?' style="font-size:15px;letter-spacing:.4px;white-space:nowrap"':''}>${docTitle}</h2>
         <p style="margin-top:4px;font-size:12px;opacity:.8">${substation}</p>
         <p style="font-size:11px;opacity:.7;margin-top:2px">${headerCompanyName}</p>
         <p style="font-size:10.5px;opacity:.75;margin-top:4px">ISO 9001 · ISO 45001 · ISO 14001 Certified</p>
