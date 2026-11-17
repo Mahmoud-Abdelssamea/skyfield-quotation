@@ -72,17 +72,23 @@ function getPriorProgressMap(src,excludeId){
   const map={};
   if(!src)return map;
   const advancePct=getPriorAdvancePct(src,excludeId);
+  // A quantity changed on a progress invoice carries over to the next one (the latest invoice wins).
+  const qty={},qtyStamp={};
   proformaInvoices.forEach(p=>{
     if(excludeId&&p.id===excludeId)return;
     if(p.basis!=='progress')return;
     if((p.sourceQuoteId||'')!==(src.id||''))return;
+    const stamp=p.createdAt||p.issueDate||'';
     (p.itemsProgress||[]).forEach(ip=>{
       const cur=parseFloat(ip.currentPct)||0;
       const keys=[ip.itemId,ip.key,ip.legacyKey].filter(Boolean);
       keys.forEach(k=>{if(!(k in map)||cur>map[k])map[k]=cur;});
+      const q=parseFloat(ip.qty);
+      if(q>0)keys.forEach(k=>{if(!(k in qty)||stamp>=qtyStamp[k]){qty[k]=q;qtyStamp[k]=stamp}});
     });
   });
   map.__advancePct=advancePct;
+  map.__qty=qty;
   return map;
 }
 function collectProgressContractItems(snap,includeOptional){
@@ -113,11 +119,18 @@ function handleIncludeOptionalChange(){
   recalcProformaModal();
 }
 function currentProgressInputs(){
-  return [...document.querySelectorAll('#pi-progress-wrap tr[data-key]')].map(tr=>({
-    key:tr.dataset.key,
-    priorPct:parseFloat(tr.dataset.prior)||0,
-    currentPct:parseFloat(tr.querySelector('.pi-prog-pct')?.value)||0
-  }));
+  // Quantity and "previously invoiced %" start from the quotation and the earlier invoices, and can be typed over.
+  return [...document.querySelectorAll('#pi-progress-wrap tr[data-key]')].map(tr=>{
+    const priorEl=tr.querySelector('.pi-prog-prior'),qtyEl=tr.querySelector('.pi-prog-qty');
+    const auto=parseFloat(tr.dataset.prior)||0,typed=priorEl?parseFloat(priorEl.value):NaN,qty=qtyEl?parseFloat(qtyEl.value):NaN;
+    return {
+      key:tr.dataset.key,
+      autoPriorPct:auto,
+      priorPct:Number.isFinite(typed)?Math.max(0,typed):auto,
+      currentPct:parseFloat(tr.querySelector('.pi-prog-pct')?.value)||0,
+      qty:Number.isFinite(qty)?qty:undefined
+    };
+  });
 }
 function infoRow(label,value){return value?`<div class="pi-info-row"><div class="key">${escHtml(label)}</div><div class="value">${escHtml(String(value))}</div></div>`:'';}
 function multilineHtml(v){return escHtml(String(v||'')).replace(/\n/g,'<br>');}

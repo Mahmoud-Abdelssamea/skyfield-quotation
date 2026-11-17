@@ -320,10 +320,13 @@ function calculateProforma(snap,opts){
       const priorPct=Math.max(0,parseFloat(p.priorPct)||0);
       const currentPct=Math.max(0,parseFloat(p.currentPct)||0);
       const deltaPct=Math.max(0,currentPct-priorPct);
-      const total=roundMoney(x.baseLineTotal*deltaPct/100);
+      // A quantity typed on the invoice re-prices the line at the quotation's unit price.
+      const typedQty=parseFloat(p.qty),qty=typedQty>0&&x.qty>0?typedQty:x.qty;
+      const lineTotal=qty===x.qty?x.baseLineTotal:roundMoney(x.baseLineTotal/x.qty*qty);
+      const total=roundMoney(lineTotal*deltaPct/100);
       sum+=total;
-      return {...x,sn:x.sn||String(idx+1),priorPct,currentPct,deltaPct,
-        contractLineTotal:x.baseLineTotal,unitPrice:roundMoney(x.qty?total/x.qty:0),total};
+      return {...x,sn:x.sn||String(idx+1),qty,quoteQty:x.qty,priorPct,currentPct,deltaPct,autoPriorPct:Number.isFinite(parseFloat(p.autoPriorPct))?parseFloat(p.autoPriorPct):priorPct,
+        baseLineTotal:lineTotal,contractLineTotal:lineTotal,unitPrice:roundMoney(qty?total/qty:0),total};
     });
     totalBefore=roundMoney(sum);
     discount=0;
@@ -396,8 +399,12 @@ function renderPiProgressRows(){
   const items=collectProgressContractItems(snap,includeOptional);
   const existingId=document.getElementById('pi-id').value;
   const priorMap=getPriorProgressMap(piWorkingSource,existingId);
-  const keep={};
+  const keep={},keepQty={},keepPrior={};
   wrap.querySelectorAll('.pi-prog-pct').forEach(inp=>{keep[inp.dataset.key]=inp.value;});
+  wrap.querySelectorAll('.pi-prog-qty').forEach(inp=>{keepQty[inp.dataset.key]=inp.value;});
+  wrap.querySelectorAll('.pi-prog-prior').forEach(inp=>{keepPrior[inp.dataset.key]=inp.value;});
+  const pendQty=(pendingProgressValues&&pendingProgressValues.__qty)||{},pendPrior=(pendingProgressValues&&pendingProgressValues.__prior)||{};
+  const inputStyle='width:70px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:5px;font-size:11px';
   if(!items.length){
     wrap.innerHTML='<div class="pi-progress-note">No line items available for this quotation.</div>';
     return;
@@ -411,16 +418,20 @@ function renderPiProgressRows(){
       const legacyKey=progressLegacyKey(it);
       const pending=pendingProgressValues?((key in pendingProgressValues)?pendingProgressValues[key]:pendingProgressValues[legacyKey]):undefined;
       const val=keep[key]!==undefined?keep[key]:(pending!==undefined?pending:'');
-      return `<tr data-key="${escHtml(key)}" data-base="${it.baseLineTotal}" data-prior="${prior}">
+      const pick=(kept,pend,def)=>kept[key]!==undefined?kept[key]:((key in pend)?pend[key]:((legacyKey in pend)?pend[legacyKey]:def));
+      const carriedQty=(priorMap.__qty||{})[key]??(priorMap.__qty||{})[legacyKey];
+      const qtyVal=pick(keepQty,pendQty,carriedQty>0?carriedQty:it.qty),priorVal=pick(keepPrior,pendPrior,prior);
+      return `<tr data-key="${escHtml(key)}" data-base="${it.baseLineTotal}" data-prior="${prior}" data-qty="${it.qty}">
         <td>${escHtml(it.description||('Item '+(i+1)))}</td>
-        <td class="num">${fmtMoney(it.qty).replace('.00','')}</td>
-        <td class="num">${fmtPiSAR(it.baseLineTotal)}</td>
-        <td class="num">${fmtMoney(prior)}%</td>
-        <td class="num"><input type="number" class="pi-prog-pct" data-key="${escHtml(key)}" min="${prior}" max="100" step="0.01" value="${escHtml(String(val))}" oninput="recalcProformaModal()"></td>
+        <td class="num"><input type="number" class="pi-prog-qty" data-key="${escHtml(key)}" min="0" step="any" style="${inputStyle}" value="${escHtml(String(qtyVal))}" aria-label="Quantity" oninput="recalcProformaModal()"></td>
+        <td class="num pi-prog-line">${fmtPiSAR(it.baseLineTotal)}</td>
+        <td class="num"><input type="number" class="pi-prog-prior" data-key="${escHtml(key)}" min="0" max="100" step="0.01" style="${inputStyle}" value="${escHtml(String(priorVal))}" aria-label="Previously invoiced %" oninput="recalcProformaModal()"></td>
+        <td class="num"><input type="number" class="pi-prog-pct" data-key="${escHtml(key)}" min="0" max="100" step="0.01" value="${escHtml(String(val))}" oninput="recalcProformaModal()"></td>
         <td class="num pi-prog-amt">SAR 0.00</td>
       </tr>`;
     }).join('')}</tbody></table>
-    <div class="pi-progress-note">Enter the cumulative completion % for each item. The system deducts all earlier progress invoices and any percentage advance already issued, and bills only the new difference. Line Amount is the net contract value after quotation discount.</div>`;
+    <div class="pi-progress-note">Enter the cumulative completion % for each item. The system deducts all earlier progress invoices and any percentage advance already issued, and bills only the new difference. Line Amount is the net contract value after quotation discount. Quantity and Previously Invoiced % can be changed for this invoice: the line is then priced at the quotation's unit price.</div>
+    <div class="pi-invoiced-warn" id="pi-prog-warn" aria-live="polite" style="display:none;font-size:12px;margin:6px 2px 0"></div>`;
   pendingProgressValues=null;
 }
 function currentPiOptions(){
@@ -490,10 +501,17 @@ function recalcProformaModal(){
   piRenderInvoicedNote(calc);
   if(currentPiOptions().basis==='progress'){
     const rowsMap={};(calc.lineItems||[]).forEach(li=>{rowsMap[progressItemKey(li)]=li;});
+    let lower=0;
     document.querySelectorAll('#pi-progress-wrap tr[data-key]').forEach(tr=>{
-      const li=rowsMap[tr.dataset.key];const cell=tr.querySelector('.pi-prog-amt');
+      const li=rowsMap[tr.dataset.key];const cell=tr.querySelector('.pi-prog-amt'),line=tr.querySelector('.pi-prog-line');
       if(cell)cell.textContent=fmtPiSAR(li?li.total:0);
+      if(line&&li)line.textContent=fmtPiSAR(li.contractLineTotal);
+      if(li&&li.priorPct<(parseFloat(tr.dataset.prior)||0)-0.0001)lower++;
     });
+    // Typing a lower "previously invoiced %" than the earlier invoices add up to can bill the same work twice: warn, never block.
+    const warn=document.getElementById('pi-prog-warn');
+    if(warn){warn.style.display=lower?'':'none';
+      warn.textContent=lower?sfLang('Previously Invoiced % is lower than what the earlier invoices add up to on '+lower+' item(s). The same work may be invoiced twice.','نسبة «المُفوتَر سابقًا» أقل مما تجمعه الفواتير السابقة في '+lower+' بند. قد يُفوتَر نفس العمل مرتين.'):'';}
   }
   const el=document.getElementById('pi-live-summary');if(!el)return;
   if(currentPiOptions().basis==='progress'){
@@ -583,7 +601,10 @@ function editProforma(id){
   document.getElementById('pi-stamp-status').textContent=proformaStamp?'Saved stamp will be used.':'';
   if(pi.basis==='progress'){
     pendingProgressValues={};
-    (pi.itemsProgress||[]).forEach(ip=>{pendingProgressValues[ip.key]=ip.currentPct;});
+    pendingProgressValues.__qty={};pendingProgressValues.__prior={};
+    (pi.itemsProgress||[]).forEach(ip=>{pendingProgressValues[ip.key]=ip.currentPct;
+      if(parseFloat(ip.qty)>0)pendingProgressValues.__qty[ip.key]=ip.qty;
+      if(ip.priorEdited)pendingProgressValues.__prior[ip.key]=ip.priorPct;});
     updatePiBasisUI();renderPiProgressRows();
   }else{
     updatePiBasisUI();
@@ -617,6 +638,8 @@ function validateProforma(calc){
   if(opts.basis==='fixed'&&opts.fixedAmount<=0)return 'Fixed Amount must be greater than zero.';
   if(opts.basis==='progress'){
     if(!opts.itemProgress||!opts.itemProgress.length)return 'No line items are available for a progress-based invoice.';
+    if(opts.itemProgress.some(p=>p.qty!==undefined&&!(p.qty>0)))return 'Quantity must be greater than zero.';
+    if(opts.itemProgress.some(p=>p.priorPct>100.0001))return 'Previously Invoiced % cannot exceed 100%.';
     if(opts.itemProgress.some(p=>p.currentPct<p.priorPct-0.0001))return 'Completion % cannot be lower than the percentage already invoiced for an item.';
     if(opts.itemProgress.some(p=>p.currentPct>100.0001))return 'Completion % cannot exceed 100%.';
     if(!opts.itemProgress.some(p=>(p.currentPct-p.priorPct)>0.0001))return 'Enter a completion % greater than what was previously invoiced for at least one item.';
@@ -650,7 +673,8 @@ async function saveProforma(openPreview){
     basis:opts.basis,percentage:opts.percentage,fixedAmount:opts.fixedAmount,fixedMode:opts.fixedMode,includeOptional:opts.includeOptional,
     sourceQuoteId:src.id||old?.sourceQuoteId||'',sourceQuotation:src.number||old?.sourceQuotation||'',projectId:src.projectId||old?.projectId||'',quoteSnapshot:deepClone(src.snapshot||src.quoteSnapshot||{}),
     lineItems:calc.lineItems,totals:calc,
-    itemsProgress:opts.basis==='progress'?calc.lineItems.map(li=>({itemId:li.itemId||'',key:progressItemKey(li),legacyKey:progressLegacyKey(li),description:li.description,priorPct:li.priorPct,currentPct:li.currentPct,deltaPct:li.deltaPct})):[],
+    itemsProgress:opts.basis==='progress'?calc.lineItems.map(li=>({itemId:li.itemId||'',key:progressItemKey(li),legacyKey:progressLegacyKey(li),description:li.description,priorPct:li.priorPct,currentPct:li.currentPct,deltaPct:li.deltaPct,
+      qty:li.qty,quoteQty:li.quoteQty,priorEdited:Math.abs((li.priorPct||0)-(li.autoPriorPct||0))>0.0001})):[],
     createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),
     _syncRevision:old?._syncRevision,_syncUpdatedAt:old?._syncUpdatedAt,_syncDeletedAt:old?._syncDeletedAt
   };

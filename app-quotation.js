@@ -1263,8 +1263,8 @@ function showExport(docType='quotation'){
     </div>
     <div class="doc-footer">
       <div class="doc-footer-line1">Sky Field Company Limited &nbsp;|&nbsp; شركة سماء الميدان المحدودة</div>
-      <div class="doc-footer-line2">Riyadh - Al-Malaz, Salah Salem Street, Al-Falih &nbsp;–&nbsp; C.R. 1116010788 &nbsp;–&nbsp; P.O.Box 7599 Al-Qassim 17471, Kingdom of Saudi Arabia</div>
-      <div class="doc-footer-line2">الرياض - الملز - شارع صلاح سالم - الفالح – س ت 1116010788 &nbsp;–&nbsp; ص.ب 7599 القصيم 17471 المملكة العربية السعودية</div>
+      <div class="doc-footer-line2">National Address: Building 7277, King Khalid Rd, Al Fakhriyah Dist., Buraidah 52347, Additional No. 3543 (QBJC7277) &nbsp;–&nbsp; C.R. 1116010788 &nbsp;–&nbsp; P.O.Box 7599 Al-Qassim 17471, Kingdom of Saudi Arabia</div>
+      <div class="doc-footer-line2">العنوان الوطني: مبنى 7277، طريق خالد بن عبدالعزيز، حي الفاخرية، بريدة 52347، الرقم الفرعي 3543 (QBJC7277) – س ت 1116010788 &nbsp;–&nbsp; ص.ب 7599 القصيم 17471 المملكة العربية السعودية</div>
       <div class="doc-footer-line3">Tel: +966569590822 &nbsp;–&nbsp; Fax: +966163836005 &nbsp;–&nbsp; VAT No: 310049492300003</div>
     </div>
   `;

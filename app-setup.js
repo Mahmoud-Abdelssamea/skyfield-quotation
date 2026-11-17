@@ -451,8 +451,9 @@ const DEFAULT_PROFORMA_COMPANY = {
   nameEn:'SKY FIELD COMPANY LIMITED',
   nameAr:'شركة سماء الميدان المحدودة',
   vat:'310049492300003',
-  addressEn:'Al-Dawadmi, Hittin District, Prince Mashhoor Bin Abdulaziz Street, Saudi Arabia',
-  addressAr:'الدوادمي - حي حطين - شارع الأمير مشهور بن عبدالعزيز - المملكة العربية السعودية',
+  // National Address (proof 1096220193, issued 25/10/2026)
+  addressEn:'Building 7277, King Khalid Rd, Al Fakhriyah Dist., Buraidah 52347, Additional No. 3543, Saudi Arabia (Short Address QBJC7277)',
+  addressAr:'مبنى 7277، طريق خالد بن عبدالعزيز، حي الفاخرية، بريدة 52347، الرقم الفرعي 3543، المملكة العربية السعودية (العنوان المختصر QBJC7277)',
   telephone:'+966 56 959 0822',
   fax:'+966 16 383 6005'
 };
