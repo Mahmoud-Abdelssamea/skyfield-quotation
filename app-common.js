@@ -132,7 +132,11 @@ function currentProgressInputs(){
     };
   });
 }
-function infoRow(label,value){return value?`<div class="pi-info-row"><div class="key">${escHtml(label)}</div><div class="value">${escHtml(String(value))}</div></div>`:'';}
+function infoRow(label,value){
+  // Numbers, e-mails and English values stay left-to-right, so a phone or e-mail is not reversed inside Arabic text.
+  if(!value)return '';
+  const v=String(value),ltr=/^[\s\d+\-().,/:@_&A-Za-z0-9]+$/.test(v)||/@/.test(v);
+  return `<div class="pi-info-row"><div class="key" dir="auto">${escHtml(label)}</div><div class="value" dir="${ltr?'ltr':'auto'}" style="text-align:${ltr?'left':'start'}">${escHtml(v)}</div></div>`;}
 function multilineHtml(v){return escHtml(String(v||'')).replace(/\n/g,'<br>');}
 function amountInWords(amount){const a=roundMoney(amount),riyals=Math.floor(a),halalas=Math.round((a-riyals)*100);return `${numberToWords(riyals)} Saudi Riyals${halalas?` and ${numberToWords(halalas)} Halalas`:''} Only`;}
 
