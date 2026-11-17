@@ -752,7 +752,9 @@
   .pi-doc-footer { background:var(--navy);color:rgba(255,255,255,.82);padding:11px 26px;text-align:center;font-size:9px;line-height:1.55; }
   .pi-doc-footer strong { color:var(--orange);font-size:10px; }
   .pi-notes { margin-top:12px;border:1px solid #e0e5ec;border-radius:7px;padding:8px 10px;font-size:9.8px;white-space:pre-wrap;line-height:1.5; }
-  @media(max-width:760px){
+  /* Screen only: a printed A4 page is 733px wide inside its margins, so without "screen" the printout took this
+     phone layout (one column, a longer invoice) unless the print dialog's margins were set to Minimum. */
+  @media screen and (max-width:760px){
     .pi-form-grid,.pi-party-grid,.pi-summary-wrap,.pi-image-row{grid-template-columns:1fr}
     .pi-basis-fields,.pi-live-summary{grid-template-columns:1fr 1fr}
     .pi-doc-header{flex-direction:column}.pi-doc-title{text-align:left}

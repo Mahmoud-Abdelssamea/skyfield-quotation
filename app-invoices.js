@@ -862,6 +862,11 @@ function previewProforma(id){
     ${hasPriceCol?`<td class="num" style="width:12%">${x.showUnitPrice!==false?fmtMoney(isProgress?(x.contractLineTotal||x.baseLineTotal||0):x.unitPrice):''}</td>`:''}
     ${isProgress?`<td class="center" style="width:7%">${fmtMoney(x.priorPct||0)}%</td><td class="center" style="width:7%">${fmtMoney(x.currentPct||0)}%</td><td class="center" style="width:7%">${fmtMoney(x.deltaPct||0)}%</td>`:''}
     ${hasTotalCol?`<td class="num" style="width:13%">${x.showTotal!==false?fmtMoney(x.total):''}</td>`:''}</tr>`).join('');
+  // Column widths. The table has a fixed layout, which takes its widths from the first row (the header), so widths
+  // set on the body cells were ignored and every column came out equal: Description and Specification were squeezed.
+  const piW=isProgress?{sn:4.5,qty:5,unit:6.5,price:10.5,pct:7.5,total:10.5}:{sn:5,qty:6,unit:7,price:12,pct:0,total:13};
+  const piColgroup='<colgroup>'+[piW.sn,null,hasSpec?null:undefined,hasRemark?null:undefined,hasQtyCol?piW.qty:undefined,hasQtyCol?piW.unit:undefined,hasPriceCol?piW.price:undefined,
+    ...(isProgress?[piW.pct,piW.pct,piW.pct]:[]),hasTotalCol?piW.total:undefined].filter(w=>w!==undefined).map(w=>w===null?'<col>':`<col style="width:${w}%">`).join('')+'</colgroup>';
   const supplierRows=infoRow('Supplier Name',c.nameEn)+infoRow('الاسم بالعربية',c.nameAr)+infoRow('Supplier Address',c.addressEn)+infoRow('العنوان',c.addressAr)+infoRow('Supplier VAT No.',c.vat)+infoRow('Telephone',c.telephone)+infoRow('Fax',c.fax);
   const clientRows=infoRow('Client Name',pi.clientName)+infoRow('Client Address',pi.clientAddress)+infoRow('Client VAT No.',pi.clientVat)+infoRow('Attention',pi.attention)+infoRow('Telephone',pi.clientTel)+infoRow('Email',pi.clientEmail);
   const t=resolved;
@@ -872,7 +877,7 @@ function previewProforma(id){
       <div class="pi-ref-grid">
         ${infoRow('Issue Date',pi.issueDate)}${infoRow('Proforma Invoice No.',pi.number)}${infoRow('Project',pi.projectName)}${infoRow('Subject',pi.subject)}${infoRow('Quotation Reference',pi.quotationRef||pi.sourceQuotation)}${infoRow('PO / Contract Ref.',pi.poRef)}${infoRow('Payment Basis',proformaBasisLabel(pi))}${infoRow('Payment Description',pi.paymentDescription)}
       </div>
-      <table class="pi-table"><thead><tr><th>SN</th><th>Description</th>${hasSpec?'<th>Specification</th>':''}${hasRemark?'<th>Remark</th>':''}${hasQtyCol?'<th>Qty</th><th>Unit</th>':''}${hasPriceCol?(isProgress?'<th>Contract Line<br>Amount (SAR)</th>':'<th>Unit Price<br>(SAR)</th>'):''}${isProgress?'<th>Prior %</th><th>Current %</th><th>This Invoice %</th>':''}${hasTotalCol?'<th>Total Price<br>(SAR)</th>':''}</tr></thead><tbody>${rows}</tbody></table>
+      <table class="pi-table">${piColgroup}<thead><tr><th>SN</th><th>Description</th>${hasSpec?'<th>Specification</th>':''}${hasRemark?'<th>Remark</th>':''}${hasQtyCol?'<th>Qty</th><th>Unit</th>':''}${hasPriceCol?(isProgress?'<th>Contract Line<br>Amount (SAR)</th>':'<th>Unit Price<br>(SAR)</th>'):''}${isProgress?'<th>Prior %</th><th>Current %</th><th>This Invoice %</th>':''}${hasTotalCol?'<th>Total Price<br>(SAR)</th>':''}</tr></thead><tbody>${rows}</tbody></table>
       <div class="pi-summary-wrap">
         <div><div class="pi-payment-note"><strong>${escHtml(pi.paymentDescription||'Kindly arrange payment of the above Proforma Invoice amount.')}</strong><br>Kindly arrange payment of the above Proforma Invoice amount.<div class="ar">نأمل منكم التكرم بصرف قيمة الفاتورة المبدئية الموضحة أعلاه، ولكم جزيل الشكر.</div></div><div class="pi-words"><strong>Amount in Words:</strong> ${escHtml(amountInWords(t.grandTotal))}</div></div>
         <div>
