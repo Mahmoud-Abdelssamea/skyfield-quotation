@@ -1,8 +1,9 @@
 'use strict';
-// Sidebar groups for the system administrator, whose menu is long: each heading opens and closes its group; going to a
-// page opens its group, and the open groups are remembered on this device. Every other account keeps the plain list.
+// Sidebar groups for the system administrator, whose menu is long: each heading opens and closes its group; only ONE
+// group is open at a time (opening one, or going to a page of another group, closes the rest); the open group is
+// remembered on this device. Every other account keeps the plain list.
 const SF_NAV_FOLD_FROM=11; // and only when that many menu items are visible
-let sfNavOpen=(()=>{try{const v=JSON.parse(localStorage.getItem('sfNavOpenGroups')||'[]');return Array.isArray(v)?v:[]}catch{return []}})();
+let sfNavOpen=(()=>{try{const v=JSON.parse(localStorage.getItem('sfNavOpenGroups')||'[]');return Array.isArray(v)?v.slice(-1):[]}catch{return []}})();
 let sfNavActiveGroup='';
 const sfNavVisible=b=>b.style.display!=='none'&&!b.hidden;
 function sfNavGroups(){
@@ -36,7 +37,7 @@ function sfNavApply(){
   // (Only the page really open: before sign-in finishes, the Dashboard item is marked by default.)
   const route=typeof sfUnifiedRoute==='string'&&sfUnifiedRoute?sfUnifiedRoute:document.body?.dataset?.module||'';
   const active=groups.find(g=>g.buttons.some(b=>b.classList.contains('active')&&sfNavVisible(b)&&b.dataset.module===route));
-  if(active&&active.key!==sfNavActiveGroup){sfNavActiveGroup=active.key;if(!sfNavOpen.includes(active.key)){sfNavOpen=[...sfNavOpen,active.key];sfNavSave()}}
+  if(active&&active.key!==sfNavActiveGroup){sfNavActiveGroup=active.key;if(sfNavOpen.join()!==active.key){sfNavOpen=[active.key];sfNavSave()}}
   for(const g of groups){
     const open=!fold||sfNavOpen.includes(g.key);
     if(fold){g.label.setAttribute('role','button');g.label.tabIndex=0;g.label.setAttribute('aria-expanded',String(open))}
@@ -47,7 +48,7 @@ function sfNavApply(){
 }
 function sfNavToggle(label){
   const key=label.dataset.group;
-  sfNavOpen=sfNavOpen.includes(key)?sfNavOpen.filter(k=>k!==key):[...sfNavOpen,key];sfNavSave();sfNavApply();
+  sfNavOpen=sfNavOpen.includes(key)?[]:[key];sfNavSave();sfNavApply();
 }
 // Runs whenever the menu is redrawn for the account or the page changes (after the group headings are updated).
 const sfNavBaseRefresh=sfUnifiedRefreshNavGroups;

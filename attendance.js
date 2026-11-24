@@ -613,12 +613,15 @@ function resetPeriodForm(){
  updateRangeControls();
 }
 function renderMonthSummary(){
- const groups=new Map();let otHours=0;
+ const groups=new Map();let otHours=0,allowance=0;
  for(const row of monthSaved.values()){
   const site=['inside','outside'].includes(row.status),key=site?'p:'+row.project_id:'s:'+row.status,name=site?(projects.find(p=>p.id===row.project_id)?.name||row.project_id):tr(labels[row.status]);
   const group=groups.get(key)||{name,count:0};group.count++;groups.set(key,group);otHours+=Number(row.overtime)||0;
+  if(row.review!=='rejected')allowance+=Number(row.allowance)||0;
  }
- $('monthProjectSummary').innerHTML=`<span><b>${monthSaved.size} ${esc(tr('يوم مسجل'))}</b><br>${otHours} ${esc(tr('ساعة إضافية'))}</span>`+[...groups.values()].map(g=>`<span>${esc(g.name)}<br><b>${g.count} ${esc(tr('أيام'))}</b></span>`).join('');
+ // The engineer's own site allowance for the month (rejected days left out; pending days counted until reviewed).
+ $('monthProjectSummary').innerHTML=`<span><b>${monthSaved.size} ${esc(tr('يوم مسجل'))}</b><br>${otHours} ${esc(tr('ساعة إضافية'))}</span>`
+  +`<span>${esc(tr('بدل الموقع'))}<br><b>${esc(sar(allowance))}</b></span>`+[...groups.values()].map(g=>`<span>${esc(g.name)}<br><b>${g.count} ${esc(tr('أيام'))}</b></span>`).join('');
 }
 function renderMonthEntries(){
  periodGroups=groupAttendancePeriods([...monthSaved.values()]);
@@ -626,8 +629,9 @@ function renderMonthEntries(){
  $('monthEntryRows').innerHTML=periodGroups.map((group,i)=>{
   const row=group.rows[0],reviews=[...new Set(group.rows.map(r=>r.review))],locked=group.rows.some(r=>r.review==='approved'),review=reviews.length===1?reviews[0]:'mixed';
   const status=tr(labels[row.status])+(row.status==='leave'?' · '+tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة',unpaid:'بدون راتب'}[row.leave_type]):''),project=projects.find(p=>String(p.id)===String(row.project_id))?.name;
-  return `<tr class="${editingPeriod?.key===group.key?'editing':''}"><td data-label="${esc(tr('الفترة'))}"><span class="period-dates">${group.from} → ${group.to}</span>${group.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${group.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}</td><td data-label="${esc(tr('المشروع / الحالة'))}"><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${row.notes?`<small>${esc(row.notes)}</small>`:''}</td><td data-label="${esc(tr('عدد الأيام'))}">${group.rows.length}</td><td data-label="${esc(tr('إضافي / يوم'))}">${Number(row.overtime)||0}</td><td data-label="${esc(tr('الاعتماد'))}"><span class="status-badge ${review}">${esc(tr(labels[review]||'حالات اعتماد مختلفة'))}</span>${(()=>{const note=group.rows.find(r=>r.review==='rejected'&&r.review_note)?.review_note;return note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(note)}</small>`:''})()}</td><td data-label="${esc(tr('إجراءات'))}">${locked?`<small>${esc(tr('مقفولة — بها أيام معتمدة'))}</small>`:`<div class="actions"><button type="button" class="secondary" data-edit-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('تعديل'))}</button><button type="button" class="delete-period" data-delete-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('مسح'))}</button></div>`}</td></tr>`;
- }).join('')||`<tr><td colspan="6" class="empty-state">${esc(tr(monthReady?'لا توجد فترات مسجلة. أضف أول فترة من النموذج أعلاه.':'جاري تحميل الفترات…'))}</td></tr>`;
+  return `<tr class="${editingPeriod?.key===group.key?'editing':''}"><td data-label="${esc(tr('الفترة'))}"><span class="period-dates">${group.from} → ${group.to}</span>${group.skipFriday?`<small>${esc(tr('باستثناء الجمعة'))}</small>`:''}${group.skipWeekend?`<small>${esc(tr('باستثناء الجمعة والسبت'))}</small>`:''}</td><td data-label="${esc(tr('المشروع / الحالة'))}"><b>${esc(project||status)}</b>${project?`<small>${esc(status)}</small>`:''}${row.notes?`<small>${esc(row.notes)}</small>`:''}</td><td data-label="${esc(tr('عدد الأيام'))}">${group.rows.length}</td><td data-label="${esc(tr('البدل'))}">${(()=>{const total=group.rows.reduce((s,r)=>s+(Number(r.allowance)||0),0),rates=[...new Set(group.rows.map(r=>Number(r.allowance)||0))];
+   return total?`<b>${esc(sar(total))}</b>${rates.length===1?`<small>${esc(money(rates[0]))} × ${group.rows.length}</small>`:''}`:'—'})()}</td><td data-label="${esc(tr('إضافي / يوم'))}">${Number(row.overtime)||0}</td><td data-label="${esc(tr('الاعتماد'))}"><span class="status-badge ${review}">${esc(tr(labels[review]||'حالات اعتماد مختلفة'))}</span>${(()=>{const note=group.rows.find(r=>r.review==='rejected'&&r.review_note)?.review_note;return note?`<small class="review-note">${esc(tr('سبب الرفض'))}: ${esc(note)}</small>`:''})()}</td><td data-label="${esc(tr('إجراءات'))}">${locked?`<small>${esc(tr('مقفولة — بها أيام معتمدة'))}</small>`:`<div class="actions"><button type="button" class="secondary" data-edit-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('تعديل'))}</button><button type="button" class="delete-period" data-delete-period="${i}" ${monthBusy||!monthReady?'disabled':''}>${esc(tr('مسح'))}</button></div>`}</td></tr>`;
+ }).join('')||`<tr><td colspan="7" class="empty-state">${esc(tr(monthReady?'لا توجد فترات مسجلة. أضف أول فترة من النموذج أعلاه.':'جاري تحميل الفترات…'))}</td></tr>`;
  renderMonthSummary();updateRangeControls();
 }
 async function loadAttendanceMonth(resetForm=true){
@@ -739,6 +743,7 @@ async function reloadEngineerDirectory(){
 }
 $('engineerSearch').oninput=renderEngineerList;
 $('engineerFilters').onclick=e=>{const b=e.target.closest('[data-eng-filter]');if(!b)return;engineerFilter=b.dataset.engFilter;renderEngineerList()};
+Object.assign(translations,{'بدل الموقع':'Site allowance'});
 Object.assign(translations,{'يحتاج انتباه':'Needs attention','البدلات غير محددة':'Allowances not set','بطاقة SEC منتهية':'SEC card expired','لا يوجد بريد للتذكير':'No reminder email','بطاقة SEC':'SEC card','إجراءات أخرى':'More actions','تغييرات غير محفوظة':'Unsaved changes'});
 // Accounts (engineers, accountants and the others) are created in one place: the Users & Permissions page.
 $('showCreateEngineer').onclick=()=>{try{if(window.parent!==window&&typeof window.parent.showTab==='function'){window.parent.showTab('users');return}}catch{}location.href='index.html#users'};
