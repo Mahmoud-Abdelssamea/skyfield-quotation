@@ -1,8 +1,11 @@
 /* Sky Field — Analytics / التحليلات
- * Four views built from data the app already holds:
- *   1. Profitability by project (before VAT)        — payroll access only
+ * Views built from data the app already holds, in page order:
+ *   a. Month at a glance: invoiced, collected, outstanding, collected − cost (one month picker for the page)
+ *   b. Invoices: paid in the month and open today, by invoice number
+ *   c. Quotations: issued and won in the month, win rate, quotations waiting for a reply
  *   2. Collection and invoice ageing by client      — everyone with the commercial system
  *   3. Monthly trend: invoiced, collected, cost     — cost series for payroll access only
+ *   1. Profitability by project (before VAT)        — payroll access only
  *   4. Engineer utilisation from approved attendance — payroll access + attendance admin
  * Nothing here writes data. Amounts use the same functions as the project pages
  * (sfProjectFinance, sfNormalizePaymentRecord, resolvedProformaCalculation).
@@ -17,12 +20,16 @@ const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0};
 const esc=v=>escHtml(String(v??''));
 const pct=v=>(Math.round(v*10)/10).toFixed(1)+'%';
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const canSeeCost=()=>typeof sfHasAccess==='function'&&sfHasAccess('payroll');
 const costingFrom=()=>typeof SF_ATTENDANCE_COSTING_FROM==='string'?SF_ATTENDANCE_COSTING_FROM:'';
 const isoDate=v=>typeof sfIsoDate==='function'?sfIsoDate(v):String(v||'').slice(0,10);
 function today(){try{if(typeof sfRiyadhToday==='function')return sfRiyadhToday()}catch(_){}return new Date().toISOString().slice(0,10)}
 function daysBetween(a,b){return Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000)}
 function monthLabel(key){const [y,m]=key.split('-');return MONTHS[(+m||1)-1]+' '+y.slice(2)}
+function monthName(key){const [y,m]=key.split('-');return MONTH_NAMES[(+m||1)-1]+' '+y}
+const curMonth=()=>S.month||today().slice(0,7);
+const total=(arr,f)=>arr.reduce((s,x)=>s+f(x),0);
 function lastMonths(n){
   const t=today();let y=+t.slice(0,4),m=+t.slice(5,7);const out=[];
   for(let i=0;i<n;i++){out.unshift(`${y}-${String(m).padStart(2,'0')}`);if(--m===0){m=12;y--}}
@@ -30,6 +37,112 @@ function lastMonths(n){
 }
 const statusOf=p=>({active:'active',completed:'completed',hold:'hold'}[p.status]||'active');
 const STATUS_LABEL={active:'Active',completed:'Completed',hold:'On Hold'};
+function unlinkedProformas(){return typeof sfUnlinkedProformas==='function'?sfUnlinkedProformas():(typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!pi.projectId||!projects.some(p=>p.id===pi.projectId))}
+
+// ── a. Shared lists: one row per invoice (incl. VAT) and per quotation ───────
+function invoiceRows(){
+  const byId=new Map((typeof proformaInvoices!=='undefined'?proformaInvoices:[]).map(pi=>[pi.id,pi])),rows=[];
+  projects.forEach(p=>(p.payments||[]).forEach(raw=>{
+    const pay=sfNormalizePaymentRecord(raw),pi=byId.get(pay.sourceProformaId);
+    rows.push({no:(pi&&pi.number)||String(pay.label||'').replace(/^Invoice\s+/i,'')||'—',projectId:p.id,project:p.name||'',
+      client:String(p.client||'').trim()||'No client',date:isoDate(pay.date),amount:num(pay.amount),received:num(pay.receivedAmount),
+      remaining:paymentRemainingAmount(pay),ratio:sfPaymentNetRatio(p,pay),receipts:pay.receipts||[]});
+  }));
+  unlinkedProformas().forEach(pi=>{
+    let g=0;try{g=num((resolvedProformaCalculation(pi)||{}).grandTotal)}catch(_){}
+    rows.push({no:pi.number||'—',projectId:'',project:pi.projectName||'',client:String(pi.clientName||'').trim()||'No client',
+      date:isoDate(pi.issueDate),amount:g,received:0,remaining:g,ratio:1/1.15,receipts:[]});
+  });
+  return rows;
+}
+// Receipts recorded in a month, one row each (an invoice paid in two parts shows twice).
+function paidIn(rows,month){
+  const out=[];
+  rows.forEach(r=>r.receipts.forEach(rc=>{const d=isoDate(rc.date);if(d.startsWith(month))out.push({...r,payDate:d,paid:num(rc.amount),method:rc.method||'',ref:rc.reference||''})}));
+  return out.sort((a,b)=>a.payDate.localeCompare(b.payDate)||String(a.no).localeCompare(String(b.no)));
+}
+// A quotation is won once it is linked to a project (the app has no "lost" status).
+function quoteRows(){
+  const linked=new Set(projects.flatMap(p=>(p.quotes||[]).map(q=>q.id)));
+  return(typeof savedQuotes!=='undefined'?savedQuotes:[]).filter(q=>q&&q.type==='quotation'&&!q._syncDeletedAt).map(q=>({
+    id:q.id,no:q.number||'—',client:q.client||'—',subject:q.subject||q.project||'',date:isoDate(q.date),total:num(q.total),won:!!q.projectId||linked.has(q.id)}));
+}
+function projectCell(r){
+  return r.projectId?`<button type="button" class="an-link" onclick="openProjectDetails('${esc(r.projectId)}')">${esc(r.project||'Project')}</button>`
+    :`<span class="an-muted">${esc(r.project||'Not linked')}</span>`;
+}
+
+// ── a. Month at a glance ─────────────────────────────────────────────────────
+function renderMonth(rows,quotes){
+  const m=curMonth(),now=today(),label=monthLabel(m);
+  const issued=rows.filter(r=>r.date.startsWith(m)),paid=paidIn(rows,m),open=rows.filter(r=>r.remaining>0.005);
+  const outstanding=total(open,r=>r.remaining),late=total(open.filter(r=>r.date&&daysBetween(r.date,now)>30),r=>r.remaining);
+  let fourth;
+  if(canSeeCost()){
+    const spent=projects.reduce((s,p)=>s+total((p.actualExpenses||[]).filter(x=>isoDate(x.date).startsWith(m)),x=>num(x.amount)),0);
+    const net=total(paid,x=>x.paid*x.ratio)-spent;
+    fourth=`<div class="pfs-card"><div class="pfs-lbl">Collected − cost in ${label}</div><div class="pfs-val ${net<0?'tone-alert':'tone-ok'}">${fmtSAR(net)}</div><div class="pfs-sub">Before VAT · cost ${fmtSAR(spent)}</div></div>`;
+  }else{
+    const q=quotes.filter(x=>x.date.startsWith(m));
+    fourth=`<div class="pfs-card"><div class="pfs-lbl">Quotations in ${label}</div><div class="pfs-val">${q.length}</div><div class="pfs-sub">Incl. VAT · ${fmtSAR(total(q,x=>x.total))}</div></div>`;
+  }
+  return `<section class="an-sec" id="an-month-sum">
+    <div class="an-head"><div><h3>${esc(monthName(m))} at a glance <span>ملخص الشهر</span></h3><p>Pick a month to update every section on this page. Money from clients includes VAT.</p></div>
+      <div class="an-controls"><label>Month<input type="month" id="an-month" value="${esc(m)}" max="${esc(now.slice(0,7))}" onchange="sfAnalyticsSet('month',this.value)"></label></div></div>
+    <div class="proj-fin-summary an-strip">
+      <div class="pfs-card"><div class="pfs-lbl">Invoiced in ${label}</div><div class="pfs-val">${fmtSAR(total(issued,r=>r.amount))}</div><div class="pfs-sub">Incl. VAT · ${issued.length} invoice(s)</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Collected in ${label}</div><div class="pfs-val tone-ok">${fmtSAR(total(paid,x=>x.paid))}</div><div class="pfs-sub">Incl. VAT · ${paid.length} payment(s)</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Outstanding today</div><div class="pfs-val ${outstanding>0.005?'tone-warn':'tone-ok'}">${fmtSAR(outstanding)}</div><div class="pfs-sub">Incl. VAT · ${late>0.005?fmtSAR(late)+' older than 30 days':'nothing older than 30 days'}</div></div>
+      ${fourth}
+    </div>
+  </section>`;
+}
+
+// ── b. Invoices: paid in the month, open today ───────────────────────────────
+function renderInvoices(rows){
+  const m=curMonth(),now=today(),label=monthLabel(m),paid=paidIn(rows,m);
+  const open=rows.filter(r=>r.remaining>0.005).map(r=>({...r,age:r.date?Math.max(0,daysBetween(r.date,now)):null})).sort((a,b)=>(b.age??-1)-(a.age??-1));
+  const ageCls=a=>a==null?'':a>90?'an-neg':a>30?'an-due':'';
+  const paidBody=paid.length?paid.map(x=>`<tr><td>${esc(x.payDate)}</td><td><strong>${esc(x.no)}</strong></td><td>${esc(x.client)}</td><td>${projectCell(x)}</td>
+      <td class="an-num">${fmtSAR(x.paid)}${x.paid+0.005<x.amount?`<div class="an-sub">of ${fmtSAR(x.amount)}</div>`:''}</td><td>${esc([x.method,x.ref].filter(Boolean).join(' · ')||'—')}</td></tr>`).join('')
+    :`<tr><td colspan="6" class="an-empty">No payments recorded in ${esc(label)}.</td></tr>`;
+  const openBody=open.length?open.map(r=>`<tr><td><strong>${esc(r.no)}</strong></td><td>${esc(r.client)}</td><td>${projectCell(r)}</td><td>${esc(r.date||'—')}</td>
+      <td class="an-num ${ageCls(r.age)}">${r.age==null?'—':r.age+' days'}</td><td class="an-num">${fmtSAR(r.amount)}</td><td class="an-num">${fmtSAR(r.received)}</td><td class="an-num an-due">${fmtSAR(r.remaining)}</td></tr>`).join('')
+    :'<tr><td colspan="8" class="an-empty">No open invoices.</td></tr>';
+  return `<section class="an-sec" id="an-invoices">
+    <div class="an-head"><div><h3>Invoices <span>الفواتير</span></h3><p>Amounts include VAT. Paid lists the receipts recorded in ${esc(label)}; open lists every invoice still unpaid today, oldest first.</p></div></div>
+    <h4 class="an-h4">Paid in ${esc(label)} · ${paid.length} payment(s) · ${fmtSAR(total(paid,x=>x.paid))}</h4>
+    <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Paid on</th><th>Invoice</th><th>Client</th><th>Project</th><th>Received</th><th>Method / reference</th></tr></thead><tbody>${paidBody}</tbody></table></div>
+    <h4 class="an-h4">Open invoices · ${open.length} · ${fmtSAR(total(open,r=>r.remaining))} outstanding</h4>
+    <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Issued</th><th>Age</th><th>Invoiced</th><th>Received</th><th>Outstanding</th></tr></thead><tbody>${openBody}</tbody></table></div>
+  </section>`;
+}
+
+// ── c. Quotations: issued, won, waiting for a reply ──────────────────────────
+function renderQuotes(quotes){
+  const m=curMonth(),now=today(),label=monthLabel(m);
+  const inMonth=quotes.filter(q=>q.date.startsWith(m)),won=inMonth.filter(q=>q.won);
+  const from=lastMonths(12)[0]+'-01',year=quotes.filter(q=>q.date&&q.date>=from),yearWon=year.filter(q=>q.won);
+  const waiting=quotes.filter(q=>!q.won&&q.date).map(q=>({...q,age:daysBetween(q.date,now)})).filter(q=>q.age>30&&q.age<=180).sort((a,b)=>b.total-a.total);
+  const row=q=>`<tr><td><button type="button" class="an-link" onclick="previewSavedQuotation('${esc(q.id)}')">${esc(q.no)}</button></td><td>${esc(q.client)}</td><td class="an-subject">${esc(q.subject)}</td>
+      <td>${esc(q.date)}</td><td class="an-num ${q.age>90?'an-neg':'an-due'}">${q.age} days</td><td class="an-num">${fmtSAR(q.total)}</td></tr>`;
+  const head='<thead><tr><th>Quotation</th><th>Client</th><th>Subject</th><th>Date</th><th>Age</th><th>Total</th></tr></thead>';
+  const TOP=10,body=waiting.length?waiting.slice(0,TOP).map(row).join('')
+    :'<tr><td colspan="6" class="an-empty">No quotation older than 30 days is waiting for a reply.</td></tr>';
+  const more=waiting.length>TOP?`<details class="an-details"><summary>Show the other ${waiting.length-TOP} quotation(s)</summary><div class="pd-table-wrap"><table class="pd-table an-table">${head}<tbody>${waiting.slice(TOP).map(row).join('')}</tbody></table></div></details>`:'';
+  return `<section class="an-sec" id="an-quotes">
+    <div class="an-head"><div><h3>Quotations <span>عروض الأسعار</span></h3><p>Totals include VAT. A quotation counts as won once it is linked to a project. The date is the quotation date, which moves when a quotation is revised.</p></div></div>
+    <div class="proj-fin-summary an-strip">
+      <div class="pfs-card"><div class="pfs-lbl">Quotations in ${label}</div><div class="pfs-val">${inMonth.length}</div><div class="pfs-sub">Incl. VAT · ${fmtSAR(total(inMonth,q=>q.total))}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Won from ${label}</div><div class="pfs-val ${won.length?'tone-ok':''}">${won.length}</div><div class="pfs-sub">Incl. VAT · ${fmtSAR(total(won,q=>q.total))}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Win rate, last 12 months</div><div class="pfs-val">${year.length?pct(yearWon.length/year.length*100):'—'}</div><div class="pfs-sub">${yearWon.length} of ${year.length} linked to a project</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Waiting over 30 days</div><div class="pfs-val ${waiting.length?'tone-warn':'tone-ok'}">${waiting.length}</div><div class="pfs-sub">Incl. VAT · ${fmtSAR(total(waiting,q=>q.total))} · up to 6 months old</div></div>
+    </div>
+    <h4 class="an-h4">Follow up: no project yet, 31 to 180 days old, largest first${waiting.length>TOP?` (top ${TOP} of ${waiting.length})`:''}</h4>
+    <div class="pd-table-wrap"><table class="pd-table an-table">${head}<tbody>${body}</tbody></table></div>
+    ${more}
+  </section>`;
+}
 
 // ── 1. Profitability ─────────────────────────────────────────────────────────
 function profitRows(){
@@ -253,10 +366,8 @@ function utilBody(){
 function paintUtil(){const el=document.getElementById('an-util-body');if(el)el.innerHTML=utilBody()}
 function renderUtil(){
   if(!canSeeCost())return '';
-  const month=S.month||today().slice(0,7);
   return `<section class="an-sec" id="an-util">
-    <div class="an-head"><div><h3>Engineer utilisation <span>استغلال المهندسين</span></h3><p>From approved attendance: days on site, in the office, on leave and absent, with overtime.</p></div>
-      <div class="an-controls"><label>Month<input type="month" id="an-month" value="${esc(month)}" max="${esc(today().slice(0,7))}" onchange="sfAnalyticsSet('month',this.value)"></label></div></div>
+    <div class="an-head"><div><h3>Engineer utilisation, ${esc(monthName(curMonth()))} <span>استغلال المهندسين</span></h3><p>From approved attendance: days on site, in the office, on leave and absent, with overtime. Change the month at the top of the page.</p></div></div>
     <div id="an-util-body">${utilBody()}</div>
   </section>`;
 }
@@ -265,8 +376,8 @@ function renderUtil(){
 function render(opts={}){
   const root=document.getElementById('analytics-root');if(!root)return;
   if(typeof projects==='undefined'){root.innerHTML='<div class="an-empty">Loading…</div>';return}
-  const month=S.month||today().slice(0,7);
-  root.innerHTML=renderProfit()+renderCollection()+renderTrend()+renderUtil()+
+  const month=curMonth(),rows=invoiceRows(),quotes=quoteRows();
+  root.innerHTML=renderMonth(rows,quotes)+renderInvoices(rows)+renderQuotes(quotes)+renderCollection()+renderTrend()+renderProfit()+renderUtil()+
     (canSeeCost()?'':'<p class="an-note">Profitability and engineer figures are available to accounts with payroll access.</p>');
   if(canSeeCost()&&(opts.reload||S.utilMonth!==month||(!S.util&&!S.utilLoading&&!S.utilError)))void loadUtil(month);
 }
@@ -275,7 +386,7 @@ window.sfAnalyticsSet=function(key,value){
   if(key==='status')S.status=value;
   else if(key==='sort')S.sort=value;
   else if(key==='vat'){S.vat=value!=='net';try{localStorage.setItem('sfAnalyticsTrendVat',S.vat?'incl':'net')}catch(_){}}
-  else if(key==='month'){if(!/^\d{4}-\d{2}$/.test(value||''))return;S.month=value;void loadUtil(value);return}
+  else if(key==='month'){if(!/^\d{4}-\d{2}$/.test(value||''))return;S.month=value}
   render();
 };
 
@@ -315,6 +426,8 @@ const css=`
 .an-chart-wrap{overflow-x:auto}.an-chart{width:100%;min-width:560px;height:auto;display:block}
 .an-grid{stroke:var(--gray-200,#e5e7eb);stroke-width:1}.an-axis{font-size:11px;fill:var(--gray-500,#6b7280)}
 .an-s-inv{fill:var(--navy,#1F3864);background:var(--navy,#1F3864)}.an-s-col{fill:#16a34a;background:#16a34a}.an-s-cost{fill:var(--orange,#E8610A);background:var(--orange,#E8610A)}
+.an-h4{margin:14px 0 6px;font-size:13px;font-weight:700;color:var(--navy,#1F3864)}
+.an-sec .an-table td.an-subject{max-width:340px;text-align:start;white-space:normal}
 .an-details{margin-top:8px;font-size:12px}.an-details summary{cursor:pointer;color:var(--navy,#1F3864);font-weight:600;margin-bottom:6px}
 .an-note{font-size:11px;color:var(--gray-500,#6b7280);margin:10px 0 0;line-height:1.55}
 .an-empty{padding:18px;text-align:center;color:var(--gray-500,#6b7280);font-size:12px}
