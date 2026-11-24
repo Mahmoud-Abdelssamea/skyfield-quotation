@@ -103,10 +103,10 @@ function renderInvoices(rows){
   const m=curMonth(),now=today(),label=monthLabel(m),paid=paidIn(rows,m);
   const open=rows.filter(r=>r.remaining>0.005).map(r=>({...r,age:r.date?Math.max(0,daysBetween(r.date,now)):null})).sort((a,b)=>(b.age??-1)-(a.age??-1));
   const ageCls=a=>a==null?'':a>90?'an-neg':a>30?'an-due':'';
-  const paidBody=paid.length?paid.map(x=>`<tr><td>${esc(x.payDate)}</td><td><strong>${esc(x.no)}</strong></td><td>${esc(x.client)}</td><td>${projectCell(x)}</td>
+  const paidBody=paid.length?paid.map(x=>`<tr><td class="an-nw">${esc(x.payDate)}</td><td class="an-nw"><strong>${esc(x.no)}</strong></td><td>${esc(x.client)}</td><td>${projectCell(x)}</td>
       <td class="an-num">${fmtSAR(x.paid)}${x.paid+0.005<x.amount?`<div class="an-sub">of ${fmtSAR(x.amount)}</div>`:''}</td><td>${esc([x.method,x.ref].filter(Boolean).join(' · ')||'—')}</td></tr>`).join('')
     :`<tr><td colspan="6" class="an-empty">No payments recorded in ${esc(label)}.</td></tr>`;
-  const openBody=open.length?open.map(r=>`<tr><td><strong>${esc(r.no)}</strong></td><td>${esc(r.client)}</td><td>${projectCell(r)}</td><td>${esc(r.date||'—')}</td>
+  const openBody=open.length?open.map(r=>`<tr><td class="an-nw"><strong>${esc(r.no)}</strong></td><td>${esc(r.client)}</td><td>${projectCell(r)}</td><td class="an-nw">${esc(r.date||'—')}</td>
       <td class="an-num ${ageCls(r.age)}">${r.age==null?'—':r.age+' days'}</td><td class="an-num">${fmtSAR(r.amount)}</td><td class="an-num">${fmtSAR(r.received)}</td><td class="an-num an-due">${fmtSAR(r.remaining)}</td></tr>`).join('')
     :'<tr><td colspan="8" class="an-empty">No open invoices.</td></tr>';
   return `<section class="an-sec" id="an-invoices">
@@ -124,8 +124,8 @@ function renderQuotes(quotes){
   const inMonth=quotes.filter(q=>q.date.startsWith(m)),won=inMonth.filter(q=>q.won);
   const from=lastMonths(12)[0]+'-01',year=quotes.filter(q=>q.date&&q.date>=from),yearWon=year.filter(q=>q.won);
   const waiting=quotes.filter(q=>!q.won&&q.date).map(q=>({...q,age:daysBetween(q.date,now)})).filter(q=>q.age>30&&q.age<=180).sort((a,b)=>b.total-a.total);
-  const row=q=>`<tr><td><button type="button" class="an-link" onclick="previewSavedQuotation('${esc(q.id)}')">${esc(q.no)}</button></td><td>${esc(q.client)}</td><td class="an-subject">${esc(q.subject)}</td>
-      <td>${esc(q.date)}</td><td class="an-num ${q.age>90?'an-neg':'an-due'}">${q.age} days</td><td class="an-num">${fmtSAR(q.total)}</td></tr>`;
+  const row=q=>`<tr><td class="an-nw"><button type="button" class="an-link" onclick="previewSavedQuotation('${esc(q.id)}')">${esc(q.no)}</button></td><td>${esc(q.client)}</td><td class="an-subject">${esc(q.subject)}</td>
+      <td class="an-nw">${esc(q.date)}</td><td class="an-num ${q.age>90?'an-neg':'an-due'}">${q.age} days</td><td class="an-num">${fmtSAR(q.total)}</td></tr>`;
   const head='<thead><tr><th>Quotation</th><th>Client</th><th>Subject</th><th>Date</th><th>Age</th><th>Total</th></tr></thead>';
   const TOP=10,body=waiting.length?waiting.slice(0,TOP).map(row).join('')
     :'<tr><td colspan="6" class="an-empty">No quotation older than 30 days is waiting for a reply.</td></tr>';
@@ -428,6 +428,7 @@ const css=`
 .an-s-inv{fill:var(--navy,#1F3864);background:var(--navy,#1F3864)}.an-s-col{fill:#16a34a;background:#16a34a}.an-s-cost{fill:var(--orange,#E8610A);background:var(--orange,#E8610A)}
 .an-h4{margin:14px 0 6px;font-size:13px;font-weight:700;color:var(--navy,#1F3864)}
 .an-sec .an-table td.an-subject{max-width:340px;text-align:start;white-space:normal}
+.an-sec .an-table td.an-nw{white-space:nowrap}
 .an-details{margin-top:8px;font-size:12px}.an-details summary{cursor:pointer;color:var(--navy,#1F3864);font-weight:600;margin-bottom:6px}
 .an-note{font-size:11px;color:var(--gray-500,#6b7280);margin:10px 0 0;line-height:1.55}
 .an-empty{padding:18px;text-align:center;color:var(--gray-500,#6b7280);font-size:12px}
