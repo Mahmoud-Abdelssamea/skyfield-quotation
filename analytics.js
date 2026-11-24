@@ -99,22 +99,45 @@ function renderMonth(rows,quotes){
 }
 
 // ── b. Invoices: paid in the month, open today ───────────────────────────────
+// No due dates are stored, so an invoice is expected 30 days after its issue date.
+const PAY_DAYS=30;
+const addDays=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
+function stillToInvoice(){
+  return projects.filter(p=>statusOf(p)!=='completed').map(p=>{const inv=total(p.payments||[],x=>num(x.amount));return{p,contract:num(p.contract),inv,left:Math.max(0,num(p.contract)-inv)}})
+    .filter(x=>x.left>0.5).sort((a,b)=>b.left-a.left);
+}
+function renderForecast(open,now){
+  const overdue=open.filter(r=>!r.exp||r.exp<=now),soon=open.filter(r=>r.exp&&r.exp>now),later=stillToInvoice();
+  const all=total(open,r=>r.remaining)+total(later,x=>x.left);
+  const rows=later.map(x=>`<tr><td>${projectCell({projectId:x.p.id,project:x.p.name})}</td><td>${esc(x.p.client||'—')}</td><td>${STATUS_LABEL[statusOf(x.p)]}</td>
+      <td class="an-num">${fmtSAR(x.contract)}</td><td class="an-num">${fmtSAR(x.inv)}</td><td class="an-num an-due">${fmtSAR(x.left)}</td></tr>`).join('');
+  return `<h4 class="an-h4">Expected collections</h4>
+    <div class="proj-fin-summary an-strip">
+      <div class="pfs-card"><div class="pfs-lbl">Overdue now</div><div class="pfs-val ${overdue.length?'tone-alert':'tone-ok'}">${fmtSAR(total(overdue,r=>r.remaining))}</div><div class="pfs-sub">Incl. VAT · ${overdue.length} invoice(s) past ${PAY_DAYS} days</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Due in the next ${PAY_DAYS} days</div><div class="pfs-val tone-warn">${fmtSAR(total(soon,r=>r.remaining))}</div><div class="pfs-sub">Incl. VAT · ${soon.length} invoice(s)</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Still to invoice</div><div class="pfs-val">${fmtSAR(total(later,x=>x.left))}</div><div class="pfs-sub">Incl. VAT · ${later.length} active or on-hold project(s)</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Expected in total</div><div class="pfs-val">${fmtSAR(all)}</div><div class="pfs-sub">Incl. VAT · open invoices and contract value not invoiced yet</div></div>
+    </div>
+    <p class="an-note">An invoice is expected ${PAY_DAYS} days after its issue date, because the system holds no due dates.</p>
+    ${later.length?`<details class="an-details"><summary>Show the ${later.length} project(s) with value still to invoice</summary><div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Project</th><th>Client</th><th>Status</th><th>Contract</th><th>Invoiced</th><th>Still to invoice</th></tr></thead><tbody>${rows}</tbody></table></div></details>`:''}`;
+}
 function renderInvoices(rows){
   const m=curMonth(),now=today(),label=monthLabel(m),paid=paidIn(rows,m);
-  const open=rows.filter(r=>r.remaining>0.005).map(r=>({...r,age:r.date?Math.max(0,daysBetween(r.date,now)):null})).sort((a,b)=>(b.age??-1)-(a.age??-1));
+  const open=rows.filter(r=>r.remaining>0.005).map(r=>({...r,age:r.date?Math.max(0,daysBetween(r.date,now)):null,exp:r.date?addDays(r.date,PAY_DAYS):''})).sort((a,b)=>(b.age??-1)-(a.age??-1));
   const ageCls=a=>a==null?'':a>90?'an-neg':a>30?'an-due':'';
   const paidBody=paid.length?paid.map(x=>`<tr><td class="an-nw">${esc(x.payDate)}</td><td class="an-nw"><strong>${esc(x.no)}</strong></td><td>${esc(x.client)}</td><td>${projectCell(x)}</td>
       <td class="an-num">${fmtSAR(x.paid)}${x.paid+0.005<x.amount?`<div class="an-sub">of ${fmtSAR(x.amount)}</div>`:''}</td><td>${esc([x.method,x.ref].filter(Boolean).join(' · ')||'—')}</td></tr>`).join('')
     :`<tr><td colspan="6" class="an-empty">No payments recorded in ${esc(label)}.</td></tr>`;
   const openBody=open.length?open.map(r=>`<tr><td class="an-nw"><strong>${esc(r.no)}</strong></td><td>${esc(r.client)}</td><td>${projectCell(r)}</td><td class="an-nw">${esc(r.date||'—')}</td>
-      <td class="an-num ${ageCls(r.age)}">${r.age==null?'—':r.age+' days'}</td><td class="an-num">${fmtSAR(r.amount)}</td><td class="an-num">${fmtSAR(r.received)}</td><td class="an-num an-due">${fmtSAR(r.remaining)}</td></tr>`).join('')
-    :'<tr><td colspan="8" class="an-empty">No open invoices.</td></tr>';
+      <td class="an-num ${ageCls(r.age)}">${r.age==null?'—':r.age+' days'}</td><td class="an-nw ${r.exp&&r.exp<=now?'an-neg':''}">${esc(r.exp||'—')}</td><td class="an-num">${fmtSAR(r.amount)}</td><td class="an-num">${fmtSAR(r.received)}</td><td class="an-num an-due">${fmtSAR(r.remaining)}</td></tr>`).join('')
+    :'<tr><td colspan="9" class="an-empty">No open invoices.</td></tr>';
   return `<section class="an-sec" id="an-invoices">
     <div class="an-head"><div><h3>Invoices <span>الفواتير</span></h3><p>Amounts include VAT. Paid lists the receipts recorded in ${esc(label)}; open lists every invoice still unpaid today, oldest first.</p></div></div>
     <h4 class="an-h4">Paid in ${esc(label)} · ${paid.length} payment(s) · ${fmtSAR(total(paid,x=>x.paid))}</h4>
     <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Paid on</th><th>Invoice</th><th>Client</th><th>Project</th><th>Received</th><th>Method / reference</th></tr></thead><tbody>${paidBody}</tbody></table></div>
     <h4 class="an-h4">Open invoices · ${open.length} · ${fmtSAR(total(open,r=>r.remaining))} outstanding</h4>
-    <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Issued</th><th>Age</th><th>Invoiced</th><th>Received</th><th>Outstanding</th></tr></thead><tbody>${openBody}</tbody></table></div>
+    <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Issued</th><th>Age</th><th>Expected by</th><th>Invoiced</th><th>Received</th><th>Outstanding</th></tr></thead><tbody>${openBody}</tbody></table></div>
+    ${renderForecast(open,now)}
   </section>`;
 }
 
@@ -144,6 +167,24 @@ function renderQuotes(quotes){
   </section>`;
 }
 
+// ── d. VAT for the quarter of the selected month ─────────────────────────────
+function renderVat(rows){
+  const [y,mm]=curMonth().split('-').map(Number),qn=Math.floor((mm-1)/3),months=[1,2,3].map(i=>`${y}-${String(qn*3+i).padStart(2,'0')}`);
+  const inQ=d=>months.includes(String(d||'').slice(0,7)),q=`Q${qn+1} ${y}`,range=`${MONTHS[qn*3]}–${MONTHS[qn*3+2]} ${y}`;
+  const issued=rows.filter(r=>inQ(r.date)),sales=total(issued,r=>r.amount*r.ratio),vat=total(issued,r=>r.amount*(1-r.ratio));
+  const got=rows.flatMap(r=>r.receipts.filter(rc=>inQ(isoDate(rc.date))).map(rc=>num(rc.amount)*(1-r.ratio)));
+  const endM=qn*3+3,dueY=endM===12?y+1:y,dueM=endM===12?1:endM+1,dueDay=new Date(Date.UTC(dueY,dueM,0)).getUTCDate();
+  return `<section class="an-sec" id="an-vat-q">
+    <div class="an-head"><div><h3>VAT for ${q} <span>ضريبة الربع</span></h3><p>Output VAT on the invoices issued in ${range}, to prepare the VAT return. Input VAT on purchases (hotels, fuel, rentals) is not recorded here, so the amount payable is this output VAT minus the input VAT on your expense invoices.</p></div></div>
+    <div class="proj-fin-summary an-strip">
+      <div class="pfs-card"><div class="pfs-lbl">Sales in ${q}</div><div class="pfs-val">${fmtSAR(sales)}</div><div class="pfs-sub">Before VAT · ${issued.length} invoice(s)</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Output VAT in ${q}</div><div class="pfs-val tone-warn">${fmtSAR(vat)}</div><div class="pfs-sub">VAT on invoices issued in ${range}</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">VAT collected in ${q}</div><div class="pfs-val tone-ok">${fmtSAR(total(got,v=>v))}</div><div class="pfs-sub">VAT part of client payments received</div></div>
+      <div class="pfs-card"><div class="pfs-lbl">Quarterly return due</div><div class="pfs-val">${dueDay} ${MONTHS[dueM-1]} ${dueY}</div><div class="pfs-sub">End of the month after the quarter</div></div>
+    </div>
+  </section>`;
+}
+
 // ── 1. Profitability ─────────────────────────────────────────────────────────
 function profitRows(){
   const from=costingFrom();
@@ -153,8 +194,8 @@ function profitRows(){
     if(f.estimated>0&&f.actual>f.estimated)flags.push(['bad','Cost over estimate','تجاوز التكلفة المقدّرة']);
     else if(f.estimated>0&&f.costUsedPct>=80&&f.invoicedNet<f.contractNet*0.8)flags.push(['warn','80%+ of cost used, under 80% invoiced','صُرف أكثر مما فُوتر']);
     if(!f.hasEstimate)flags.push(['info',`No cost estimate · at most ${fmtSAR(f.profitCeiling)}`,'بلا تكلفة مقدّرة']);
-    if(from&&start&&start.slice(0,7)<from)flags.push(['info',`Labour cost before ${from} missing`,`العمالة قبل \u2066${from}\u2069 غير مرحّلة`]);
-    return{p,f,flags};
+    // Projects started before attendance costing: shown once under the actual cost instead of a flag on every row.
+    return{p,f,flags,early:!!(from&&start&&start.slice(0,7)<from)};
   });
 }
 function sortProfit(rows){
@@ -177,14 +218,15 @@ function renderProfit(){
   const rows=sortProfit(profitRows());
   const t=rows.reduce((s,r)=>{s.contract+=r.f.contractNet;s.est+=r.f.estimated;s.actual+=r.f.actual;s.comm+=r.f.commission;if(r.f.hasEstimate){s.exp+=r.f.expectedProfit;s.estContract+=r.f.contractNet}else s.noEst++;s.cash+=r.f.cashProfit;s.received+=r.f.receivedNet;return s},{contract:0,est:0,actual:0,comm:0,exp:0,estContract:0,noEst:0,cash:0,received:0});
   const attention=rows.filter(r=>r.flags.some(x=>x[0]==='bad'||x[0]==='warn')).length;
-  const body=rows.length?rows.map(({p,f,flags})=>`<tr>
+  const from=costingFrom();
+  const body=rows.length?rows.map(({p,f,flags,early})=>`<tr>
       <td><button type="button" class="an-link" onclick="openProjectDetails('${esc(p.id)}')">${esc(p.name||'Project')}</button><div class="an-sub">${esc(p.client||'—')} · ${STATUS_LABEL[statusOf(p)]}</div></td>
       <td class="an-num">${fmtSAR(f.contractNet)}</td>
       <td class="an-num">${f.estimated?fmtSAR(f.estimated):'<span class="an-muted">—</span>'}</td>
-      <td class="an-num">${fmtSAR(f.actual)}</td>
+      <td class="an-num">${fmtSAR(f.actual)}${early?`<div class="an-sub">Labour from ${esc(from)} only</div>`:''}</td>
       <td>${costBar(f)}</td>
       <td class="an-num">${fmtSAR(f.commission)}</td>
-      <td class="an-num ${f.expectedProfit<0?'an-neg':''}">${f.hasEstimate?`${fmtSAR(f.expectedProfit)}<div class="an-sub">${f.expectedMargin==null?'':pct(f.expectedMargin)}${f.costOverEstimate?' · on actual cost':''}</div>`:'<span class="an-muted">—</span><div class="an-sub">no estimate</div>'}</td>
+      <td class="an-num ${f.expectedProfit<0?'an-neg':''}">${f.hasEstimate?`${fmtSAR(f.expectedProfit)}<div class="an-sub">${f.expectedMargin==null?'':pct(f.expectedMargin)}${f.costOverEstimate?' · on actual cost':''}</div>`:`<span class="an-muted">—</span><div class="an-sub"><button type="button" class="an-link an-add" onclick="openProjectDetails('${esc(p.id)}')">Add estimate</button></div>`}</td>
       <td class="an-num ${f.cashProfit<0?'an-neg':''}">${fmtSAR(f.cashProfit)}</td>
       <td class="an-notes">${flags.map(([k,en,ar])=>`<span class="an-flag ${k}">${esc(en)}<bdi dir="rtl" class="an-flag-ar">${esc(ar)}</bdi></span>`).join('')}</td></tr>`).join('')
     :'<tr><td colspan="9" class="an-empty">No projects match this filter.</td></tr>';
@@ -353,7 +395,10 @@ function utilBody(){
   const rows=S.util.map(e=>{const s=share(e);return `<tr><td><strong>${esc(e.name)}</strong></td><td class="an-num">${e.site}</td><td class="an-num">${e.office}</td><td class="an-num">${e.leave}</td><td class="an-num ${e.absent?'an-neg':''}">${e.absent}</td>
     <td class="an-num">${e.pending?`<span class="an-flag warn">${e.pending}</span>`:'0'}</td><td class="an-num">${Math.round(e.ot*10)/10}</td><td class="an-num">${s==null?'—':pct(s)}</td><td>${mix(e)}</td></tr>`}).join('');
   const all=t.site+t.office;
-  return `<div class="proj-fin-summary an-strip">
+  // Engineers with at least 5 office days and no more site days than office days: candidates for a site or rental job.
+  const bench=S.util.filter(e=>e.office>=5&&e.office>=e.site).sort((a,b)=>b.office-a.office||a.name.localeCompare(b.name));
+  const benchNote=bench.length?`<div class="an-callout"><div class="an-callout-h">Mostly in the office in ${esc(monthLabel(S.utilMonth))}</div><div>${bench.map(e=>`<span class="an-chip"><bdi>${esc(e.name)}</bdi> · ${e.office} office day(s)</span>`).join('')}</div><div class="an-sub">Free for a site or rental assignment, unless they are office staff.</div></div>`:'';
+  return `${benchNote}<div class="proj-fin-summary an-strip">
       <div class="pfs-card"><div class="pfs-lbl">Site days</div><div class="pfs-val">${t.site}</div><div class="pfs-sub">${S.util.length} engineer(s), approved days</div></div>
       <div class="pfs-card"><div class="pfs-lbl">On site share</div><div class="pfs-val tone-ok">${all?pct(t.site/all*100):'—'}</div><div class="pfs-sub">Site ÷ (site + office)</div></div>
       <div class="pfs-card"><div class="pfs-lbl">Overtime hours</div><div class="pfs-val">${Math.round(t.ot*10)/10}</div><div class="pfs-sub">Approved</div></div>
@@ -377,7 +422,7 @@ function render(opts={}){
   const root=document.getElementById('analytics-root');if(!root)return;
   if(typeof projects==='undefined'){root.innerHTML='<div class="an-empty">Loading…</div>';return}
   const month=curMonth(),rows=invoiceRows(),quotes=quoteRows();
-  root.innerHTML=renderMonth(rows,quotes)+renderInvoices(rows)+renderQuotes(quotes)+renderCollection()+renderTrend()+renderProfit()+renderUtil()+
+  root.innerHTML=renderMonth(rows,quotes)+renderInvoices(rows)+renderQuotes(quotes)+renderVat(rows)+renderCollection()+renderTrend()+renderProfit()+renderUtil()+
     (canSeeCost()?'':'<p class="an-note">Profitability and engineer figures are available to accounts with payroll access.</p>');
   if(canSeeCost()&&(opts.reload||S.utilMonth!==month||(!S.util&&!S.utilLoading&&!S.utilError)))void loadUtil(month);
 }
@@ -429,6 +474,10 @@ const css=`
 .an-h4{margin:14px 0 6px;font-size:13px;font-weight:700;color:var(--navy,#1F3864)}
 .an-sec .an-table td.an-subject{max-width:340px;text-align:start;white-space:normal}
 .an-sec .an-table td.an-nw{white-space:nowrap}
+.an-link.an-add{font-size:11px;font-weight:600;color:var(--orange,#E8610A)}
+.an-callout{border:1px solid #fed7aa;background:#fff7ed;border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.an-callout-h{font-size:12px;font-weight:700;color:#9a3412;margin-bottom:6px}
+.an-chip{display:inline-block;font-size:12px;background:#fff;border:1px solid #fed7aa;border-radius:999px;padding:3px 10px;margin:0 6px 6px 0}
 .an-details{margin-top:8px;font-size:12px}.an-details summary{cursor:pointer;color:var(--navy,#1F3864);font-weight:600;margin-bottom:6px}
 .an-note{font-size:11px;color:var(--gray-500,#6b7280);margin:10px 0 0;line-height:1.55}
 .an-empty{padding:18px;text-align:center;color:var(--gray-500,#6b7280);font-size:12px}
