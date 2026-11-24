@@ -10,7 +10,9 @@
 (function(){
 'use strict';
 
-const S={status:'',sort:'margin',month:'',util:null,utilMonth:'',utilError:'',utilLoading:false,utilToken:0};
+const S={status:'',sort:'margin',month:'',util:null,utilMonth:'',utilError:'',utilLoading:false,utilToken:0,
+  vat:(()=>{try{return localStorage.getItem('sfAnalyticsTrendVat')!=='net'}catch(_){return true}})()};
+const opt=(v,l,cur)=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`;
 const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0};
 const esc=v=>escHtml(String(v??''));
 const pct=v=>(Math.round(v*10)/10).toFixed(1)+'%';
@@ -62,7 +64,6 @@ function renderProfit(){
   const rows=sortProfit(profitRows());
   const t=rows.reduce((s,r)=>{s.contract+=r.f.contractNet;s.est+=r.f.estimated;s.actual+=r.f.actual;s.comm+=r.f.commission;if(r.f.hasEstimate){s.exp+=r.f.expectedProfit;s.estContract+=r.f.contractNet}else s.noEst++;s.cash+=r.f.cashProfit;s.received+=r.f.receivedNet;return s},{contract:0,est:0,actual:0,comm:0,exp:0,estContract:0,noEst:0,cash:0,received:0});
   const attention=rows.filter(r=>r.flags.some(x=>x[0]==='bad'||x[0]==='warn')).length;
-  const opt=(v,l,cur)=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`;
   const body=rows.length?rows.map(({p,f,flags})=>`<tr>
       <td><button type="button" class="an-link" onclick="openProjectDetails('${esc(p.id)}')">${esc(p.name||'Project')}</button><div class="an-sub">${esc(p.client||'—')} · ${STATUS_LABEL[statusOf(p)]}</div></td>
       <td class="an-num">${fmtSAR(f.contractNet)}</td>
@@ -142,21 +143,26 @@ function renderCollection(){
 }
 
 // ── 3. Monthly trend ─────────────────────────────────────────────────────────
+// inv/col hold amounts incl. VAT (what clients are billed and pay); invNet/colNet the same before VAT.
 function trendData(){
-  const keys=lastMonths(12),at=new Map(keys.map((k,i)=>[k,i])),inv=keys.map(()=>0),col=keys.map(()=>0),cost=keys.map(()=>0);
+  const keys=lastMonths(12),at=new Map(keys.map((k,i)=>[k,i])),zero=()=>keys.map(()=>0);
+  const inv=zero(),invNet=zero(),col=zero(),colNet=zero(),cost=zero();
   const put=(arr,date,v)=>{const k=isoDate(date).slice(0,7);if(at.has(k))arr[at.get(k)]+=v};
   projects.forEach(p=>{
     (p.payments||[]).forEach(raw=>{
-      const pay=sfNormalizePaymentRecord(raw),r=sfPaymentNetRatio(p,pay);
-      put(inv,pay.date,num(pay.amount)*r);
-      (pay.receipts||[]).forEach(rc=>put(col,rc.date,num(rc.amount)*r));
+      const pay=sfNormalizePaymentRecord(raw),r=sfPaymentNetRatio(p,pay),a=num(pay.amount);
+      put(inv,pay.date,a);put(invNet,pay.date,a*r);
+      (pay.receipts||[]).forEach(rc=>{const v=num(rc.amount);put(col,rc.date,v);put(colNet,rc.date,v*r)});
     });
     (p.actualExpenses||[]).forEach(x=>put(cost,x.date,num(x.amount)));
   });
   (typeof sfUnlinkedProformas==='function'?sfUnlinkedProformas():(typeof proformaInvoices!=='undefined'?proformaInvoices:[]).filter(pi=>!pi.projectId||!projects.some(p=>p.id===pi.projectId))).forEach(pi=>{
-    try{const t=resolvedProformaCalculation(pi)||{};put(inv,pi.issueDate,num(t.totalAfterDiscount)||num(t.grandTotal)/1.15)}catch(_){}
+    try{
+      const t=resolvedProformaCalculation(pi)||{},net=num(t.totalAfterDiscount)||num(t.grandTotal)/1.15;
+      put(inv,pi.issueDate,num(t.grandTotal)||net*1.15);put(invNet,pi.issueDate,net);
+    }catch(_){}
   });
-  return{keys,inv,col,cost};
+  return{keys,inv,invNet,col,colNet,cost};
 }
 function niceMax(v){if(v<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(v))),n=v/p;return(n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p}
 function shortSar(v){const a=Math.abs(v);return a>=1e6?(v/1e6).toFixed(a>=1e7?0:1)+'M':a>=1e3?(v/1e3).toFixed(a>=1e4?0:1)+'k':String(Math.round(v))}
@@ -173,16 +179,21 @@ function trendChart(d,series){
   return `<svg viewBox="0 0 ${W} ${H}" class="an-chart" role="img" aria-label="Monthly ${series.map(s=>s.name).join(', ')} for the last 12 months">${g}</svg>`;
 }
 function renderTrend(){
-  const d=trendData(),cost=canSeeCost();
-  const series=[{name:'Invoiced',cls:'an-s-inv',v:d.inv},{name:'Collected',cls:'an-s-col',v:d.col}].concat(cost?[{name:'Cost',cls:'an-s-cost',v:d.cost}]:[]);
+  const d=trendData(),cost=canSeeCost(),vat=S.vat;
+  const inv=vat?d.inv:d.invNet,col=vat?d.col:d.colNet;
+  const series=[{name:'Invoiced',cls:'an-s-inv',v:inv},{name:'Collected',cls:'an-s-col',v:col}].concat(cost?[{name:'Cost',cls:'an-s-cost',v:d.cost}]:[]);
   const sum=a=>a.reduce((s,v)=>s+v,0);
-  const rows=d.keys.map((k,i)=>`<tr><td>${monthLabel(k)}</td><td class="an-num">${fmtSAR(d.inv[i])}</td><td class="an-num">${fmtSAR(d.col[i])}</td>${cost?`<td class="an-num">${fmtSAR(d.cost[i])}</td><td class="an-num ${d.col[i]-d.cost[i]<0?'an-neg':''}">${fmtSAR(d.col[i]-d.cost[i])}</td>`:''}</tr>`).reverse().join('');
+  // Collected − cost always uses collections before VAT: the VAT part is owed to ZATCA, not earned.
+  const margin=i=>d.colNet[i]-d.cost[i];
+  const rows=d.keys.map((k,i)=>`<tr><td>${monthLabel(k)}</td><td class="an-num">${fmtSAR(inv[i])}</td><td class="an-num">${fmtSAR(col[i])}</td>${cost?`<td class="an-num">${fmtSAR(d.cost[i])}</td><td class="an-num ${margin(i)<0?'an-neg':''}">${fmtSAR(margin(i))}</td>`:''}</tr>`).reverse().join('');
+  const basis=vat?'Incl. VAT, as billed to and paid by clients.':'Before VAT.';
   return `<section class="an-sec" id="an-trend">
-    <div class="an-head"><div><h3>Monthly trend, last 12 months <span>الاتجاه الشهري</span></h3><p>Before VAT. Invoiced by invoice date, collected by receipt date${cost?', cost by expense date':''}.</p></div></div>
+    <div class="an-head"><div><h3>Monthly trend, last 12 months <span>الاتجاه الشهري</span></h3><p>${basis} Invoiced by invoice date, collected by receipt date${cost?', cost by expense date as recorded':''}.${cost&&vat?' Collected − cost uses collections before VAT.':''}</p></div>
+      <div class="an-controls"><label>Amounts<select id="an-vat" onchange="sfAnalyticsSet('vat',this.value)">${opt('incl','Incl. VAT',vat?'incl':'net')}${opt('net','Before VAT',vat?'incl':'net')}</select></label></div></div>
     <div class="an-legend">${series.map(s=>`<span><i class="${s.cls}"></i>${s.name} ${fmtSAR(sum(s.v))}</span>`).join('')}</div>
     <div class="an-chart-wrap">${trendChart(d,series)}</div>
-    <details class="an-details"><summary>Show the numbers by month</summary><div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Month</th><th>Invoiced</th><th>Collected</th>${cost?'<th>Cost</th><th>Collected − cost</th>':''}</tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td>12 months</td><td class="an-num">${fmtSAR(sum(d.inv))}</td><td class="an-num">${fmtSAR(sum(d.col))}</td>${cost?`<td class="an-num">${fmtSAR(sum(d.cost))}</td><td class="an-num">${fmtSAR(sum(d.col)-sum(d.cost))}</td>`:''}</tr></tfoot></table></div></details>
+    <details class="an-details"><summary>Show the numbers by month</summary><div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Month</th><th>Invoiced</th><th>Collected</th>${cost?`<th>Cost</th><th>Collected${vat?' before VAT':''} − cost</th>`:''}</tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td>12 months</td><td class="an-num">${fmtSAR(sum(inv))}</td><td class="an-num">${fmtSAR(sum(col))}</td>${cost?`<td class="an-num">${fmtSAR(sum(d.cost))}</td><td class="an-num">${fmtSAR(sum(d.colNet)-sum(d.cost))}</td>`:''}</tr></tfoot></table></div></details>
     ${cost&&costingFrom()?`<p class="an-note">Cost before ${esc(costingFrom())} holds invoices and manual expenses only; labour cost from attendance starts in ${esc(costingFrom())}.</p>`:''}
   </section>`;
 }
@@ -263,6 +274,7 @@ window.sfRenderAnalytics=render;
 window.sfAnalyticsSet=function(key,value){
   if(key==='status')S.status=value;
   else if(key==='sort')S.sort=value;
+  else if(key==='vat'){S.vat=value!=='net';try{localStorage.setItem('sfAnalyticsTrendVat',S.vat?'incl':'net')}catch(_){}}
   else if(key==='month'){if(!/^\d{4}-\d{2}$/.test(value||''))return;S.month=value;void loadUtil(value);return}
   render();
 };
