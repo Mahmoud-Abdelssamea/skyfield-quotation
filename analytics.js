@@ -509,7 +509,7 @@ const css=`
   .an-sec .an-table tfoot tr{background:var(--gray-100,#f3f4f6)}
   .an-sec .an-table td,.an-sec .an-table tfoot td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;min-width:0;max-width:none;padding:6px 0;border:none;border-bottom:1px solid var(--gray-100,#f3f4f6);background:none;text-align:end;white-space:normal}
   .an-sec .an-table td:last-child{border-bottom:none}
-  .an-sec .an-table td:has(> .an-val:empty){display:none}
+  .an-sec .an-table td:has(> .an-val:empty),.an-sec .an-table tbody td:has(> .an-val > .an-muted:only-child){display:none}
   .an-sec .an-table td.an-subject,.an-sec .an-table td.an-nw{max-width:none;white-space:normal}
   .an-sec .an-table .an-lbl{display:block;flex:0 0 42%;font-size:11px;font-weight:600;color:var(--gray-500,#6b7280);text-align:start}
   .an-sec .an-table .an-val{flex:1;min-width:0;text-align:end}
