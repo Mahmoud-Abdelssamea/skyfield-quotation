@@ -408,7 +408,21 @@ function utilBody(){
     <div class="pd-table-wrap"><table class="pd-table an-table"><thead><tr><th>Engineer</th><th>Site</th><th>Office</th><th>Leave</th><th>Absent</th><th>Pending</th><th>OT hours</th><th>On site</th><th>Month mix</th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="an-note">Counts approved days only; pending days are shown separately and are not in the totals. ${S.utilMonth===today().slice(0,7)?'This month is still in progress.':''}</p>`;
 }
-function paintUtil(){const el=document.getElementById('an-util-body');if(el)el.innerHTML=utilBody()}
+// Phones show every table row as a card: each cell gets its column name in a span, which is hidden on wide
+// screens. The span is ordinary text, so the Arabic interface translates it like the column heading.
+function labelTables(el){
+  if(!el||typeof el.querySelectorAll!=='function')return;
+  el.querySelectorAll('table.an-table').forEach(tb=>{
+    const heads=[...tb.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+    tb.querySelectorAll('tbody tr, tfoot tr').forEach(tr=>[...tr.children].forEach((td,i)=>{
+      if(td.colSpan>1||td.querySelector(':scope > .an-lbl'))return;
+      const v=document.createElement('div');v.className='an-val';while(td.firstChild)v.appendChild(td.firstChild);
+      const l=document.createElement('span');l.className='an-lbl';l.setAttribute('aria-hidden','true');l.textContent=heads[i]||'';
+      td.append(l,v);
+    }));
+  });
+}
+function paintUtil(){const el=document.getElementById('an-util-body');if(el){el.innerHTML=utilBody();labelTables(el)}}
 function renderUtil(){
   if(!canSeeCost())return '';
   return `<section class="an-sec" id="an-util">
@@ -424,6 +438,7 @@ function render(opts={}){
   const month=curMonth(),rows=invoiceRows(),quotes=quoteRows();
   root.innerHTML=renderMonth(rows,quotes)+renderInvoices(rows)+renderQuotes(quotes)+renderVat(rows)+renderCollection()+renderTrend()+renderProfit()+renderUtil()+
     (canSeeCost()?'':'<p class="an-note">Profitability and engineer figures are available to accounts with payroll access.</p>');
+  labelTables(root);
   if(canSeeCost()&&(opts.reload||S.utilMonth!==month||(!S.util&&!S.utilLoading&&!S.utilError)))void loadUtil(month);
 }
 window.sfRenderAnalytics=render;
@@ -482,8 +497,29 @@ const css=`
 .an-note{font-size:11px;color:var(--gray-500,#6b7280);margin:10px 0 0;line-height:1.55}
 .an-empty{padding:18px;text-align:center;color:var(--gray-500,#6b7280);font-size:12px}
 .an-error{padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#991b1b;font-size:12px}
+.an-lbl{display:none}
 @media(max-width:900px){.an-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.an-sec{padding:12px}.an-head h3{font-size:15px}}
+@media(max-width:700px){.an-sec{padding:12px}.an-head h3{font-size:15px}
+  .an-head{flex-direction:column;align-items:stretch}.an-controls label,.an-controls select,.an-controls input{width:100%}
+  .an-sec .pd-table-wrap{overflow:visible}
+  .an-sec .an-table{min-width:0;width:100%;border:none;background:none}
+  .an-sec .an-table thead{display:none}
+  .an-sec .an-table,.an-sec .an-table tbody,.an-sec .an-table tfoot,.an-sec .an-table tr{display:block;width:100%}
+  .an-sec .an-table tr{border:1px solid var(--gray-200,#e5e7eb);border-radius:10px;margin:0 0 10px;padding:2px 12px;background:#fff}
+  .an-sec .an-table tfoot tr{background:var(--gray-100,#f3f4f6)}
+  .an-sec .an-table td,.an-sec .an-table tfoot td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;min-width:0;max-width:none;padding:6px 0;border:none;border-bottom:1px solid var(--gray-100,#f3f4f6);background:none;text-align:end;white-space:normal}
+  .an-sec .an-table td:last-child{border-bottom:none}
+  .an-sec .an-table td:has(> .an-val:empty){display:none}
+  .an-sec .an-table td.an-subject,.an-sec .an-table td.an-nw{max-width:none;white-space:normal}
+  .an-sec .an-table .an-lbl{display:block;flex:0 0 42%;font-size:11px;font-weight:600;color:var(--gray-500,#6b7280);text-align:start}
+  .an-sec .an-table .an-val{flex:1;min-width:0;text-align:end}
+  .an-sec .an-table td:first-child{font-size:14px;padding-top:9px}
+  .an-sec .an-table td:first-child .an-lbl{display:none}
+  .an-sec .an-table td:first-child .an-val{text-align:start}
+  .an-sec .an-table .an-val .an-sub,.an-sec .an-table .an-val .an-link,.an-sec .an-table .an-val .an-flag{text-align:inherit}
+  .an-sec .an-table td.an-empty{display:block;text-align:center}
+  .an-sec .an-table .an-cost,.an-sec .an-table .an-age,.an-sec .an-table .an-mix{min-width:0;width:100%}
+  .an-notes{min-width:0}.an-flag{max-width:none}}
 `;
 const style=document.createElement('style');style.id='sf-analytics-style';style.textContent=css;document.head.appendChild(style);
 })();
