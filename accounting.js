@@ -34,13 +34,24 @@ function errorText(e){
 // Status tabs group several workflow states: "attention" needs the engineer or administrator, "done" is finished without payment.
 const stateGroups={attention:['changes_requested','reopened'],done:['cancelled','closed']};
 const inState=(r,state)=>state==='all'||(state==='awaiting'?payable(r):stateGroups[state]?stateGroups[state].includes(r.status):r.status===state);
-function scoped(){const term=A('acctSearch').value.trim().toLocaleLowerCase(),project=A('acctProject').value;
- return items.filter(r=>(!project||project==='all'||(r.project_id||'general')===project)&&(!term||[r.engineer_name,r.engineer_id,r.project_name,r.description,r.invoice_no,r.payment_reference,r.expense_id].join(' ').toLocaleLowerCase().includes(term)))}
-function filtered(){const state=A('acctState').value;return scoped().filter(r=>inState(r,state))}
+// The chosen month / week / day as dates (null for "all months"). The database also returns expenses PAID in the
+// period from earlier months, so each row is checked here: the "Paid" tab by payment date, every other tab by expense date.
+function periodBounds(){
+ const mode=A('acctPeriod').value;
+ if(mode==='month'){const m=A('acctMonth').value;if(!/^\d{4}-\d{2}$/.test(m))return null;const end=new Date(m+'-01T00:00:00Z');end.setUTCMonth(end.getUTCMonth()+1);end.setUTCDate(0);return {start:m+'-01',end:end.toISOString().slice(0,10)}}
+ try{return periodRange()}catch(e){return null}
+}
+const inPeriod=(r,state,b=periodBounds())=>{if(!b)return true;const d=String(state==='paid'?r.payment_date||'':r.day||'').slice(0,10);return !!d&&d>=b.start&&d<=b.end};
+const matches=(r,state,b)=>inState(r,state)&&inPeriod(r,state,b);
+// Search ignores hamza forms, tatweel, diacritics and ة/ه, ى/ي, گ/ك ("عبدالوهاب" finds "عبدالـوهاب", "امجد" finds "أمجد").
+const fold=s=>String(s??'').toLocaleLowerCase().replace(/[ـً-ٰٟ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/گ/g,'ك').replace(/\s+/g,' ').trim();
+function scoped(){const term=fold(A('acctSearch').value),project=A('acctProject').value;
+ return items.filter(r=>(!project||project==='all'||(r.project_id||'general')===project)&&(!term||fold([r.engineer_name,r.engineer_id,r.project_name,r.description,r.invoice_no,r.payment_reference,r.expense_id].join(' ')).includes(term)))}
+function filtered(){const state=A('acctState').value,b=periodBounds();return scoped().filter(r=>matches(r,state,b))}
 const daysSince=d=>{const t=Date.parse(String(d||'').slice(0,10)+'T00:00:00Z');return Number.isFinite(t)?Math.max(0,Math.floor((Date.parse(today()+'T00:00:00Z')-t)/86400000)):null};
 // Summary cards for the loaded period (project and search applied, status not), each opening its tab.
 function summaryCards(){
- const list=scoped(),sum=rows=>money(rows.reduce((s,r)=>s+Number(r.amount),0)),open=list.filter(payable),attention=list.filter(r=>inState(r,'attention')),paid=list.filter(r=>r.status==='paid');
+ const list=scoped(),b=periodBounds(),sum=rows=>money(rows.reduce((s,r)=>s+Number(r.amount),0)),open=list.filter(r=>matches(r,'awaiting',b)),attention=list.filter(r=>matches(r,'attention',b)),paid=list.filter(r=>matches(r,'paid',b));
  const oldest=open.reduce((m,r)=>Math.max(m,daysSince(r.reviewed_at||r.day)??0),0),allPeriod=A('acctPeriod').value==='all';
  const card=(state,label,value,sub,tone='')=>`<button type="button" class="acct-card ${tone}" data-acct-state="${state}"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></button>`;
  return card('awaiting',T('بانتظار السداد','Awaiting payment'),`${T(sum(open)+' ريال','SAR '+sum(open))}`,T(`${open.length} مصروف`,`${open.length} expense${open.length===1?'':'s'}`),open.length?'warn':'')
@@ -78,7 +89,7 @@ function render(){
  pruneSelection();const list=filtered(),state=A('acctState').value;A('acctSummary').textContent=T(`${list.length} مصروف · الإجمالي ${money(list.reduce((s,r)=>s+Number(r.amount),0))} ريال`,`${list.length} expenses · Total SAR ${money(list.reduce((s,r)=>s+Number(r.amount),0))}`);
  A('acctCards').innerHTML=summaryCards();
  A('acctChips').innerHTML=[['awaiting',T('بانتظار السداد','Awaiting payment')],['attention',T('يحتاج إجراء','Needs action')],['paid',T('تم السداد','Paid')],['done',T('ملغاة أو مغلقة','Cancelled or closed')],['all',T('الكل','All')]]
-  .map(([key,label])=>{const n=scoped().filter(r=>inState(r,key)).length;return `<button type="button" role="tab" aria-selected="${key===state}" class="${key===state?'active':''}" data-acct-state="${key}">${esc(label)} <span>${n}</span></button>`}).join('');
+  .map(([key,label])=>{const b=periodBounds(),n=A('acctPeriod').value==='all'&&['paid','done'].includes(key)?'—':scoped().filter(r=>matches(r,key,b)).length;return `<button type="button" role="tab" aria-selected="${key===state}" class="${key===state?'active':''}" data-acct-state="${key}">${esc(label)} <span>${n}</span></button>`}).join('');
  A('acctRows').innerHTML=list.map(rowHtml).join('')||`<tr><td colspan="6" class="acct-empty">${esc(state==='awaiting'?T('لا توجد مصروفات بانتظار السداد. 👍','Nothing awaiting payment. 👍'):T('لا توجد مصروفات مطابقة.','No matching expenses.'))}</td></tr>`;
  bulkBar();A('acctExport').disabled=A('acctPrintAll').disabled=!list.length||stale;
  A('acctPrintList').disabled=!list.length||stale;A('acctReceiptsZip').disabled=!list.length||stale||exportBusy;
@@ -343,9 +354,13 @@ async function filterChangeConfirmed(el,fallback,question){
  if(!(await sfAsk(question,{ok:T('ترك التغييرات','Discard'),danger:true})))return false;
  el.value=next;return true;
 }
-A('acctMonth').onchange=async()=>{if(!(await filterChangeConfirmed(A('acctMonth'),'',T('لديك بيانات سداد لم تحفظ. هل تريد تركها؟','Discard the unsaved payment details?'))))return;closeEditor();closeFeedback();A('acctPeriod').value=A('acctMonth').value?'month':'all';A('acctPeriod').dataset.previous=A('acctPeriod').value;A('acctDateLabel').hidden=true;A('acctMonthLabel').hidden=!A('acctMonth').value;A('acctMonth').disabled=false;A('acctMonth').dataset.previous=A('acctMonth').value;A('acctHistory').hidden=true;void refreshQueue()};
-A('acctPeriod').onchange=async()=>{if(busy||!(await filterChangeConfirmed(A('acctPeriod'),'all',T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))))return;closeEditor();closeFeedback();const mode=A('acctPeriod').value;A('acctPeriod').dataset.previous=mode;A('acctDateLabel').hidden=!['day','week'].includes(mode);A('acctMonthLabel').hidden=mode!=='month';A('acctMonth').disabled=mode!=='month';if(mode==='month')A('acctMonth').value=A('acctMonth').value||today().slice(0,7);else A('acctMonth').value='';A('acctDate').value=A('acctDate').value||today();void refreshQueue()};
-A('acctDate').onchange=async()=>{if(busy||!(await filterChangeConfirmed(A('acctDate'),today(),T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))))return;closeEditor();closeFeedback();A('acctDate').dataset.previous=A('acctDate').value;void refreshQueue()};
+// While a payment is being saved a filter change is undone (the list would not reload until the save ends).
+const undoWhileBusy=(el,fallback)=>{if(!busy)return false;el.value=el.dataset.previous??fallback;note(T('انتظر حتى ينتهي الحفظ ثم غيّر الفلتر.','Wait for the save to finish, then change the filter.'));return true};
+// "All months" holds open expenses only: the Paid / Cancelled / All tabs would show nothing, so go back to "Awaiting payment".
+const openOnlyState=()=>{if(A('acctPeriod').value==='all'&&['paid','done','all'].includes(A('acctState').value))A('acctState').value='awaiting'};
+A('acctMonth').onchange=async()=>{if(undoWhileBusy(A('acctMonth'),''))return;if(!(await filterChangeConfirmed(A('acctMonth'),'',T('لديك بيانات سداد لم تحفظ. هل تريد تركها؟','Discard the unsaved payment details?'))))return;closeEditor();closeFeedback();A('acctPeriod').value=A('acctMonth').value?'month':'all';A('acctPeriod').dataset.previous=A('acctPeriod').value;openOnlyState();A('acctDateLabel').hidden=true;A('acctMonthLabel').hidden=!A('acctMonth').value;A('acctMonth').disabled=false;A('acctMonth').dataset.previous=A('acctMonth').value;A('acctHistory').hidden=true;void refreshQueue()};
+A('acctPeriod').onchange=async()=>{if(undoWhileBusy(A('acctPeriod'),'all'))return;if(!(await filterChangeConfirmed(A('acctPeriod'),'all',T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))))return;closeEditor();closeFeedback();const mode=A('acctPeriod').value;A('acctPeriod').dataset.previous=mode;openOnlyState();A('acctDateLabel').hidden=!['day','week'].includes(mode);A('acctMonthLabel').hidden=mode!=='month';A('acctMonth').disabled=mode!=='month';if(mode==='month')A('acctMonth').value=A('acctMonth').value||today().slice(0,7);else A('acctMonth').value='';A('acctMonth').dataset.previous=A('acctMonth').value;A('acctDate').value=A('acctDate').value||today();A('acctDate').dataset.previous=A('acctDate').value;void refreshQueue()};
+A('acctDate').onchange=async()=>{if(undoWhileBusy(A('acctDate'),today()))return;if(!(await filterChangeConfirmed(A('acctDate'),today(),T('ترك التغييرات غير المحفوظة؟','Discard unsaved changes?'))))return;closeEditor();closeFeedback();A('acctDate').dataset.previous=A('acctDate').value;void refreshQueue()};
 A('acctFeedbackForm').onsubmit=sendFeedback;A('acctCancelFeedback').onclick=()=>closeInvoice();
 A('acctState').onchange=render;A('acctProject').onchange=render;A('acctSearch').oninput=render;
 A('acctNextStatus').onchange=updatePaymentFields;
