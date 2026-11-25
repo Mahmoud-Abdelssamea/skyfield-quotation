@@ -100,13 +100,16 @@ function teamOverview(people,days,month,todayIso){
  const [y,n]=month.split('-').map(Number),count=new Date(Date.UTC(y,n,0)).getUTCDate();
  const dates=Array.from({length:count},(_,i)=>{const d=new Date(Date.UTC(y,n-1,i+1));return{iso:d.toISOString().slice(0,10),day:i+1,friday:d.getUTCDay()===5}});
  const byKey=new Map(days.map(r=>[r.user_id+'|'+r.day,r]));
- const rows=people.map(person=>{const totals={approved:0,pending:0,rejected:0,missing:0};
+ const rows=people.map(person=>{const totals={approved:0,pending:0,rejected:0,missing:0},kinds={site:0,office:0,absent:0,leave:0};
   const cells=dates.map(d=>{const r=byKey.get(person.user_id+'|'+d.iso);
-   if(r){const state=r.review==='approved'?'approved':r.review==='rejected'?'rejected':'pending';totals[state]++;return{...d,state,kind:r.status}}
+   if(r){const state=r.review==='approved'?'approved':r.review==='rejected'?'rejected':'pending';totals[state]++;
+    // Days by type (site = inside or outside Riyadh); a rejected day does not count.
+    if(state!=='rejected'){const k=['inside','outside'].includes(r.status)?'site':r.status;if(k in kinds)kinds[k]++}
+    return{...d,state,kind:r.status}}
    if(d.iso>todayIso)return{...d,state:'future'};
    if(d.friday)return{...d,state:'friday'};
    totals.missing++;return{...d,state:'missing'}});
-  return{person,cells,totals}});
+  return{person,cells,totals,kinds}});
  return{dates,rows,missingPeople:rows.filter(r=>r.totals.missing>0).length,missingDays:rows.reduce((t,r)=>t+r.totals.missing,0),pendingDays:rows.reduce((t,r)=>t+r.totals.pending,0)};
 }
 function renderTeamOverview(){
@@ -118,9 +121,35 @@ function renderTeamOverview(){
  $('teamOverviewSummary').textContent=language==='en'
   ?`${ov.rows.length} engineers · ${ov.missingPeople} with missing days (${ov.missingDays} days) · ${ov.pendingDays} days awaiting approval`
   :`${ov.rows.length} مهندس · ${ov.missingPeople} لديهم أيام غير مسجّلة (${ov.missingDays} يوم) · ${ov.pendingDays} يوم بانتظار الاعتماد`;
- const head=`<thead><tr><th class="ov-name">${esc(tr('المهندس'))}</th>${ov.dates.map(d=>`<th class="${d.friday?'ov-fri':''}"><span>${d.day}</span><small>${esc(wd[new Date(d.iso+'T00:00:00Z').getUTCDay()])}</small></th>`).join('')}<th class="ov-total" title="${esc(tr('معتمد'))}">✓</th><th class="ov-total" title="${esc(tr('بانتظار الاعتماد'))}">…</th><th class="ov-total" title="${esc(tr('غير مسجّل'))}">✕</th></tr></thead>`;
- const body=ov.rows.map(r=>`<tr><th class="ov-name"><button type="button" class="ov-person" data-ov-user="${esc(r.person.user_id)}" title="${esc(tr('عرض فترات هذا المهندس'))}">${esc(r.person.name)}</button><small>${esc(r.person.engineer_id)}</small></th>${r.cells.map(c=>`<td class="ov-cell ${c.state}" title="${esc(c.iso+' · '+state[c.state]+(c.kind?' · '+tr(labels[c.kind]||c.kind):''))}">${c.kind?esc(letters[c.kind]||''):''}</td>`).join('')}<td class="ov-total ok">${r.totals.approved}</td><td class="ov-total wait">${r.totals.pending}</td><td class="ov-total miss">${r.totals.missing}</td></tr>`).join('');
+ const head=`<thead><tr><th class="ov-name">${esc(tr('المهندس'))}</th>${ov.dates.map(d=>`<th class="${d.friday?'ov-fri':''}"><span>${d.day}</span><small>${esc(wd[new Date(d.iso+'T00:00:00Z').getUTCDay()])}</small></th>`).join('')}<th class="ov-total ov-kind ov-kind-first" title="${esc(tr('أيام الموقع'))}">${esc(letters.inside)}</th><th class="ov-total ov-kind" title="${esc(tr('أيام المكتب'))}">${esc(letters.office)}</th><th class="ov-total ov-kind" title="${esc(tr('أيام الغياب'))}">${esc(letters.absent)}</th><th class="ov-total ov-kind-last" title="${esc(tr('معتمد'))}">✓</th><th class="ov-total" title="${esc(tr('بانتظار الاعتماد'))}">…</th><th class="ov-total" title="${esc(tr('غير مسجّل'))}">✕</th></tr></thead>`;
+ const body=ov.rows.map(r=>`<tr><th class="ov-name"><button type="button" class="ov-person" data-ov-user="${esc(r.person.user_id)}" title="${esc(tr('عرض فترات هذا المهندس'))}">${esc(r.person.name)}</button><small>${esc(r.person.engineer_id)}</small></th>${r.cells.map(c=>`<td class="ov-cell ${c.state}" title="${esc(c.iso+' · '+state[c.state]+(c.kind?' · '+tr(labels[c.kind]||c.kind):''))}">${c.kind?esc(letters[c.kind]||''):''}</td>`).join('')}<td class="ov-total ov-kind ov-kind-first" title="${esc(tr('أيام الموقع'))}">${r.kinds.site}</td><td class="ov-total ov-kind" title="${esc(tr('أيام المكتب'))}">${r.kinds.office}</td><td class="ov-total ov-kind absent" title="${esc(tr('أيام الغياب'))}">${r.kinds.absent}</td><td class="ov-total ok ov-kind-last">${r.totals.approved}</td><td class="ov-total wait">${r.totals.pending}</td><td class="ov-total miss">${r.totals.missing}</td></tr>`).join('');
  $('teamOverviewTable').innerHTML=head+`<tbody>${body||`<tr><td class="empty-state">${esc(tr('لا يوجد مهندسون.'))}</td></tr>`}</tbody>`;
+}
+// Team overview as a printable page (A4 landscape): title, month, summary, legend and the grid with its colours.
+// The browser's print dialog saves it as PDF.
+function exportTeamOverviewPdf(){
+ const table=$('teamOverviewTable');if(!table||!table.querySelector('tbody tr td.ov-cell'))throw Error(tr('لا توجد بيانات لتصديرها.'));
+ const w=window.open('about:blank','_blank');if(!w)throw Error(tr('اسمح بفتح نافذة الطباعة في المتصفح.'));w.opener=null;
+ const copy=table.cloneNode(true);copy.querySelectorAll('button.ov-person').forEach(b=>{const s=document.createElement('b');s.textContent=b.textContent;b.replaceWith(s)});
+ const month=$('month').value,legend=document.querySelector('#teamOverview .ov-legend')?.innerHTML||'',en=language==='en';
+ const title=(en?'Team attendance':'الحضور الشهري للفريق')+' — '+monthLabel(month);
+ const css='@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;font:10px Tahoma,Arial,sans-serif;color:#1f3b5c}'
+  +'header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1F3864;padding-bottom:6px;margin-bottom:6px}header img{height:34px}h1{font-size:15px;margin:0}'
+  +'.sum{font-weight:700;margin:4px 0}.ov-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 6px;color:#40546a}.ov-key{display:inline-flex;align-items:center;gap:4px}'
+  +'.ov-key::before{content:"";width:10px;height:10px;border-radius:2px;display:inline-block}.ov-key.approved::before{background:#3b8a5a}.ov-key.pending::before{background:#f2b33d}.ov-key.rejected::before{background:#d9534f}.ov-key.missing::before{background:#c6d0db}.ov-key.friday::before{background:#f7f9fb;border:1px solid #c6d0db}'
+  +'table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #dfe6ee;text-align:center;padding:2px 1px;height:20px}thead th{background:#f4f7fb;font-size:9px}thead th small{display:block;font-weight:400;color:#64798c}'
+  +'.ov-name{width:150px;text-align:start;padding:2px 5px;background:#f8fafc}.ov-name b{display:block;font-size:9.5px;line-height:1.25;white-space:normal;overflow-wrap:anywhere}.ov-name small{color:#64798c}'
+  +'.ov-cell{color:#fff;font-weight:700;font-size:9px}.ov-cell.approved{background:#3b8a5a}.ov-cell.pending{background:#f2b33d;color:#4a3200}.ov-cell.rejected{background:#d9534f}'
+  +'.ov-cell.missing{background:repeating-linear-gradient(45deg,#e7ecf2 0 3px,#c6d0db 3px 5px)}.ov-cell.future,.ov-cell.friday{background:#f7f9fb}.ov-fri{color:#9aa9b8}'
+  +'.ov-total{width:24px;font-weight:700;background:#fafbfd}.ov-total.ok{color:#2f6f49}.ov-total.wait{color:#9a6400}.ov-total.miss{color:#a02a26}.ov-total.ov-kind{background:#eef3f8}.ov-total.ov-kind.absent{color:#a02a26}'
+  +'.ov-kind-first,.ov-kind-last{border-inline-start:2px solid #9fb0c4}tr{break-inside:avoid}thead{display:table-header-group}'
+  +'button{display:block;margin:10px auto;padding:8px 22px;border:0;border-radius:7px;background:#1F3864;color:#fff;font:inherit;font-size:13px;cursor:pointer}@media print{button{display:none}}';
+ const logo=new URL('skyfield-logo.webp',document.baseURI).href;
+ w.document.open();w.document.write('<!doctype html><html lang="'+(en?'en':'ar')+'" dir="'+(en?'ltr':'rtl')+'"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body>'
+  +'<button onclick="window.print()">'+esc(en?'Print / save as PDF':'طباعة / حفظ PDF')+'</button>'
+  +'<header><h1>'+esc(title)+'</h1><img src="'+esc(logo)+'" alt="SKY FIELD"></header>'
+  +'<p class="sum">'+esc($('teamOverviewSummary').textContent)+'</p><div class="ov-legend">'+legend+'</div>'+copy.outerHTML+'</body></html>');
+ w.document.close();w.focus();setTimeout(()=>{try{w.print()}catch(e){}},400);
 }
 // ── Summary cards above the approvals (administrators) ──
 // Month handed over by the dashboard's "Review" button (the oldest month with pending periods); used once.
@@ -440,7 +469,7 @@ function setupApprovalFilters(){
   if(k==='missing')return setApprovalType('overview');
   $('approvalEngineer').value='all';$('approvalState').value='pending';setApprovalType(k==='expenses'?'expenses':'attendance')};
  $('teamOverview').onclick=e=>{const b=e.target.closest('[data-ov-user]');if(!b)return;$('approvalEngineer').value=b.dataset.ovUser;$('approvalState').value='all';syncApprovalExportEngineer();setApprovalType('attendance')};
- Object.assign(translations,{'نظرة على الفريق':'Team overview','معتمد':'Approved','غير مسجّل':'Not recorded','جمعة':'Friday','لم يأتِ بعد':'Not yet','جمعة / لم يأتِ بعد':'Friday / not yet','المهندس':'Engineer','عرض فترات هذا المهندس':'Show this engineer’s periods','لا يوجد مهندسون.':'No engineers.','الحرف داخل اليوم: م موقع · ك مكتب · ج إجازة · غ غياب':'Letter in a day: S site · O office · L leave · A absent','فترات بانتظار الاعتماد':'Periods awaiting approval','مصروفات بانتظار الاعتماد':'Expenses awaiting approval','أيام غير مسجّلة':'Days not recorded','تحديد كل المعروض':'Select all shown','إلغاء التحديد':'Clear selection','اعتماد المحدد':'Approve selected','حدّد الفترات المطلوب اعتمادها، أو «تحديد كل المعروض».':'Select the periods to approve, or “Select all shown”.','تحديد الفترة':'Select period','تحديد':'Select','تصدير':'Export'});
+ Object.assign(translations,{'تصدير PDF':'Export PDF','لا توجد بيانات لتصديرها.':'Nothing to export.','اسمح بفتح نافذة الطباعة في المتصفح.':'Allow the print window in your browser.','أيام الموقع':'Site days','أيام المكتب':'Office days','أيام الغياب':'Absent days','نظرة على الفريق':'Team overview','معتمد':'Approved','غير مسجّل':'Not recorded','جمعة':'Friday','لم يأتِ بعد':'Not yet','جمعة / لم يأتِ بعد':'Friday / not yet','المهندس':'Engineer','عرض فترات هذا المهندس':'Show this engineer’s periods','لا يوجد مهندسون.':'No engineers.','الحرف داخل اليوم: م موقع · ك مكتب · ج إجازة · غ غياب':'Letter in a day: S site · O office · L leave · A absent','فترات بانتظار الاعتماد':'Periods awaiting approval','مصروفات بانتظار الاعتماد':'Expenses awaiting approval','أيام غير مسجّلة':'Days not recorded','تحديد كل المعروض':'Select all shown','إلغاء التحديد':'Clear selection','اعتماد المحدد':'Approve selected','حدّد الفترات المطلوب اعتمادها، أو «تحديد كل المعروض».':'Select the periods to approve, or “Select all shown”.','تحديد الفترة':'Select period','تحديد':'Select','تصدير':'Export'});
  for(const button of document.querySelectorAll('[data-approval-type]'))button.onclick=()=>setApprovalType(button.dataset.approvalType);
  translateUI();
 }
@@ -466,6 +495,7 @@ submit($('memberForm'),async f=>{
  if(window.sfSaveSupplemental)await window.sfSaveSupplemental(v.user_id,updates);
  await reloadEngineerDirectory();$('editEngineerPanel').hidden=true;
 });
+$('teamOverviewPdf').onclick=()=>run(async()=>exportTeamOverviewPdf());
 $('rows').onclick=e=>run(async()=>{const b=e.target.closest('button');if(!b)return;if(await handlePeriodAction(b))return;if(await handleExpenseAction(b))return;if(b.dataset.receipt!==undefined){const r=records[Number(b.dataset.receipt)];const d=await checked(db.storage.from('sf-receipts').createSignedUrl(r.receipt_path,60));window.open(d.signedUrl,'_blank','noopener');}if(b.dataset.settle!==undefined){const r=records[Number(b.dataset.settle)];await checked(db.rpc('sf_settle_expense',{expense_id:r.id}));await refresh();}if(b.dataset.review!==undefined){const r=records[Number(b.dataset.review)];if(b.dataset.value==='approved'&&r.category?.startsWith('housing')&&!(await sfAsk(language==='en'?'Approve this housing expense?':'اعتماد مصروف السكن هذا؟',{message:tr('السكن خارج الرياض الذي توفره الشركة منفصل عن بدل السكن في الراتب، ويُحمّل على المشروع. تأكد فقط أن نفس السكن ونفس الفترة لم يُعتمدا من قبل. هل تعتمد؟'),ok:language==='en'?'Approve':'اعتماد'})))return;await setExpenseReview(r,b.dataset.value);}});
 $('refresh').onclick=()=>run(refresh);$('month').onchange=()=>run(refresh);
 $('export').onclick=()=>{const cell=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=approvalType!=='expenses'?exportPeriodRows():[['المهندس','التاريخ','البند','رقم الفاتورة','المشروع','المبلغ','الحالة','ساعات إضافية','التصفية','تاريخ التصفية'],...filteredApprovalRecords().map(({r})=>[members.find(m=>m.user_id===r.user_id)?.name,r.day,r.label,r.invoice_no||'',projects.find(p=>p.id===r.project_id)?.name||'عام',r.amount,labels[r.review],r.overtime||0,r.table==='sf_daily_expenses'?tr(r.settled_at?'تمت التصفية':'لم تتم التصفية'):'',r.settled_at||''])];const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='skyfield-'+approvalType+'-'+$('month').value+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
