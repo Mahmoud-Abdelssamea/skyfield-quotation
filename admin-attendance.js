@@ -9,7 +9,9 @@ const say=(text,error=false)=>{E('aaMessage').textContent=text;E('aaMessage').cl
 function invalidate(){preview=null;++request;E('aaPreviewPanel').hidden=true;E('aaSave').disabled=true;E('aaReplace').checked=false}
 function values(){const s=E('aaStatus').value;return {p_user_id:E('aaEngineer').value,p_from:E('aaFrom').value,p_to:E('aaTo').value,p_status:s,p_project_id:s==='site'?E('aaProject').value||null:null,p_leave_type:s==='leave'?E('aaLeave').value:null,p_overtime:['site','office'].includes(s)?Number(E('aaOvertime').value||0):0,p_include_friday:E('aaFriday').checked,p_note:E('aaNote').value.trim()}}
 // Project for site work, overtime for site or office, leave type for leave; Friday is included by default only for leave.
-function updateFields(){const s=E('aaStatus').value;E('aaLeaveLabel').hidden=s!=='leave';E('aaProjectLabel').hidden=s!=='site';E('aaProject').required=s==='site';if(s==='site')E('aaProject').innerHTML=monthProjectOptions(E('aaProject').value);E('aaOvertimeLabel').hidden=!['site','office'].includes(s);E('aaFriday').checked=s==='leave'}
+function updateFields(){const s=E('aaStatus').value;E('aaLeaveLabel').hidden=s!=='leave';E('aaProjectLabel').hidden=s!=='site';E('aaProject').required=s==='site';if(s==='site')E('aaProject').innerHTML=monthProjectOptions(E('aaProject').value);E('aaOvertimeLabel').hidden=!['site','office'].includes(s);E('aaFriday').checked=s==='leave'||s==='delete';
+ // "Delete recorded days": Friday included by default (a wrong Friday is the usual case); the button says what it does.
+ E('aaSave').textContent=s==='delete'?T('مسح الأيام المسجلة','Delete recorded days'):T('حفظ واعتماد الأيام','Save and approve days');E('aaSave').classList.toggle('danger',s==='delete')}
 function dates(v){
  if(!v.p_user_id||!v.p_from||!v.p_to||v.p_from>v.p_to||v.p_from.slice(0,7)!==v.p_to.slice(0,7)||v.p_to>allowedUntil()||v.p_from<'2000-01-01')throw Error(T('اختر المهندس وفترة صحيحة داخل شهر واحد وحتى التاريخ المسموح.','Choose an engineer and valid dates within one month and the allowed date limit.'));
  const days=[],end=new Date(v.p_to+'T00:00:00Z');for(let d=new Date(v.p_from+'T00:00:00Z');d<=end;d.setUTCDate(d.getUTCDate()+1))if(v.p_include_friday||d.getUTCDay()!==5)days.push(d.toISOString().slice(0,10));
@@ -21,6 +23,7 @@ function dates(v){
 }
 function statusText(r){
  if(!r)return T('غير مسجل','Not recorded');
+ if(r.status==='delete')return T('يُمسح','Deleted');
  // A new site entry shows where it will count (inside or outside Riyadh), as the server sets it from the project.
  const status=r.status==='site'?projectLocationOf(r.project_id)||'site':r.status,parts=[status==='site'?tr('عمل بالموقع'):tr(labels[status]||status)];
  if(r.status==='leave')parts.push(tr({annual:'سنوية',sick:'مرضية',emergency:'طارئة',unpaid:'بدون راتب'}[r.leave_type]||'إجازة'));
@@ -35,23 +38,43 @@ async function loadPreview(){
   const rows=await checked(db.from('sf_daily_records').select('id,user_id,day,status,leave_type,project_id,overtime,review,period_revision,period_id').eq('user_id',v.p_user_id).gte('day',start).lt('day',next.toISOString().slice(0,10)).order('day'));
   if(token!==request||me?.user_id!==user||!allowed())return;
   const existing=new Map(rows.map(r=>[r.day,r])),replaced=days.filter(d=>existing.has(d)).length;
-  preview={v,rows,days,replaced};E('aaRows').innerHTML=days.map(d=>`<tr><td>${esc(d)}</td><td>${esc(statusText(existing.get(d)))}</td><td>${esc(statusText({status:v.p_status,leave_type:v.p_leave_type,project_id:v.p_project_id,overtime:v.p_overtime}))}</td></tr>`).join('');
+  preview={v,rows,days,replaced};
+  if(v.p_status==='delete'){
+   // Only recorded days are listed and deleted; the confirmation dialog stands in for the replace checkbox.
+   const recorded=days.filter(d=>existing.has(d));
+   E('aaRows').innerHTML=recorded.map(d=>`<tr><td>${esc(d)}</td><td>${esc(statusText(existing.get(d)))} · ${esc(tr(labels[existing.get(d).review]||existing.get(d).review))}</td><td>${esc(statusText({status:'delete'}))}</td></tr>`).join('');
+   E('aaSummary').textContent=recorded.length?T(`${recorded.length} يوم مسجل سيتم مسحه`,`${recorded.length} recorded day${recorded.length===1?'':'s'} will be deleted`):T('لا توجد أيام مسجلة في هذه الفترة.','No recorded days in this period.');
+   E('aaReplaceLabel').hidden=true;E('aaSave').disabled=!recorded.length;E('aaPreviewPanel').hidden=false;say('');return;
+  }
+  E('aaRows').innerHTML=days.map(d=>`<tr><td>${esc(d)}</td><td>${esc(statusText(existing.get(d)))}</td><td>${esc(statusText({status:v.p_status,leave_type:v.p_leave_type,project_id:v.p_project_id,overtime:v.p_overtime}))}</td></tr>`).join('');
   E('aaSummary').textContent=T(`${days.length} يوم · ${replaced} يوم مسجل سيتم استبداله`,`${days.length} days · ${replaced} recorded days will be replaced`);
   E('aaReplaceLabel').hidden=!replaced;E('aaSave').disabled=!!replaced;E('aaPreviewPanel').hidden=false;say('');
  }catch(e){say(e.message,true)}finally{busy=false;E('aaFields').disabled=false}
 }
-function errorText(e){const m=String(e.message||e);if(/ATTENDANCE_CHANGED/.test(m))return T('تغيّر سجل المهندس. اضغط معاينة الأيام وراجع التغييرات من جديد.','The engineer’s records changed. Preview and review the days again.');if(/ADMIN_REQUIRED|ENGINEER_UNAVAILABLE/.test(m))return T('صلاحية الإدارة أو حساب المهندس غير متاح.','Administrator access or engineer account is unavailable.');if(/PROJECT_LOCATION_REQUIRED/.test(m))return tr('لم يحدد المدير موقع هذا المشروع بعد، فلا يمكن تسجيل أيام موقع عليه.');if(/PROJECT_UNAVAILABLE/.test(m))return T('هذا المشروع غير متاح للتسجيل.','This project is not available for entries.');if(/INVALID_OVERTIME/.test(m))return T('ساعات الإضافي من 0 إلى 16، بأرباع الساعة.','Overtime is 0 to 16 hours, in quarter hours.');return m}
+function errorText(e){const m=String(e.message||e);if(/ATTENDANCE_CHANGED/.test(m))return T('تغيّر سجل المهندس. اضغط معاينة الأيام وراجع التغييرات من جديد.','The engineer’s records changed. Preview and review the days again.');if(/ADMIN_REQUIRED|ENGINEER_UNAVAILABLE/.test(m))return T('صلاحية الإدارة أو حساب المهندس غير متاح.','Administrator access or engineer account is unavailable.');if(/PROJECT_LOCATION_REQUIRED/.test(m))return tr('لم يحدد المدير موقع هذا المشروع بعد، فلا يمكن تسجيل أيام موقع عليه.');if(/PROJECT_UNAVAILABLE/.test(m))return T('هذا المشروع غير متاح للتسجيل.','This project is not available for entries.');if(/INVALID_OVERTIME/.test(m))return T('ساعات الإضافي من 0 إلى 16، بأرباع الساعة.','Overtime is 0 to 16 hours, in quarter hours.');if(/NO_RECORDED_DAYS/.test(m))return T('لا توجد أيام مسجلة في هذه الفترة.','No recorded days in this period.');if(/LEAVE_REQUEST_DAYS/.test(m))return T('بعض الأيام من طلب إجازة. عدّل أو ألغِ طلب الإجازة من صفحة طلبات الإجازة.','Some days come from a leave request. Change or cancel it on the Leave requests page.');return m}
 async function save(e){
  e.preventDefault();if(!allowed()||busy||!preview)return;
  const v=values();if(JSON.stringify(v)!==JSON.stringify(preview.v)){invalidate();say(T('أعد معاينة الأيام بعد تغيير البيانات.','Preview again after changing the details.'),true);return}
  if(!v.p_note||v.p_note.length>500){say(T('اكتب سبب التسجيل، بحد أقصى 500 حرف.','Enter a reason, up to 500 characters.'),true);return}
+ const name=members.find(m=>m.user_id===v.p_user_id)?.name||'';
+ if(v.p_status==='delete')return deleteDays(v,name);
  if(preview.replaced&&!E('aaReplace').checked)return;
- const name=members.find(m=>m.user_id===v.p_user_id)?.name||'',count=preview.days.length;
+ const count=preview.days.length;
  if(!(await sfAsk(T(`حفظ واعتماد ${count} يوم للمهندس ${name}؟`,`Save and approve ${count} days for ${name}?`),{message:T('ستُستبدل الحالات المعروضة في المعاينة.','Existing statuses shown in the preview will be replaced.'),ok:T('حفظ واعتماد','Save and approve')}))||busy||!preview)return;
  const user=me.user_id,snapshot=preview.rows.map(r=>({id:r.id,revision:r.period_revision}));busy=true;E('aaFields').disabled=true;E('aaSave').disabled=true;
  try{await checked(db.rpc('sf_admin_set_attendance',{...v,p_existing:snapshot}));if(me?.user_id!==user)return;invalidate();say(T('تم حفظ الأيام واعتمادها.','Days saved and approved.'));window.sfEmbeddedReviewChanged?.();try{await refresh({quiet:true})}catch{say(T('تم الحفظ. اضغط تحديث لإعادة تحميل القائمة.','Saved. Refresh to reload the list.'))}}
  catch(e){invalidate();say(errorText(e),true)}finally{busy=false;E('aaFields').disabled=false}
 }
+// Delete the recorded days shown in the preview (approved or not), after a confirmation that names the engineer and the count.
+async function deleteDays(v,name){
+ const count=preview.replaced;if(!count)return;
+ if(!(await sfAsk(T(`مسح ${count} يوم من حضور ${name}؟`,`Delete ${count} day${count===1?'':'s'} from ${name}'s attendance?`),{message:T('تُحذف الأيام المعروضة في المعاينة حتى لو كانت معتمدة، ويبقى سجل بالتغيير. باقي أيام الفترة لا تتغير.','The days in the preview are deleted even if approved, and the change is logged. The other days of the period stay as they are.'),ok:T('مسح الأيام','Delete days'),danger:true}))||busy||!preview)return;
+ const user=me.user_id,snapshot=preview.rows.map(r=>({id:r.id,revision:r.period_revision}));busy=true;E('aaFields').disabled=true;E('aaSave').disabled=true;
+ try{const r=await checked(db.rpc('sf_admin_delete_attendance',{p_user_id:v.p_user_id,p_from:v.p_from,p_to:v.p_to,p_include_friday:v.p_include_friday,p_note:v.p_note,p_existing:snapshot}));if(me?.user_id!==user)return;invalidate();
+  const n=r?.days??count;say(T(`تم مسح ${n} يوم.`,`${n} day${n===1?'':'s'} deleted.`));window.sfEmbeddedReviewChanged?.();try{await refresh({quiet:true})}catch{say(T('تم المسح. اضغط تحديث لإعادة تحميل القائمة.','Deleted. Refresh to reload the list.'))}}
+ catch(e){invalidate();say(errorText(e),true)}finally{busy=false;E('aaFields').disabled=false}
+}
+Object.assign(translations,{'مسح الأيام المسجلة':'Delete recorded days','يُمسح':'Deleted','مسح الأيام':'Delete days'});
 Object.assign(translations,{'تسجيل حضور أو غياب أو إجازة لمهندس':'Record engineer attendance, absence or leave','حفظ واعتماد الأيام':'Save and approve days','تسجيل غياب أو إجازة لمهندس':'Record engineer absence or leave','سبب التسجيل / التعديل':'Reason for entry / change','التسجيل الإداري يُعتمد مباشرة. راجع الأيام المسجلة قبل الحفظ.':'Administrative entries are approved immediately. Review existing days before saving.','معاينة الأيام':'Preview days','الحالة الحالية':'Current status','الحالة الجديدة':'New status','أوافق على استبدال الحالات المسجلة للأيام المعروضة':'I agree to replace existing statuses for the displayed days','حفظ واعتماد الغياب / الإجازة':'Save and approve absence / leave','تشمل الجمعة':'Include Friday'});
 window.sfAdminAttendanceInit=()=>{invalidate();E('adminAttendancePanel').hidden=!allowed();if(!allowed())return;E('aaEngineer').innerHTML='<option value="">'+esc(T('اختر المهندس','Select engineer'))+'</option>'+members.filter(m=>m.role==='engineer'&&m.is_active!==false).sort((a,b)=>String(a.engineer_id).localeCompare(String(b.engineer_id),undefined,{numeric:true})).map(m=>`<option value="${esc(m.user_id)}">${esc(m.engineer_id)} · ${esc(m.name)}</option>`).join('');for(const id of ['aaFrom','aaTo']){E(id).value=today();E(id).max=allowedUntil()}E('aaProject').innerHTML=monthProjectOptions('');updateFields();translateUI()};
 E('aaPreview').onclick=()=>void loadPreview();E('adminAttendanceForm').onsubmit=save;
