@@ -90,3 +90,25 @@
 .ov-total.ov-kind-last{border-inline-start:2px solid #c9d4e2}
 .ov-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .ov-head .ov-summary{margin:6px 0}
+/* Colour by: approval (default) or day type; a small two-button switch beside the export button. */
+.ov-mode{display:inline-flex;align-items:center;gap:0;border:1px solid #c9d4e2;border-radius:9px;overflow:hidden;font-size:12px;margin-inline-start:auto}
+.ov-mode span{padding:0 10px;color:#5a6f84}
+.ov-mode button{all:unset;cursor:pointer;padding:6px 12px;border-inline-start:1px solid #c9d4e2;color:#1F3864;font-weight:600;transition:background .15s}
+.ov-mode button:hover{background:#eef3f8}
+.ov-mode button.active{background:#1F3864;color:#fff}
+.ov-mode button:focus-visible{outline:2px solid #e8610a;outline-offset:-2px}
+.ov-cell.t-inside{background:#2f6fb3}
+.ov-cell.t-outside{background:#7b4fb0}
+.ov-cell.t-office{background:#cfd8e3;color:#26394d}
+.ov-cell.t-leave{background:#9fd3ad;color:#1d4d2b}
+.ov-cell.t-absent{background:#d9534f}
+.ov-cell.t-pend{box-shadow:inset 0 0 0 2px #f2b33d}
+.ov-cell.t-rej{opacity:.35}
+.ov-key.t-inside::before{background:#2f6fb3;border-color:#2f6fb3}
+.ov-key.t-outside::before{background:#7b4fb0;border-color:#7b4fb0}
+.ov-key.t-office::before{background:#cfd8e3}
+.ov-key.t-leave::before{background:#9fd3ad;border-color:#9fd3ad}
+.ov-key.t-absent::before{background:#d9534f;border-color:#d9534f}
+.ov-key.t-pend::before{background:#fff;box-shadow:inset 0 0 0 2px #f2b33d}
+.ov-key.t-rej::before{background:#2f6fb3;opacity:.35}
+.ov-head #teamOverviewPdf{width:auto;flex:0 0 auto}
